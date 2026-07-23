@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventaire Studio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#12141a; --panel:#1c1f28; --panel2:#242835; --border:#333848;
+  --txt:#e8eaf0; --muted:#9aa0b0; --accent:#4f8ef7; --accent2:#3a6fd0;
+  --ok:#3ecf8e; --warn:#f5b342; --bad:#f26d6d; --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45}
+header{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--panel);border-bottom:1px solid var(--border);flex-wrap:wrap}
+header h1{font-size:19px;font-weight:700}
+header .spacer{flex:1}
+nav{display:flex;gap:4px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--border);overflow-x:auto}
+nav button{background:none;border:none;color:var(--muted);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;white-space:nowrap}
+nav button.active{background:var(--accent);color:#fff}
+nav button:hover:not(.active){background:var(--panel2);color:var(--txt)}
+main{padding:16px;max-width:1100px;margin:0 auto}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--accent2)}
+.btn.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--border)}
+.btn.sec:hover{background:var(--border)}
+.btn.danger{background:var(--bad)}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn.ok{background:var(--ok);color:#0c2b1d}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+.stat{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat .num{font-size:28px;font-weight:800}
+.stat .lbl{color:var(--muted);font-size:13px;margin-top:2px}
+.stat.warn .num{color:var(--warn)}
+.stat.bad .num{color:var(--bad)}
+.stat.ok .num{color:var(--ok)}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px}
+.panel h2{font-size:15px;margin-bottom:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+input,select,textarea{background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+input[type=search]{min-width:180px;flex:1}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:1px solid var(--border)}
+td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr.rowlink{cursor:pointer}
+tr.rowlink:hover td{background:var(--panel2)}
+.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:600}
+.tag.dispo{background:rgba(62,207,142,.15);color:var(--ok)}
+.tag.sorti{background:rgba(245,179,66,.15);color:var(--warn)}
+.tag.bon{background:rgba(62,207,142,.15);color:var(--ok)}
+.tag.reparer{background:rgba(245,179,66,.15);color:var(--warn)}
+.tag.hs{background:rgba(242,109,109,.15);color:var(--bad)}
+.tag.cat{background:rgba(79,142,247,.15);color:var(--accent)}
+.muted{color:var(--muted);font-size:13px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--accent)}
+.alert{border-left:3px solid var(--warn);background:var(--panel2);padding:10px 12px;border-radius:6px;margin-bottom:8px;font-size:14px}
+.alert.bad{border-color:var(--bad)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;padding:24px 12px;z-index:50;overflow-y:auto}
+.overlay.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;width:100%;max-width:540px;padding:20px}
+.modal h3{margin-bottom:14px;font-size:17px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-grid .full{grid-column:1/-1}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.field input,.field select,.field textarea{width:100%}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.hist{list-style:none}
+.hist li{padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
+.hist li:last-child{border:none}
+.hist .when{color:var(--muted);font-size:12px}
+.thumb{width:42px;height:42px;object-fit:cover;border-radius:6px;background:var(--panel2)}
+.itemphoto{max-width:100%;max-height:220px;border-radius:10px;margin-bottom:10px}
+#qrbox{background:#fff;padding:14px;border-radius:10px;display:inline-block;margin:8px 0}
+.days-late{color:var(--bad);font-weight:700}
+.empty{color:var(--muted);text-align:center;padding:26px 0}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;margin:3px;font-size:14px}
+.chip button{background:none;border:none;color:var(--bad);cursor:pointer;font-size:15px;padding:0}
+#setup{max-width:520px;margin:40px auto;padding:0 16px}
+#syncdot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
+#syncdot.on{background:var(--ok)}
+@media(max-width:700px){
+  main{padding:10px}
+  table,thead,tbody,tr,td{display:block}
+  thead{display:none}
+  tr{background:var(--panel2);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;padding:8px}
+  td{border:none;padding:4px 8px}
+  td[data-l]::before{content:attr(data-l) " : ";color:var(--muted);font-size:12px}
+  .form-grid{grid-template-columns:1fr}
+}
+@media print{
+  body *{visibility:hidden}
+  #labelPrint,#labelPrint *{visibility:visible}
+  #labelPrint{position:fixed;left:0;top:0;background:#fff;color:#000}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎛️ Inventaire Studio</h1>
+  <span id="syncdot" title="Connexion Supabase"></span>
+  <span class="spacer"></span>
+  <button class="btn sec small" onclick="refresh()">↻ Actualiser</button>
+  <button class="btn sec small" onclick="exportJSON()">Exporter</button>
+  <button class="btn sec small" onclick="document.getElementById('importFile').click()">Importer</button>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this)">
+</header>
+
+<nav style="display:none">
+  <button data-v="dash" class="active" onclick="show('dash')">Tableau de bord</button>
+  <button data-v="inv" onclick="show('inv')">Inventaire</button>
+  <button data-v="out" onclick="show('out')">Sortis</button>
+  <button data-v="people" onclick="show('people')">Personnes</button>
+  <button data-v="loc" onclick="show('loc')">Emplacements</button>
+</nav>
+
+<div id="setup" style="display:none">
+  <div class="panel">
+    <h2>Connexion à Supabase</h2>
+    <p class="muted" id="setupMsg" style="margin-bottom:10px">
+      Colle ici les infos de ton projet Supabase (Project Settings → API).
+      À faire une seule fois par appareil.
+    </p>
+    <div class="field" style="margin-bottom:8px"><label>Project URL</label>
+      <input id="cfg-url" style="width:100%" placeholder="https://xxxx.supabase.co"></div>
+    <div class="field" style="margin-bottom:12px"><label>Clé anon (public)</label>
+      <input id="cfg-key" style="width:100%" placeholder="eyJhbGciOi…"></div>
+    <button class="btn" onclick="saveCfg()">Se connecter</button>
+  </div>
+</div>
+
+<main style="display:none">
+  <section id="v-dash"></section>
+  <section id="v-inv" style="display:none">
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Rechercher (nom, marque, n° série, ID…)" oninput="renderInv()">
+      <select id="fCat" onchange="renderInv()"></select>
+      <select id="fStatus" onchange="renderInv()">
+        <option value="">Statut : tous</option>
+        <option value="dispo">Disponible</option>
+        <option value="sorti">Sorti</option>
+      </select>
+      <select id="fLoc" onchange="renderInv()"></select>
+      <select id="fCond" onchange="renderInv()">
+        <option value="">État : tous</option>
+        <option value="bon">Bon état</option>
+        <option value="reparer">À réparer</option>
+        <option value="hs">Hors service</option>
+      </select>
+      <button class="btn" onclick="openItemForm()">+ Ajouter</button>
+    </div>
+    <div class="panel"><div id="invList"></div></div>
+  </section>
+  <section id="v-out" style="display:none"></section>
+  <section id="v-people" style="display:none"></section>
+  <section id="v-loc" style="display:none"></section>
+</main>
+
+<!-- Modals -->
+<div class="overlay" id="ovItem"><div class="modal">
+  <h3 id="itemFormTitle">Ajouter un item</h3>
+  <div class="form-grid">
+    <div class="field full"><label>Nom *</label><input id="i-name" placeholder="ex : Câble XLR 5m #3"></div>
+    <div class="field"><label>Catégorie *</label><select id="i-cat"></select></div>
+    <div class="field"><label>Marque / modèle</label><input id="i-brand"></div>
+    <div class="field"><label>N° de série</label><input id="i-serial"></div>
+    <div class="field"><label>État</label><select id="i-cond">
+      <option value="bon">Bon état</option><option value="reparer">À réparer</option><option value="hs">Hors service</option>
+    </select></div>
+    <div class="field full"><label>Emplacement de référence *</label><select id="i-home"></select></div>
+    <div class="field full"><label>Photo (optionnel)</label><input type="file" id="i-photo" accept="image/*"></div>
+    <div class="field full"><label>Notes</label><textarea id="i-notes" rows="2"></textarea></div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovItem')">Annuler</button>
+    <button class="btn" onclick="saveItem()">Enregistrer</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="ovOut"><div class="modal">
+  <h3>Check-out — <span id="out-item"></span></h3>
+  <div class="form-grid">
+    <div class="field full"><label>Qui prend l'item ? *</label><select id="out-user"></select></div>
+    <div class="field full"><label>Destination / raison *</label><input id="out-reason" placeholder="ex : session mobile, prêté à…, en réparation"></div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovOut')">Annuler</button>
+    <button class="btn" onclick="doCheckout()">Valider la sortie</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="ovIn"><div class="modal">
+  <h3>Check-in — <span id="in-item"></span></h3>
+  <div class="form-grid">
+    <div class="field"><label>État au retour</label><select id="in-cond">
+      <option value="bon">Bon état</option><option value="reparer">À réparer</option><option value="hs">Hors service</option>
+    </select></div>
+    <div class="field full"><label>Note (optionnel)</label><input id="in-note" placeholder="ex : jack abîmé"></div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovIn')">Annuler</button>
+    <button class="btn ok" onclick="doCheckin()">Valider le retour</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="ovDetail"><div class="modal" id="detailBody"></div></div>
+
+<div id="labelPrint" style="display:none"></div>
+
+<script>
+/* ============================================================
+   CONFIG — optionnel : colle ici l'URL et la clé anon de ton
+   projet Supabase pour que ta collègue n'ait rien à configurer.
+   Sinon, l'app demande ces infos au premier lancement.
+   ============================================================ */
+const SUPABASE_URL = "";
+const SUPABASE_KEY = "";
+
+const CATS = {
+  "synthe":"Synthé / clavier","boite":"Boîte à rythmes / groovebox","micro":"Micro","cable":"Câble",
+  "ampli":"Ampli","pedale":"Pédale / effet","casque":"Casque","enceinte":"Enceinte / monitoring",
+  "interface":"Interface / carte son","instrument":"Instrument","pied":"Pied / support","accessoire":"Accessoire","autre":"Autre"
+};
+const CATCODE = {synthe:"SYN",boite:"BAR",micro:"MIC",cable:"CAB",ampli:"AMP",pedale:"PED",casque:"CAS",enceinte:"ENC",interface:"INT",instrument:"INS",pied:"PIE",accessoire:"ACC",autre:"DIV"};
+const CONDS = {bon:"Bon état",reparer:"À réparer",hs:"Hors service"};
+const ALERT_DAYS = 7;
+
+let sb = null;
+let db = {items:[],users:[],locations:[],history:[]};
+
+/* ================= CONNEXION ================= */
+function getCfg(){
+  if(SUPABASE_URL && SUPABASE_KEY) return {url:SUPABASE_URL,key:SUPABASE_KEY};
+  try{ return JSON.parse(localStorage.getItem('sbCfg')); }catch(e){ return null; }
+}
+function saveCfg(){
+  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/,"");
+  const key = document.getElementById('cfg-key').value.trim();
+  if(!url || !key){ alert("Les deux champs sont obligatoires."); return; }
+  localStorage.setItem('sbCfg', JSON.stringify({url,key}));
+  init();
+}
+function showSetup(msg){
+  document.getElementById('setup').style.display = '';
+  document.querySelector('main').style.display = 'none';
+  document.querySelector('nav').style.display = 'none';
+  if(msg) document.getElementById('setupMsg').innerHTML = '⚠️ ' + esc(msg) + '<br>Vérifie l\'URL et la clé ci-dessous.';
+}
+async function init(){
+  const cfg = getCfg();
+  if(!cfg || !cfg.url || !cfg.key){ showSetup(); return; }
+  sb = supabase.createClient(cfg.url, cfg.key);
+  try{ await loadAll(); }
+  catch(e){ localStorage.removeItem('sbCfg'); showSetup(e.message||"connexion impossible"); return; }
+  document.getElementById('setup').style.display = 'none';
+  document.querySelector('main').style.display = '';
+  document.querySelector('nav').style.display = 'flex';
+  document.getElementById('syncdot').classList.add('on');
+  render();
+  subscribe();
+}
+async function loadAll(){
+  const [it,pe,lo,hi] = await Promise.all([
+    sb.from('items').select('*').order('id'),
+    sb.from('people').select('*').order('name'),
+    sb.from('locations').select('*').order('name'),
+    sb.from('history').select('*').order('date',{ascending:false}).limit(1000)
+  ]);
+  for(const r of [it,pe,lo,hi]) if(r.error) throw r.error;
+  db.items = it.data;
+  db.users = pe.data;
+  db.locations = lo.data.map(l=>l.name);
+  db.history = hi.data.map(h=>({itemId:h.item_id,type:h.type,date:h.date,userId:h.user_id,detail:h.detail,cond:h.cond}));
+}
+async function refresh(){ if(!sb) return; try{ await loadAll(); render(); }catch(e){} }
+function subscribe(){
+  let t = null;
+  try{
+    sb.channel('inv-sync').on('postgres_changes',{event:'*',schema:'public'},()=>{
+      clearTimeout(t); t = setTimeout(refresh, 400);
+    }).subscribe();
+  }catch(e){}
+}
+async function run(promise){
+  const {error} = await promise;
+  if(error){ alert("Erreur d'enregistrement : " + error.message); throw error; }
+}
+
+/* ================= HELPERS ================= */
+function uid(cat){
+  const code = CATCODE[cat]||"DIV";
+  let max = 0;
+  db.items.forEach(i=>{ const m = i.id.match(new RegExp('^'+code+'-(\\d+)$')); if(m) max = Math.max(max,+m[1]); });
+  return code + "-" + String(max+1).padStart(3,"0");
+}
+function now(){ return new Date().toISOString(); }
+function fdate(iso){ return new Date(iso).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}); }
+function daysSince(iso){ return Math.floor((Date.now()-new Date(iso))/864e5); }
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function item(id){ return db.items.find(i=>i.id===id); }
+function userName(id){ const u = db.users.find(u=>u.id===id); return u?u.name:"?"; }
+async function hist(itemId,type,detail,userId,cond){
+  const h = {itemId,type,date:now(),detail:detail||"",userId:userId||null,cond:cond||null};
+  db.history.unshift(h);
+  await run(sb.from('history').insert({item_id:itemId,type,date:h.date,detail:h.detail,user_id:h.userId,cond:h.cond}));
+}
+
+/* ================= NAVIGATION ================= */
+function show(v){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
+  ['dash','inv','out','people','loc'].forEach(x=>document.getElementById('v-'+x).style.display = x===v?'':'none');
+  render();
+}
+function curView(){ const b = document.querySelector('nav button.active'); return b?b.dataset.v:'dash'; }
+function close_(id){ document.getElementById(id).classList.remove('open'); }
+function open_(id){ document.getElementById(id).classList.add('open'); }
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
+
+function render(){
+  const v = curView();
+  if(v==='dash') renderDash();
+  if(v==='inv'){ fillFilters(); renderInv(); }
+  if(v==='out') renderOut();
+  if(v==='people') renderPeople();
+  if(v==='loc') renderLoc();
+}
+
+/* ================= DASHBOARD ================= */
+function renderDash(){
+  const t = db.items.length;
+  const out = db.items.filter(i=>i.status==='sorti');
+  const rep = db.items.filter(i=>i.cond!=='bon');
+  const late = out.filter(i=>daysSince(i.out.date)>=ALERT_DAYS);
+  let alerts = "";
+  late.forEach(i=>{
+    alerts += `<div class="alert">⏰ <b>${esc(i.name)}</b> sorti depuis <b>${daysSince(i.out.date)} j</b> — ${esc(userName(i.out.userId))} (${esc(i.out.reason)})</div>`;
+  });
+  rep.forEach(i=>{
+    alerts += `<div class="alert ${i.cond==='hs'?'bad':''}">🔧 <b>${esc(i.name)}</b> — ${CONDS[i.cond]}</div>`;
+  });
+  const recent = db.history.slice(0,8).map(h=>{
+    const it = item(h.itemId);
+    return `<li>${histIcon(h.type)} <b>${esc(it?it.name:h.itemId)}</b> — ${histText(h)}<div class="when">${fdate(h.date)}</div></li>`;
+  }).join("");
+  document.getElementById('v-dash').innerHTML = `
+    <div class="cards">
+      <div class="stat"><div class="num">${t}</div><div class="lbl">Items au total</div></div>
+      <div class="stat ok"><div class="num">${t-out.length}</div><div class="lbl">Disponibles</div></div>
+      <div class="stat warn"><div class="num">${out.length}</div><div class="lbl">Sortis</div></div>
+      <div class="stat bad"><div class="num">${rep.length}</div><div class="lbl">À réparer / HS</div></div>
+    </div>
+    <div class="panel"><h2>Alertes</h2>${alerts || '<div class="muted">Rien à signaler 👌</div>'}</div>
+    <div class="panel"><h2>Activité récente</h2><ul class="hist">${recent || '<div class="muted">Aucune activité</div>'}</ul></div>`;
+}
+function histIcon(t){ return {create:"➕",out:"📤",in:"📥",move:"📍",edit:"✏️"}[t]||"•"; }
+function histText(h){
+  const u = h.userId ? " — " + esc(userName(h.userId)) : "";
+  if(h.type==='out') return `sortie${u} (${esc(h.detail)})`;
+  if(h.type==='in') return `retour${u}${h.cond?` — état : ${CONDS[h.cond]}`:""}${h.detail?` (${esc(h.detail)})`:""}`;
+  if(h.type==='move') return `déplacé : ${esc(h.detail)}`;
+  if(h.type==='edit') return `modifié${h.detail?` (${esc(h.detail)})`:""}`;
+  return esc(h.detail)||"créé";
+}
+
+/* ================= INVENTAIRE ================= */
+function fillFilters(){
+  const fc = document.getElementById('fCat'), keep = fc.value;
+  fc.innerHTML = '<option value="">Catégorie : toutes</option>' + Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+  fc.value = keep;
+  const fl = document.getElementById('fLoc'), keepL = fl.value;
+  fl.innerHTML = '<option value="">Emplacement : tous</option>' + db.locations.map(l=>`<option>${esc(l)}</option>`).join("");
+  fl.value = keepL;
+}
+function renderInv(){
+  const q = (document.getElementById('q').value||"").toLowerCase();
+  const cat = document.getElementById('fCat').value, st = document.getElementById('fStatus').value;
+  const lo = document.getElementById('fLoc').value, co = document.getElementById('fCond').value;
+  const rows = db.items.filter(i=>{
+    if(q && !(i.name+" "+i.brand+" "+i.serial+" "+i.id+" "+(i.notes||"")).toLowerCase().includes(q)) return false;
+    if(cat && i.cat!==cat) return false;
+    if(st && i.status!==st) return false;
+    if(lo && i.loc!==lo && i.home!==lo) return false;
+    if(co && i.cond!==co) return false;
+    return true;
+  });
+  if(!rows.length){ document.getElementById('invList').innerHTML = '<div class="empty">Aucun item ne correspond.</div>'; return; }
+  document.getElementById('invList').innerHTML = `<table><thead><tr>
+    <th></th><th>Item</th><th>Catégorie</th><th>Statut</th><th>Emplacement</th><th>État</th><th></th>
+  </tr></thead><tbody>` + rows.map(i=>`
+    <tr class="rowlink" onclick="openDetail('${i.id}')">
+      <td>${i.photo?`<img class="thumb" src="${i.photo}">`:""}</td>
+      <td data-l="Item"><b>${esc(i.name)}</b><br><span class="mono">${i.id}</span>${i.brand?` <span class="muted">· ${esc(i.brand)}</span>`:""}</td>
+      <td data-l="Catégorie"><span class="tag cat">${CATS[i.cat]||i.cat}</span></td>
+      <td data-l="Statut">${statusTag(i)}</td>
+      <td data-l="Emplacement">${esc(i.loc)}${i.loc!==i.home?` <span class="muted">(réf : ${esc(i.home)})</span>`:""}</td>
+      <td data-l="État"><span class="tag ${i.cond}">${CONDS[i.cond]}</span></td>
+      <td onclick="event.stopPropagation()">${actionBtn(i)}</td>
+    </tr>`).join("") + "</tbody></table>";
+}
+function statusTag(i){
+  if(i.status==='dispo') return '<span class="tag dispo">Disponible</span>';
+  return `<span class="tag sorti">Sorti · ${daysSince(i.out.date)} j</span>`;
+}
+function actionBtn(i){
+  return i.status==='dispo'
+    ? `<button class="btn small" onclick="openCheckout('${i.id}')">Check-out</button>`
+    : `<button class="btn small ok" onclick="openCheckin('${i.id}')">Check-in</button>`;
+}
+
+/* ---- formulaire item ---- */
+let editingId = null;
+function openItemForm(id){
+  editingId = id||null;
+  document.getElementById('itemFormTitle').textContent = id?'Modifier l\'item':'Ajouter un item';
+  document.getElementById('i-cat').innerHTML = Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+  document.getElementById('i-home').innerHTML = db.locations.map(l=>`<option>${esc(l)}</option>`).join("");
+  const i = id?item(id):null;
+  document.getElementById('i-name').value = i?i.name:"";
+  document.getElementById('i-cat').value = i?i.cat:"cable";
+  document.getElementById('i-brand').value = i?i.brand:"";
+  document.getElementById('i-serial').value = i?i.serial:"";
+  document.getElementById('i-cond').value = i?i.cond:"bon";
+  document.getElementById('i-home').value = i?i.home:(db.locations[0]||"");
+  document.getElementById('i-notes').value = i?i.notes:"";
+  document.getElementById('i-photo').value = "";
+  open_('ovItem');
+}
+function saveItem(){
+  const name = document.getElementById('i-name').value.trim();
+  if(!name){ alert("Le nom est obligatoire."); return; }
+  if(!db.locations.length){ alert("Créez d'abord un emplacement (onglet Emplacements)."); return; }
+  const vals = {
+    name, cat:document.getElementById('i-cat').value, brand:document.getElementById('i-brand').value.trim(),
+    serial:document.getElementById('i-serial').value.trim(), cond:document.getElementById('i-cond').value,
+    home:document.getElementById('i-home').value, notes:document.getElementById('i-notes').value.trim()
+  };
+  const file = document.getElementById('i-photo').files[0];
+  const finish = async (photo)=>{
+    if(editingId){
+      const i = item(editingId);
+      const movedHome = i.home!==vals.home;
+      Object.assign(i,vals);
+      if(photo) i.photo = photo;
+      if(i.status==='dispo' && movedHome) i.loc = vals.home;
+      await run(sb.from('items').update({...vals, photo:i.photo, loc:i.loc}).eq('id',i.id));
+      if(movedHome && i.status==='dispo') await hist(i.id,'move',`nouvel emplacement de référence : ${vals.home}`);
+      await hist(i.id,'edit');
+    }else{
+      const id = uid(vals.cat);
+      const row = {id,...vals,photo:photo||null,loc:vals.home,status:"dispo",out:null};
+      db.items.push(row);
+      await run(sb.from('items').insert(row));
+      await hist(id,'create',"Ajout à l'inventaire");
+    }
+    close_('ovItem'); render();
+  };
+  if(file){
+    const img = new Image(), rd = new FileReader();
+    rd.onload = e=>{ img.onload = ()=>{
+      const c = document.createElement('canvas'), s = Math.min(1, 400/Math.max(img.width,img.height));
+      c.width = img.width*s; c.height = img.height*s;
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      finish(c.toDataURL('image/jpeg',.75));
+    }; img.src = e.target.result; };
+    rd.readAsDataURL(file);
+  } else finish(null);
+}
+async function deleteItem(id){
+  if(!confirm("Supprimer définitivement cet item et son historique ?")) return;
+  db.items = db.items.filter(i=>i.id!==id);
+  db.history = db.history.filter(h=>h.itemId!==id);
+  await run(sb.from('history').delete().eq('item_id',id));
+  await run(sb.from('items').delete().eq('id',id));
+  close_('ovDetail'); render();
+}
+
+/* ================= CHECK-OUT / CHECK-IN ================= */
+let actionId = null;
+function openCheckout(id){
+  if(!db.users.length){ alert("Ajoutez d'abord une personne (onglet Personnes)."); return; }
+  actionId = id;
+  document.getElementById('out-item').textContent = item(id).name;
+  document.getElementById('out-user').innerHTML = db.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join("");
+  document.getElementById('out-reason').value = "";
+  open_('ovOut');
+}
+async function doCheckout(){
+  const reason = document.getElementById('out-reason').value.trim();
+  if(!reason){ alert("Indiquez la destination ou la raison."); return; }
+  const i = item(actionId), userId = document.getElementById('out-user').value;
+  i.status = 'sorti'; i.out = {userId, date:now(), reason}; i.loc = reason;
+  await run(sb.from('items').update({status:i.status,out:i.out,loc:i.loc}).eq('id',i.id));
+  await hist(i.id,'out',reason,userId);
+  close_('ovOut'); close_('ovDetail'); render();
+}
+function openCheckin(id){
+  actionId = id;
+  const i = item(id);
+  document.getElementById('in-item').textContent = i.name;
+  document.getElementById('in-cond').value = i.cond;
+  document.getElementById('in-note').value = "";
+  open_('ovIn');
+}
+async function doCheckin(){
+  const i = item(actionId);
+  const cond = document.getElementById('in-cond').value, note = document.getElementById('in-note').value.trim();
+  const userId = i.out?i.out.userId:null;
+  i.status = 'dispo'; i.cond = cond; i.loc = i.home; i.out = null;
+  await run(sb.from('items').update({status:i.status,cond,loc:i.loc,out:null}).eq('id',i.id));
+  await hist(i.id,'in',note,userId,cond);
+  close_('ovIn'); close_('ovDetail'); render();
+}
+
+/* ================= FICHE ITEM ================= */
+function openDetail(id){
+  const i = item(id);
+  const rows = db.history.filter(h=>h.itemId===id).map(h=>
+    `<li>${histIcon(h.type)} ${histText(h)}<div class="when">${fdate(h.date)}</div></li>`).join("");
+  const outInfo = i.status==='sorti'
+    ? `<div class="alert">📤 Sorti depuis le <b>${fdate(i.out.date)}</b> (${daysSince(i.out.date)} j) — <b>${esc(userName(i.out.userId))}</b> · ${esc(i.out.reason)}</div>` : "";
+  document.getElementById('detailBody').innerHTML = `
+    <h3>${esc(i.name)} <span class="mono">${i.id}</span></h3>
+    ${i.photo?`<img class="itemphoto" src="${i.photo}">`:""}
+    <p style="margin-bottom:10px">
+      <span class="tag cat">${CATS[i.cat]||i.cat}</span> ${statusTag(i)} <span class="tag ${i.cond}">${CONDS[i.cond]}</span>
+    </p>
+    ${outInfo}
+    <p class="muted" style="margin-bottom:4px">
+      ${i.brand?`Marque/modèle : <b>${esc(i.brand)}</b><br>`:""}
+      ${i.serial?`N° série : <b>${esc(i.serial)}</b><br>`:""}
+      Emplacement de référence : <b>${esc(i.home)}</b><br>
+      Emplacement actuel : <b>${esc(i.loc)}</b>
+    </p>
+    ${i.notes?`<p class="muted" style="margin-bottom:10px">📝 ${esc(i.notes)}</p>`:""}
+    <div class="modal-actions" style="justify-content:flex-start;margin:12px 0">
+      ${actionBtn(i)}
+      <button class="btn sec small" onclick="openItemForm('${i.id}')">Modifier</button>
+      <button class="btn sec small" onclick="showLabel('${i.id}')">Étiquette / QR</button>
+      <button class="btn danger small" onclick="deleteItem('${i.id}')">Supprimer</button>
+    </div>
+    <div id="qrzone"></div>
+    <h3 style="font-size:14px;color:var(--muted);text-transform:uppercase">Historique</h3>
+    <ul class="hist">${rows||'<li class="muted">Aucun mouvement</li>'}</ul>
+    <div class="modal-actions"><button class="btn sec" onclick="close_('ovDetail')">Fermer</button></div>`;
+  open_('ovDetail');
+}
+function showLabel(id){
+  const i = item(id), z = document.getElementById('qrzone');
+  z.innerHTML = `<div id="qrbox"><div id="qrcode"></div>
+    <div style="color:#000;text-align:center;font-family:monospace;font-weight:700;margin-top:6px">${i.id}</div>
+    <div style="color:#000;text-align:center;font-size:12px">${esc(i.name)}</div></div>
+    <div><button class="btn small sec" onclick="printLabel()">🖨️ Imprimer l'étiquette</button></div>`;
+  if(typeof QRCode!=='undefined') new QRCode(document.getElementById('qrcode'),{text:i.id+" | "+i.name,width:110,height:110});
+  else document.getElementById('qrcode').innerHTML = '<span style="color:#000;font-size:12px">(QR indisponible hors ligne)</span>';
+}
+function printLabel(){
+  const box = document.getElementById('qrbox');
+  if(!box) return;
+  const p = document.getElementById('labelPrint');
+  p.innerHTML = box.outerHTML; p.style.display = 'block';
+  window.print();
+  p.style.display = 'none';
+}
+
+/* ================= SORTIS ================= */
+function renderOut(){
+  const minDays = window._minDays||0;
+  const rows = db.items.filter(i=>i.status==='sorti' && daysSince(i.out.date)>=minDays)
+    .sort((a,b)=>new Date(a.out.date)-new Date(b.out.date));
+  document.getElementById('v-out').innerHTML = `
+    <div class="toolbar">
+      <label class="muted">Sorti depuis plus de</label>
+      <input type="number" min="0" style="width:70px" value="${minDays}" onchange="window._minDays=+this.value;renderOut()"> <span class="muted">jours</span>
+    </div>
+    <div class="panel">` + (rows.length ? `<table><thead><tr>
+      <th>Item</th><th>Qui</th><th>Depuis</th><th>Durée</th><th>Destination / raison</th><th></th>
+    </tr></thead><tbody>` + rows.map(i=>{
+      const d = daysSince(i.out.date);
+      return `<tr class="rowlink" onclick="openDetail('${i.id}')">
+        <td data-l="Item"><b>${esc(i.name)}</b> <span class="mono">${i.id}</span></td>
+        <td data-l="Qui">${esc(userName(i.out.userId))}</td>
+        <td data-l="Depuis">${fdate(i.out.date)}</td>
+        <td data-l="Durée"><span class="${d>=ALERT_DAYS?'days-late':''}">${d} j</span></td>
+        <td data-l="Raison">${esc(i.out.reason)}</td>
+        <td onclick="event.stopPropagation()"><button class="btn small ok" onclick="openCheckin('${i.id}')">Check-in</button></td>
+      </tr>`;}).join("") + "</tbody></table>"
+    : '<div class="empty">Tout est au studio 🎉</div>') + "</div>";
+}
+
+/* ================= PERSONNES ================= */
+function renderPeople(){
+  const list = db.users.map(u=>{
+    const holding = db.items.filter(i=>i.status==='sorti' && i.out.userId===u.id);
+    return `<tr><td data-l="Nom"><b>${esc(u.name)}</b></td>
+      <td data-l="A en sa possession">${holding.length?holding.map(i=>`<span class="chip" style="cursor:pointer" onclick="openDetail('${i.id}')">${esc(i.name)} · ${daysSince(i.out.date)} j</span>`).join(""):'<span class="muted">rien</span>'}</td>
+      <td><button class="btn danger small" onclick="delUser('${u.id}')">✕</button></td></tr>`;
+  }).join("");
+  document.getElementById('v-people').innerHTML = `
+    <div class="toolbar">
+      <input id="newUser" placeholder="Nom de la personne" onkeydown="if(event.key==='Enter')addUser()">
+      <button class="btn" onclick="addUser()">+ Ajouter</button>
+    </div>
+    <div class="panel">${db.users.length?`<table><thead><tr><th>Nom</th><th>A en sa possession</th><th></th></tr></thead><tbody>${list}</tbody></table>`:'<div class="empty">Aucune personne enregistrée.</div>'}</div>`;
+}
+async function addUser(){
+  const n = document.getElementById('newUser').value.trim();
+  if(!n) return;
+  const u = {id:"u"+Date.now(),name:n};
+  db.users.push(u);
+  await run(sb.from('people').insert(u));
+  renderPeople();
+}
+async function delUser(id){
+  if(db.items.some(i=>i.status==='sorti'&&i.out.userId===id)){ alert("Cette personne a encore du matériel sorti."); return; }
+  if(!confirm("Supprimer cette personne ?")) return;
+  db.users = db.users.filter(u=>u.id!==id);
+  await run(sb.from('people').delete().eq('id',id));
+  renderPeople();
+}
+
+/* ================= EMPLACEMENTS ================= */
+function renderLoc(){
+  const list = db.locations.map(l=>{
+    const n = db.items.filter(i=>i.home===l).length;
+    const present = db.items.filter(i=>i.loc===l).length;
+    return `<tr><td data-l="Emplacement"><b>${esc(l)}</b></td>
+      <td data-l="Items rattachés">${n} rattaché(s) · ${present} présent(s)</td>
+      <td><button class="btn danger small" onclick="delLoc('${esc(l)}')">✕</button></td></tr>`;
+  }).join("");
+  document.getElementById('v-loc').innerHTML = `
+    <div class="toolbar">
+      <input id="newLoc" placeholder="ex : Rack C, Tiroir jack…" onkeydown="if(event.key==='Enter')addLoc()">
+      <button class="btn" onclick="addLoc()">+ Ajouter</button>
+    </div>
+    <div class="panel">${db.locations.length?`<table><thead><tr><th>Emplacement</th><th>Contenu</th><th></th></tr></thead><tbody>${list}</tbody></table>`:'<div class="empty">Aucun emplacement.</div>'}</div>`;
+}
+async function addLoc(){
+  const n = document.getElementById('newLoc').value.trim();
+  if(!n || db.locations.includes(n)) return;
+  db.locations.push(n);
+  await run(sb.from('locations').insert({name:n}));
+  renderLoc();
+}
+async function delLoc(l){
+  if(db.items.some(i=>i.home===l)){ alert("Des items sont rattachés à cet emplacement."); return; }
+  if(!confirm("Supprimer cet emplacement ?")) return;
+  db.locations = db.locations.filter(x=>x!==l);
+  await run(sb.from('locations').delete().eq('name',l));
+  renderLoc();
+}
+
+/* ================= EXPORT / IMPORT ================= */
+function exportJSON(){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));
+  a.download = 'inventaire-studio-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+function importJSON(inp){
+  const f = inp.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = async e=>{
+    try{
+      const d = JSON.parse(e.target.result);
+      if(!d.items || !d.users) throw 0;
+      if(!confirm(`Importer ${d.items.length} item(s), ${d.users.length} personne(s) et leur historique dans la base partagée ?`)){ inp.value=""; return; }
+      if(d.locations.length) await run(sb.from('locations').upsert(d.locations.map(name=>({name}))));
+      if(d.users.length) await run(sb.from('people').upsert(d.users));
+      if(d.items.length) await run(sb.from('items').upsert(d.items.map(i=>({
+        id:i.id,name:i.name,cat:i.cat,brand:i.brand||"",serial:i.serial||"",cond:i.cond||"bon",
+        notes:i.notes||"",photo:i.photo||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null
+      }))));
+      if(d.history && d.history.length) await run(sb.from('history').insert(d.history.map(h=>({
+        item_id:h.itemId,type:h.type,date:h.date,detail:h.detail||"",user_id:h.userId||null,cond:h.cond||null
+      }))));
+      await loadAll(); render();
+      alert("Import terminé ✔");
+    }catch(err){ if(err!==0 && err && err.message) return; alert("Fichier invalide."); }
+    inp.value = "";
+  };
+  r.readAsText(f);
+}
+
+init();
+</script>
+</body>
+</html>
