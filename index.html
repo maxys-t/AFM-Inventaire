@@ -3,91 +3,97 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inventaire Studio</title>
+<title>AFM Inventory Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
-  --bg:#f4f5f8; --panel:#ffffff; --panel2:#eef0f4; --border:#dde1e9;
-  --txt:#1d2433; --muted:#68718a; --accent:#2f6fed; --accent2:#215ad0;
-  --ok:#178f60; --warn:#b7791f; --bad:#d64545; --radius:10px;
+  --bg:#f5f5f7; --panel:#ffffff; --panel2:#f5f5f7; --border:#e8e8ed; --border2:#d2d2d7;
+  --txt:#1d1d1f; --muted:#6e6e73; --accent:#0071e3; --accent2:#0077ed;
+  --ok:#1d8a3c; --warn:#b25000; --bad:#de3131; --radius:16px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45}
-header{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--panel);border-bottom:1px solid var(--border);flex-wrap:wrap}
-header h1{font-size:19px;font-weight:700}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.47;-webkit-font-smoothing:antialiased}
+header{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:14px 22px;background:rgba(255,255,255,.82);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border);flex-wrap:wrap}
+header h1{font-size:19px;font-weight:600;letter-spacing:-.02em}
 header .spacer{flex:1}
-nav{display:flex;gap:4px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--border);overflow-x:auto}
-nav button{background:none;border:none;color:var(--muted);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;white-space:nowrap}
-nav button.active{background:var(--accent);color:#fff}
-nav button:hover:not(.active){background:var(--panel2);color:var(--txt)}
-main{padding:16px;max-width:1100px;margin:0 auto}
-.btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer}
+nav{display:flex;gap:6px;padding:12px 18px;background:rgba(255,255,255,.82);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border);overflow-x:auto;justify-content:center}
+nav button{background:none;border:none;color:var(--txt);padding:7px 16px;border-radius:980px;cursor:pointer;font-size:14px;font-weight:500;white-space:nowrap;transition:background .15s}
+nav button.active{background:var(--txt);color:#fff}
+nav button:hover:not(.active){background:var(--border)}
+main{padding:22px 16px;max-width:1100px;margin:0 auto}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:980px;padding:9px 18px;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s}
 .btn:hover{background:var(--accent2)}
-.btn.sec{background:var(--panel);color:var(--txt);border:1px solid var(--border)}
-.btn.sec:hover{background:var(--panel2)}
+.btn.sec{background:#e8e8ed;color:var(--txt)}
+.btn.sec:hover{background:var(--border2)}
 .btn.danger{background:var(--bad)}
-.btn.small{padding:5px 10px;font-size:13px}
+.btn.small{padding:6px 13px;font-size:13px}
 .btn.ok{background:var(--ok);color:#fff}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:18px}
-.stat{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
-.stat .num{font-size:28px;font-weight:800}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:20px}
+.stat{background:var(--panel);border-radius:var(--radius);padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.stat .num{font-size:30px;font-weight:700;letter-spacing:-.02em}
 .stat .lbl{color:var(--muted);font-size:13px;margin-top:2px}
 .stat.warn .num{color:var(--warn)}
 .stat.bad .num{color:var(--bad)}
 .stat.ok .num{color:var(--ok)}
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
-.panel h2{font-size:15px;margin-bottom:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
-input,select,textarea{background:#fff;border:1px solid var(--border);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+.panel{background:var(--panel);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.panel h2{font-size:13px;margin-bottom:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+input,select,textarea{background:#fff;border:1px solid var(--border2);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:14px;font-family:inherit;appearance:none;-webkit-appearance:none}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236e6e73' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;width:16px;height:16px;accent-color:var(--accent)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,113,227,.15)}
 input[type=search]{min-width:180px;flex:1}
 table{width:100%;border-collapse:collapse}
-th{text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:1px solid var(--border)}
-td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+th{text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:1px solid var(--border);font-weight:600}
+td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
 tr.rowlink{cursor:pointer}
 tr.rowlink:hover td{background:var(--panel2)}
-.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:600}
-.tag.dispo{background:rgba(23,143,96,.12);color:var(--ok)}
-.tag.sorti{background:rgba(183,121,31,.12);color:var(--warn)}
-.tag.bon{background:rgba(23,143,96,.12);color:var(--ok)}
-.tag.attente{background:rgba(183,121,31,.12);color:var(--warn)}
-.tag.reparation{background:rgba(142,68,220,.12);color:#8e44dc}
-.tag.hs{background:rgba(214,69,69,.12);color:var(--bad)}
-.tag.cat{background:rgba(47,111,237,.10);color:var(--accent)}
+.tag{display:inline-block;padding:3px 10px;border-radius:980px;font-size:12px;font-weight:500}
+.tag.dispo{background:rgba(52,199,89,.14);color:var(--ok)}
+.tag.sorti{background:rgba(255,149,0,.14);color:var(--warn)}
+.tag.bon{background:rgba(52,199,89,.14);color:var(--ok)}
+.tag.attente{background:rgba(255,149,0,.14);color:var(--warn)}
+.tag.reparation{background:rgba(175,82,222,.13);color:#8944ab}
+.tag.hs{background:rgba(255,59,48,.12);color:var(--bad)}
+.tag.cat{background:rgba(0,113,227,.10);color:var(--accent)}
 .muted{color:var(--muted);font-size:13px}
-.mono{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--accent)}
-.alert{border-left:3px solid var(--warn);background:var(--panel2);padding:10px 12px;border-radius:6px;margin-bottom:8px;font-size:14px}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13px;color:var(--accent)}
+.alert{border-left:3px solid var(--warn);background:var(--panel2);padding:10px 14px;border-radius:10px;margin-bottom:8px;font-size:14px}
 .alert.bad{border-color:var(--bad)}
-.overlay{position:fixed;inset:0;background:rgba(25,32,50,.45);display:none;align-items:flex-start;justify-content:center;padding:24px 12px;z-index:50;overflow-y:auto}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;padding:28px 12px;z-index:50;overflow-y:auto;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
 .overlay.open{display:flex}
-.modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;width:100%;max-width:540px;padding:20px;box-shadow:0 10px 40px rgba(20,30,60,.18)}
-.modal h3{margin-bottom:14px;font-size:17px}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal{background:var(--panel);border-radius:20px;width:100%;max-width:540px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{margin-bottom:16px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-grid .full{grid-column:1/-1}
-.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
 .field input,.field select,.field textarea{width:100%}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.checkline{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--txt);cursor:pointer;margin-top:6px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
 .hist{list-style:none}
-.hist li{padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
+.hist li{padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
 .hist li:last-child{border:none}
 .hist .when{color:var(--muted);font-size:12px}
-.thumb{width:42px;height:42px;object-fit:cover;border-radius:6px;background:var(--panel2)}
-.itemphoto{max-width:100%;max-height:220px;border-radius:10px;margin-bottom:10px}
-#qrbox{background:#fff;border:1px solid var(--border);padding:14px;border-radius:10px;display:inline-block;margin:8px 0}
-.days-late{color:var(--bad);font-weight:700}
-.empty{color:var(--muted);text-align:center;padding:26px 0}
-.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;margin:3px;font-size:14px}
-.subloc{padding-left:26px;color:var(--txt)}
+.thumb{width:42px;height:42px;object-fit:cover;border-radius:10px;background:var(--panel2)}
+.itemphoto{max-width:100%;max-height:220px;border-radius:14px;margin-bottom:10px}
+#qrbox{background:#fff;border:1px solid var(--border);padding:14px;border-radius:14px;display:inline-block;margin:8px 0}
+.days-late{color:var(--bad);font-weight:600}
+.empty{color:var(--muted);text-align:center;padding:30px 0}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border-radius:980px;padding:5px 13px;margin:3px;font-size:13px}
+.subloc{padding-left:26px}
 .subloc::before{content:"└ ";color:var(--muted)}
 #setup{max-width:520px;margin:40px auto;padding:0 16px}
-#syncdot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
-#syncdot.on{background:var(--ok)}
+#syncdot{width:8px;height:8px;border-radius:50%;background:var(--border2);display:inline-block}
+#syncdot.on{background:#34c759}
 @media(max-width:700px){
-  main{padding:10px}
+  main{padding:12px}
+  nav{justify-content:flex-start}
   table,thead,tbody,tr,td{display:block}
   thead{display:none}
-  tr{background:var(--panel2);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;padding:8px}
+  tr{background:var(--panel2);border-radius:12px;margin-bottom:10px;padding:8px}
+  tr:last-child td{border:none}
   td{border:none;padding:4px 8px}
   td[data-l]::before{content:attr(data-l) " : ";color:var(--muted);font-size:12px}
   .form-grid{grid-template-columns:1fr}
@@ -103,7 +109,7 @@ tr.rowlink:hover td{background:var(--panel2)}
 <body>
 
 <header>
-  <h1>🎛️ Inventaire Studio</h1>
+  <h1>AFM Inventory Tracker</h1>
   <span id="syncdot" title="Connexion Supabase"></span>
   <span class="spacer"></span>
   <button class="btn sec small" onclick="refresh()">↻ Actualiser</button>
@@ -174,8 +180,24 @@ tr.rowlink:hover td{background:var(--panel2)}
   </section>
 
   <section id="v-rep" style="display:none"></section>
-  <section id="v-people" style="display:none"></section>
-  <section id="v-loc" style="display:none"></section>
+
+  <section id="v-people" style="display:none">
+    <div class="toolbar">
+      <input id="newUser" placeholder="Nom de la personne" onkeydown="if(event.key==='Enter')addUser()">
+      <button class="btn" onclick="addUser()">+ Ajouter</button>
+    </div>
+    <div class="panel"><div id="peopleList"></div></div>
+  </section>
+
+  <section id="v-loc" style="display:none">
+    <div class="toolbar">
+      <input id="newLoc" placeholder="ex : Studio A, Rack synthés…" onkeydown="if(event.key==='Enter')addLoc()">
+      <select id="newLocParent"></select>
+      <button class="btn" onclick="addLoc()">+ Ajouter</button>
+    </div>
+    <p class="muted" style="margin-bottom:10px">Un emplacement principal = un lieu (Studio A, Régie…). Choisis "dans : …" pour créer un sous-emplacement (ex : Rack synthés dans Studio A).</p>
+    <div class="panel"><div id="locList"></div></div>
+  </section>
 </main>
 
 <!-- Modals -->
@@ -205,6 +227,10 @@ tr.rowlink:hover td{background:var(--panel2)}
   <div class="form-grid">
     <div class="field full"><label>Qui prend l'item ? *</label><select id="out-user"></select></div>
     <div class="field full"><label>Destination / raison *</label><input id="out-reason" placeholder="ex : session mobile, prêté à…, en réparation"></div>
+    <div class="field"><label>Date de retour prévue (optionnel)</label><input type="date" id="out-due"></div>
+    <div class="field"><label>&nbsp;</label>
+      <label class="checkline"><input type="checkbox" id="out-alert" checked> M'alerter si non rendu à cette date</label>
+    </div>
   </div>
   <div class="modal-actions">
     <button class="btn sec" onclick="close_('ovOut')">Annuler</button>
@@ -247,8 +273,8 @@ tr.rowlink:hover td{background:var(--panel2)}
    CONFIG — optionnel : colle ici l'URL et la clé anon de ton
    projet Supabase pour que personne n'ait à les saisir.
    ============================================================ */
-const SUPABASE_URL = "https://umqocgzeafhtqtcoygeo.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcW9jZ3plYWZodHF0Y295Z2VvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDA2MDEsImV4cCI6MjEwMDM3NjYwMX0.dI0CDOX1gW5B-h_IFaxB7udHUYYzo3f2HwkFhQBxf3A";
+const SUPABASE_URL = "";
+const SUPABASE_KEY = "";
 
 const CATS = {
   "synthe":"Synthé / clavier","boite":"Boîte à rythmes / groovebox","micro":"Micro","cable":"Câble",
@@ -281,6 +307,7 @@ function showSetup(msg){
   document.querySelector('nav').style.display = 'none';
   if(msg) document.getElementById('setupMsg').innerHTML = '⚠️ ' + esc(msg) + '<br>Vérifie l\'URL et la clé ci-dessous.';
 }
+function normCond(c){ return c==='reparer' ? 'attente' : (c||'bon'); }
 async function init(){
   const cfg = getCfg();
   if(!cfg || !cfg.url || !cfg.key){ showSetup(); return; }
@@ -294,7 +321,6 @@ async function init(){
   render();
   subscribe();
 }
-function normCond(c){ return c==='reparer' ? 'attente' : (c||'bon'); }
 async function loadAll(){
   const [it,pe,lo,hi] = await Promise.all([
     sb.from('items').select('*').order('id'),
@@ -306,7 +332,7 @@ async function loadAll(){
   db.items = it.data.map(i=>({...i,cond:normCond(i.cond)}));
   db.users = pe.data;
   db.locations = lo.data.map(l=>({name:l.name,parent:l.parent||null}));
-  db.history = hi.data.map(h=>({itemId:h.item_id,type:h.type,date:h.date,userId:h.user_id,detail:h.detail,cond:normCond(h.cond)||h.cond}));
+  db.history = hi.data.map(h=>({itemId:h.item_id,type:h.type,date:h.date,userId:h.user_id,detail:h.detail,cond:h.cond?normCond(h.cond):null}));
 }
 async function refresh(){ if(!sb) return; try{ await loadAll(); render(); }catch(e){} }
 function subscribe(){
@@ -331,7 +357,10 @@ function uid(cat){
 }
 function now(){ return new Date().toISOString(); }
 function fdate(iso){ return new Date(iso).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}); }
+function fdateD(d){ return new Date(d+'T00:00:00').toLocaleDateString('fr-FR'); }
 function daysSince(iso){ return Math.floor((Date.now()-new Date(iso))/864e5); }
+function overdue(i){ return !!(i.out && i.out.due && new Date(i.out.due+'T23:59:59') < new Date()); }
+function daysLate(i){ return Math.floor((Date.now()-new Date(i.out.due+'T23:59:59'))/864e5)+1; }
 function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function item(id){ return db.items.find(i=>i.id===id); }
 function userName(id){ const u = db.users.find(u=>u.id===id); return u?u.name:"?"; }
@@ -368,7 +397,10 @@ function show(v){
 }
 function curView(){ const b = document.querySelector('nav button.active'); return b?b.dataset.v:'dash'; }
 function close_(id){ document.getElementById(id).classList.remove('open'); }
-function open_(id){ document.getElementById(id).classList.add('open'); }
+function open_(id){
+  document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+  document.getElementById(id).classList.add('open');
+}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
 
 function render(){
@@ -386,10 +418,14 @@ function renderDash(){
   const t = db.items.length;
   const out = db.items.filter(i=>i.status==='sorti');
   const rep = db.items.filter(i=>i.cond!=='bon');
-  const late = out.filter(i=>daysSince(i.out.date)>=ALERT_DAYS);
   let alerts = "";
-  late.forEach(i=>{
-    alerts += `<div class="alert">⏰ <b>${esc(i.name)}</b> sorti depuis <b>${daysSince(i.out.date)} j</b> — ${esc(userName(i.out.userId))} (${esc(i.out.reason)})</div>`;
+  out.forEach(i=>{
+    const o = i.out;
+    if(o.due && o.alertOn!==false && overdue(i)){
+      alerts += `<div class="alert bad">⚠️ <b>${esc(i.name)}</b> — retour prévu le <b>${fdateD(o.due)}</b>, en retard de <b>${daysLate(i)} j</b> — ${esc(userName(o.userId))} (${esc(o.reason)})</div>`;
+    }else if(!o.due && daysSince(o.date)>=ALERT_DAYS){
+      alerts += `<div class="alert">⏰ <b>${esc(i.name)}</b> sorti depuis <b>${daysSince(o.date)} j</b> — ${esc(userName(o.userId))} (${esc(o.reason)})</div>`;
+    }
   });
   rep.forEach(i=>{
     alerts += `<div class="alert ${i.cond==='hs'?'bad':''}">🔧 <b>${esc(i.name)}</b> — ${CONDS[i.cond]}</div>`;
@@ -456,7 +492,8 @@ function renderInv(){
 }
 function statusTag(i){
   if(i.status==='dispo') return '<span class="tag dispo">Disponible</span>';
-  return `<span class="tag sorti">Sorti · ${daysSince(i.out.date)} j</span>`;
+  const od = overdue(i);
+  return `<span class="tag ${od?'hs':'sorti'}">Sorti · ${daysSince(i.out.date)} j${od?' ⚠️':''}</span>`;
 }
 function actionBtn(i){
   return i.status==='dispo'
@@ -541,16 +578,22 @@ function openCheckout(id){
   document.getElementById('out-item').textContent = item(id).name;
   document.getElementById('out-user').innerHTML = db.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join("");
   document.getElementById('out-reason').value = "";
+  document.getElementById('out-due').value = "";
+  document.getElementById('out-alert').checked = true;
   open_('ovOut');
 }
 async function doCheckout(){
   const reason = document.getElementById('out-reason').value.trim();
   if(!reason){ alert("Indiquez la destination ou la raison."); return; }
+  const due = document.getElementById('out-due').value || null;
+  const alertOn = document.getElementById('out-alert').checked;
   const i = item(actionId), userId = document.getElementById('out-user').value;
-  i.status = 'sorti'; i.out = {userId, date:now(), reason}; i.loc = reason;
+  i.status = 'sorti';
+  i.out = {userId, date:now(), reason, due, alertOn};
+  i.loc = reason;
   await run(sb.from('items').update({status:i.status,out:i.out,loc:i.loc}).eq('id',i.id));
-  await hist(i.id,'out',reason,userId);
-  close_('ovOut'); close_('ovDetail'); render();
+  await hist(i.id,'out',reason + (due?` — retour prévu le ${fdateD(due)}`:''),userId);
+  close_('ovOut'); render();
 }
 function openCheckin(id){
   actionId = id;
@@ -567,7 +610,7 @@ async function doCheckin(){
   i.status = 'dispo'; i.cond = cond; i.loc = i.home; i.out = null;
   await run(sb.from('items').update({status:i.status,cond,loc:i.loc,out:null}).eq('id',i.id));
   await hist(i.id,'in',note,userId,cond);
-  close_('ovIn'); close_('ovDetail'); render();
+  close_('ovIn'); render();
 }
 
 /* ================= RÉPARATIONS ================= */
@@ -590,7 +633,7 @@ async function doRepair(){
   i.cond = newCond;
   await run(sb.from('items').update({cond:newCond}).eq('id',i.id));
   await hist(id,'repair', REPACT[newCond] + (note?` — ${note}`:''), null, newCond);
-  close_('ovRep'); close_('ovDetail'); render();
+  close_('ovRep'); render();
 }
 function repSince(i){
   const h = db.history.find(h=>h.itemId===i.id && (h.type==='repair' || (h.type==='in' && h.cond && h.cond!=='bon')));
@@ -639,7 +682,7 @@ function openDetail(id){
   const rows = db.history.filter(h=>h.itemId===id).map(h=>
     `<li>${histIcon(h.type)} ${histText(h)}<div class="when">${fdate(h.date)}</div></li>`).join("");
   const outInfo = i.status==='sorti'
-    ? `<div class="alert">📤 Sorti depuis le <b>${fdate(i.out.date)}</b> (${daysSince(i.out.date)} j) — <b>${esc(userName(i.out.userId))}</b> · ${esc(i.out.reason)}</div>` : "";
+    ? `<div class="alert ${overdue(i)?'bad':''}">📤 Sorti depuis le <b>${fdate(i.out.date)}</b> (${daysSince(i.out.date)} j) — <b>${esc(userName(i.out.userId))}</b> · ${esc(i.out.reason)}${i.out.due?`<br>Retour prévu le <b>${fdateD(i.out.due)}</b>${overdue(i)?` — <span class="days-late">en retard de ${daysLate(i)} j</span>`:''}`:''}</div>` : "";
   const repBtns = i.cond==='bon'
     ? `<button class="btn sec small" onclick="openRepair('${i.id}','attente')">Signaler à réparer</button>`
     : `<button class="btn small ok" onclick="openRepair('${i.id}','bon')">Marquer réparé</button>`;
@@ -665,7 +708,7 @@ function openDetail(id){
       <button class="btn danger small" onclick="deleteItem('${i.id}')">Supprimer</button>
     </div>
     <div id="qrzone"></div>
-    <h3 style="font-size:14px;color:var(--muted);text-transform:uppercase">Historique</h3>
+    <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Historique</h3>
     <ul class="hist">${rows||'<li class="muted">Aucun mouvement</li>'}</ul>
     <div class="modal-actions"><button class="btn sec" onclick="close_('ovDetail')">Fermer</button></div>`;
   open_('ovDetail');
@@ -712,14 +755,15 @@ function renderOutList(){
     return true;
   }).sort((a,b)=>new Date(a.out.date)-new Date(b.out.date));
   document.getElementById('outList').innerHTML = rows.length ? `<table><thead><tr>
-    <th>Item</th><th>Qui</th><th>Depuis</th><th>Durée</th><th>Destination / raison</th><th></th>
+    <th>Item</th><th>Qui</th><th>Depuis</th><th>Durée</th><th>Retour prévu</th><th>Destination / raison</th><th></th>
   </tr></thead><tbody>` + rows.map(i=>{
-    const d = daysSince(i.out.date);
+    const d = daysSince(i.out.date), od = overdue(i);
     return `<tr class="rowlink" onclick="openDetail('${i.id}')">
       <td data-l="Item"><b>${esc(i.name)}</b> <span class="mono">${i.id}</span></td>
       <td data-l="Qui">${esc(userName(i.out.userId))}</td>
       <td data-l="Depuis">${fdate(i.out.date)}</td>
-      <td data-l="Durée"><span class="${d>=ALERT_DAYS?'days-late':''}">${d} j</span></td>
+      <td data-l="Durée"><span class="${(!i.out.due && d>=ALERT_DAYS)?'days-late':''}">${d} j</span></td>
+      <td data-l="Retour prévu">${i.out.due?`<span class="${od?'days-late':''}">${fdateD(i.out.due)}${od?' ⚠️':''}</span>`:'<span class="muted">—</span>'}</td>
       <td data-l="Raison">${esc(i.out.reason)}</td>
       <td onclick="event.stopPropagation()"><button class="btn small ok" onclick="openCheckin('${i.id}')">Check-in</button></td>
     </tr>`;}).join("") + "</tbody></table>"
@@ -732,75 +776,74 @@ function renderPeople(){
     const holding = db.items.filter(i=>i.status==='sorti' && i.out.userId===u.id);
     return `<tr><td data-l="Nom"><b>${esc(u.name)}</b></td>
       <td data-l="A en sa possession">${holding.length?holding.map(i=>`<span class="chip" style="cursor:pointer" onclick="openDetail('${i.id}')">${esc(i.name)} · ${daysSince(i.out.date)} j</span>`).join(""):'<span class="muted">rien</span>'}</td>
-      <td><button class="btn danger small" onclick="delUser('${u.id}')">✕</button></td></tr>`;
+      <td><button class="btn danger small" data-id="${u.id}" onclick="delUser(this.dataset.id)">✕</button></td></tr>`;
   }).join("");
-  document.getElementById('v-people').innerHTML = `
-    <div class="toolbar">
-      <input id="newUser" placeholder="Nom de la personne" onkeydown="if(event.key==='Enter')addUser()">
-      <button class="btn" onclick="addUser()">+ Ajouter</button>
-    </div>
-    <div class="panel">${db.users.length?`<table><thead><tr><th>Nom</th><th>A en sa possession</th><th></th></tr></thead><tbody>${list}</tbody></table>`:'<div class="empty">Aucune personne enregistrée.</div>'}</div>`;
+  document.getElementById('peopleList').innerHTML = db.users.length
+    ? `<table><thead><tr><th>Nom</th><th>A en sa possession</th><th></th></tr></thead><tbody>${list}</tbody></table>`
+    : '<div class="empty">Aucune personne enregistrée.</div>';
 }
 async function addUser(){
-  const n = document.getElementById('newUser').value.trim();
+  const inp = document.getElementById('newUser');
+  const n = inp.value.trim();
   if(!n) return;
   const u = {id:"u"+Date.now(),name:n};
   db.users.push(u);
-  await run(sb.from('people').insert(u));
+  inp.value = ""; inp.focus();
   renderPeople();
+  await run(sb.from('people').insert(u));
 }
 async function delUser(id){
   if(db.items.some(i=>i.status==='sorti'&&i.out.userId===id)){ alert("Cette personne a encore du matériel sorti."); return; }
   if(!confirm("Supprimer cette personne ?")) return;
   db.users = db.users.filter(u=>u.id!==id);
-  await run(sb.from('people').delete().eq('id',id));
   renderPeople();
+  await run(sb.from('people').delete().eq('id',id));
 }
 
 /* ================= EMPLACEMENTS ================= */
 function renderLoc(){
+  const sel = document.getElementById('newLocParent'), keep = sel.value;
+  sel.innerHTML = '<option value="">— emplacement principal —</option>' + locRoots().map(r=>`<option value="${esc(r.name)}">dans : ${esc(r.name)}</option>`).join("");
+  sel.value = keep;
   const locRow = (l,sub)=>{
     const n = db.items.filter(i=>i.home===l.name).length;
     const present = db.items.filter(i=>i.loc===l.name).length;
     return `<tr><td data-l="Emplacement" class="${sub?'subloc':''}"><b>${esc(l.name)}</b></td>
       <td data-l="Contenu">${n} rattaché(s) · ${present} présent(s)</td>
-      <td><button class="btn danger small" onclick="delLoc('${esc(l.name)}')">✕</button></td></tr>`;
+      <td><button class="btn danger small" data-n="${esc(l.name)}" onclick="delLoc(this.dataset.n)">✕</button></td></tr>`;
   };
   let list = "";
   locRoots().forEach(r=>{ list += locRow(r,false); locChildren(r.name).forEach(c=>list += locRow(c,true)); });
   db.locations.filter(l=>l.parent && !locObj(l.parent)).forEach(o=>list += locRow(o,false));
-  const parentOpts = '<option value="">— emplacement principal —</option>' + locRoots().map(r=>`<option value="${esc(r.name)}">dans : ${esc(r.name)}</option>`).join("");
-  document.getElementById('v-loc').innerHTML = `
-    <div class="toolbar">
-      <input id="newLoc" placeholder="ex : Studio A, Rack synthés…" onkeydown="if(event.key==='Enter')addLoc()">
-      <select id="newLocParent">${parentOpts}</select>
-      <button class="btn" onclick="addLoc()">+ Ajouter</button>
-    </div>
-    <p class="muted" style="margin-bottom:10px">Un emplacement principal = un lieu (Studio A, Régie…). Choisis "dans : …" pour créer un sous-emplacement (ex : Rack synthés dans Studio A).</p>
-    <div class="panel">${db.locations.length?`<table><thead><tr><th>Emplacement</th><th>Contenu</th><th></th></tr></thead><tbody>${list}</tbody></table>`:'<div class="empty">Aucun emplacement.</div>'}</div>`;
+  document.getElementById('locList').innerHTML = db.locations.length
+    ? `<table><thead><tr><th>Emplacement</th><th>Contenu</th><th></th></tr></thead><tbody>${list}</tbody></table>`
+    : '<div class="empty">Aucun emplacement.</div>';
 }
 async function addLoc(){
-  const n = document.getElementById('newLoc').value.trim();
+  const inp = document.getElementById('newLoc');
+  const n = inp.value.trim();
   const parent = document.getElementById('newLocParent').value||null;
-  if(!n || locObj(n)) return;
+  if(!n) return;
+  if(locObj(n)){ alert("Cet emplacement existe déjà."); return; }
   db.locations.push({name:n,parent});
-  await run(sb.from('locations').insert({name:n,parent}));
+  inp.value = ""; inp.focus();
   renderLoc();
+  await run(sb.from('locations').insert({name:n,parent}));
 }
 async function delLoc(l){
   if(locChildren(l).length){ alert("Cet emplacement contient des sous-emplacements. Supprime-les d'abord."); return; }
   if(db.items.some(i=>i.home===l)){ alert("Des items sont rattachés à cet emplacement."); return; }
   if(!confirm("Supprimer cet emplacement ?")) return;
   db.locations = db.locations.filter(x=>x.name!==l);
-  await run(sb.from('locations').delete().eq('name',l));
   renderLoc();
+  await run(sb.from('locations').delete().eq('name',l));
 }
 
 /* ================= EXPORT / IMPORT ================= */
 function exportJSON(){
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));
-  a.download = 'inventaire-studio-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'afm-inventory-' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
 }
 function importJSON(inp){
