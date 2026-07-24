@@ -111,3 +111,12 @@ une entrée en haut de [CHANGELOG.md](CHANGELOG.md), et le message du commit Git
   règles de sécurité côté base.
 - **v1.1** — Intégration au portail local du studio (page d'accueil, page guest).
 - **v1.2** — Automatisations : relances email pour le matériel en retard, récap hebdo.
+ 
+### Autres fonctionalités à ajouter par la suite:
+
+ - Catégories de reparation
+    - Instrument
+    - Informatique
+    - Autres (pour ce qui est infrastructure par exemple)
+
+  - Recencer le prix de chaque item et trier par ordre décroissant par défaut, pour voir les 'plus gros' item en premier 
