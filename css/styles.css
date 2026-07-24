@@ -1,6 +1,6 @@
 :root{
-  --bg:#f5f5f7; --panel:#ffffff; --panel2:#f5f5f7; --border:#e8e8ed; --border2:#d2d2d7;
-  --txt:#1d1d1f; --muted:#6e6e73; --accent:#0071e3; --accent2:#0077ed;
+  --bg:#1e1e1ede; --panel:#ffffff; --panel2:#f5f5f7; --border:#e8e8ed; --border2:#d2d2d7;
+  --txt:#e1e1e2; --muted:#6e6e73; --accent:#0071e3; --accent2:#0077ed;
   --ok:#1d8a3c; --warn:#b25000; --bad:#de3131; --radius:16px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
