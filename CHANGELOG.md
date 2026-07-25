@@ -3,6 +3,7 @@
 ## [0.6.1] — 2026-07-24
 ### Modifié
 - Nouvelle palette de couleurs : thème sombre façon Apple (dark mode).
+- Clés Supabase supprimés dans config.js
 
 ## [0.6.0] — 2026-07-24
 ### Modifié
