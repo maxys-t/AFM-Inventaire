@@ -105,12 +105,28 @@ une entrée en haut de [CHANGELOG.md](CHANGELOG.md), et le message du commit Git
 
 ## Feuille de route
 
-- **v0.7** — Filet de sécurité : corbeille (suppression réversible), sauvegardes
-  automatiques externes, meilleure gestion des erreurs d'enregistrement.
-- **v1.0** — Comptes utilisateurs : connexion par email, rôles admin / utilisateur,
-  règles de sécurité côté base.
-- **v1.1** — Intégration au portail local du studio (page d'accueil, page guest).
-- **v1.2** — Automatisations : relances email pour le matériel en retard, récap hebdo.
+**Décisions de conception (v1.0)**
+- Application réservée au personnel : les clients ne voient jamais l'app.
+- Les emprunteurs n'ont pas de compte (simples noms en texte libre).
+- Les artistes sont gérés via l'onglet Projets : un projet à leur nom, auquel on
+  ajoute le matériel au fur et à mesure.
+- Les trois ingénieurs à temps plein sont administrateurs (tous les droits :
+  ajout, suppression, gestion complète).
+- Les stagiaires auront un rôle restreint, à définir (a priori : consultation +
+  check-out / check-in, sans suppression).
+
+**Versions à venir**
+- **v0.7 — Filet de sécurité** : corbeille (suppression réversible pendant 30 jours),
+  sauvegardes automatiques externes (GitHub Action, puis serveur local du studio),
+  meilleure gestion des erreurs d'enregistrement.
+- **v1.0 — Comptes utilisateurs** : connexion du personnel par email (lien magique),
+  rôles admin / stagiaire, et règles de sécurité côté base (l'accès et les
+  suppressions ne sont plus ouverts à tous). L'authentification réserve l'app au
+  personnel et signe chaque action dans l'historique.
+- **v1.1 — Écosystème studio** : intégration au portail local du studio
+  (page d'accueil, page guest wifi / bons plans), l'inventaire comme service interne.
+- **v1.2 — Automatisations** : relances email pour le matériel en retard,
+  récapitulatif hebdomadaire du matériel sorti et des réparations en attente.
  
 ### Autres fonctionalités à ajouter par la suite:
 
