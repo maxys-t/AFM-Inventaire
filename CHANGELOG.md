@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.2] — 2026-07-25
+### Modifié
+- Update Feuille de route dans READ ME
+  
 ## [0.6.1] — 2026-07-24
 ### Modifié
 - Nouvelle palette de couleurs : thème sombre façon Apple (dark mode).
