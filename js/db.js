@@ -5,7 +5,8 @@
    ============================================================ */
 
 let sb = null;
-let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:false};
+let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:false,
+          trash:[],trashSupported:true};
 let syncState = 'off';   // 'ok' | 'off' | 'error'
 
 /* ================= CONNEXION ================= */
@@ -49,7 +50,12 @@ async function loadAll(){
     sb.from('history').select('*').order('date',{ascending:false}).limit(1000)
   ]);
   for(const r of [it,pe,lo,hi]) if(r.error) throw r.error;
-  db.items = it.data.map(i=>({...i,cond:normCond(i.cond)}));
+  // Corbeille : les items portant une date de suppression sont mis de côté.
+  // Si la colonne n'existe pas encore (migration 004 non passée), tout reste actif.
+  const all = it.data.map(i=>({...i,cond:normCond(i.cond)}));
+  db.trashSupported = all.length===0 || Object.prototype.hasOwnProperty.call(all[0],'deleted_at');
+  db.trash = all.filter(i=>i.deleted_at).sort((a,b)=>new Date(b.deleted_at)-new Date(a.deleted_at));
+  db.items = all.filter(i=>!i.deleted_at);
   db.users = pe.data;
   db.locations = lo.data.map(l=>({name:l.name,parent:l.parent||null}));
   db.history = hi.data.map(h=>({itemId:h.item_id,type:h.type,date:h.date,userId:h.user_id,detail:h.detail,cond:h.cond?normCond(h.cond):null}));
@@ -166,7 +172,13 @@ async function hist(itemId,type,detail,userId,cond){
 /* --- items --- */
 async function apiInsertItems(rows){ await run(sb.from('items').insert(rows)); }
 async function apiUpdateItem(id, fields){ await run(sb.from('items').update(fields).eq('id', id)); }
-async function apiDeleteItem(id){
+
+/* Corbeille : l'item est marqué supprimé, son historique est conservé. */
+async function apiTrashItem(id){ await run(sb.from('items').update({deleted_at:now()}).eq('id', id)); }
+async function apiRestoreItem(id){ await run(sb.from('items').update({deleted_at:null}).eq('id', id)); }
+
+/* Suppression définitive (item + historique) — irréversible. */
+async function apiPurgeItem(id){
   await run(sb.from('history').delete().eq('item_id', id));
   await run(sb.from('items').delete().eq('id', id));
 }
