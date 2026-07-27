@@ -106,3 +106,44 @@ tr.rowlink:hover td{background:var(--panel2)}
   #labelPrint,#labelPrint *{visibility:visible}
   #labelPrint{position:fixed;left:0;top:0;background:#fff;color:#000}
 }
+
+#toasts{
+  position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+  z-index:100; display:flex; flex-direction:column; gap:8px;
+  width:min(520px, calc(100% - 24px)); pointer-events:none;
+}
+.toast{
+  display:flex; align-items:center; gap:10px;
+  background:var(--panel); color:var(--txt);
+  border:1px solid var(--border); border-radius:14px;
+  padding:11px 14px; font-size:14px;
+  box-shadow:0 8px 30px rgba(0,0,0,.35);
+  pointer-events:auto;
+  animation:toastIn .18s ease-out;
+}
+@keyframes toastIn{ from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
+.toast .ic{ flex:none; font-size:15px }
+.toast .msg{ flex:1 }
+.toast.ok{ border-color:var(--ok) }
+.toast.ok .ic{ color:var(--ok) }
+.toast.error{ border-color:var(--bad) }
+.toast.error .ic{ color:var(--bad) }
+.toast .act{
+  flex:none; background:var(--accent); color:#fff; border:none;
+  border-radius:980px; padding:5px 12px; font-size:13px; font-weight:500; cursor:pointer;
+}
+.toast .act:hover{ background:var(--accent2) }
+.toast .cl{
+  flex:none; background:none; border:none; color:var(--muted);
+  font-size:14px; cursor:pointer; padding:0 2px;
+}
+.toast .cl:hover{ color:var(--txt) }
+ 
+/* Pastille de connexion : rouge et pulsante quand la liaison est perdue */
+#syncdot.off{ background:var(--bad); animation:dotPulse 1.4s ease-in-out infinite }
+@keyframes dotPulse{ 0%,100%{ opacity:1 } 50%{ opacity:.35 } }
+ 
+@media(max-width:700px){
+  #toasts{ bottom:10px }
+  .toast{ font-size:13px; padding:10px 12px }
+}
