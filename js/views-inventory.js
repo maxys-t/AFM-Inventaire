@@ -118,11 +118,21 @@ function saveItem(){
   } else finish(null);
 }
 async function deleteItem(id){
-  if(!confirm("Supprimer définitivement cet item et son historique ?")) return;
-  db.items = db.items.filter(i=>i.id!==id);
-  db.history = db.history.filter(h=>h.itemId!==id);
-  await apiDeleteItem(id);
+  const i = item(id);
+  if(!i) return;
+  if(!db.trashSupported){
+    alert("La corbeille n'est pas encore activée : exécute sql/004-corbeille.sql dans Supabase.");
+    return;
+  }
+  if(i.status==='sorti' && !confirm(`« ${i.name} » est actuellement sorti (${outBy(i)}).\nLe mettre quand même à la corbeille ?`)) return;
+  else if(i.status!=='sorti' && !confirm(`Mettre « ${i.name} » à la corbeille ?\n\nIl sera récupérable pendant ${typeof TRASH_DAYS==='number'?TRASH_DAYS:30} jours, avec son historique.`)) return;
+  db.items = db.items.filter(x=>x.id!==id);
+  i.deleted_at = now();
+  db.trash.unshift(i);
   close_('ovDetail'); render();
+  if(typeof updateTrashBadge==='function') updateTrashBadge();
+  await apiTrashItem(id);
+  toast(`« ${i.name} » mis à la corbeille.`, 'ok', "Annuler", ()=>restoreItem(id));
 }
 
 /* ---- check-out / check-in ---- */
@@ -197,7 +207,7 @@ function openDetail(id){
       ${repBtns}
       <button class="btn sec small" onclick="openItemForm('${i.id}')">Modifier</button>
       <button class="btn sec small" onclick="showLabel('${i.id}')">Étiquette / QR</button>
-      <button class="btn danger small" onclick="deleteItem('${i.id}')">Supprimer</button>
+      <button class="btn danger small" onclick="deleteItem('${i.id}')">Mettre à la corbeille</button>
     </div>
     <div id="qrzone"></div>
     <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Historique</h3>
