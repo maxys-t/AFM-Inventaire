@@ -4,7 +4,7 @@ Application web de gestion de l'inventaire du studio AFM : matériel, prêts,
 réparations, emplacements et projets de tournée. Pensée pour être simple à
 utiliser au quotidien, sur ordinateur comme sur mobile.
 
-> Version actuelle : **0.6.2** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
+> Version actuelle : **0.7.0** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
 
 ## À quoi ça sert
 
@@ -20,6 +20,7 @@ utiliser au quotidien, sur ordinateur comme sur mobile.
   avec checklist de préparation et passage automatique en mode « Show » (check-out groupé).
 - **Tableau de bord** : vue d'ensemble, alertes (retards, matériel à réparer),
   activité récente.
+- **Corbeille** : un item supprimé reste récupérable 30 jours, avec tout son historique.
 
 Les données sont partagées en temps réel entre tous les utilisateurs via Supabase :
 une action faite par une personne apparaît chez les autres sans recharger la page.
@@ -30,6 +31,10 @@ une action faite par une personne apparaît chez les autres sans recharger la pa
 - **Sur mobile** : la même URL, interface responsive — idéal en tournée ou session mobile.
 - **Exporter / Importer** : boutons dans l'en-tête pour sauvegarder ou recharger
   toutes les données au format JSON.
+- **Corbeille** : bouton 🗑 dans l'en-tête, visible uniquement quand elle contient
+  quelque chose (avec le nombre d'items).
+- **Pastille de connexion** : verte = tout est synchronisé, rouge clignotante =
+  connexion perdue, les modifications ne sont pas enregistrées.
 
 ## Architecture du code
 
@@ -48,7 +53,8 @@ js/views-projects.js    Écran Projets (templates de tournée, checklist, mode S
 js/views-out.js         Écran Sortis
 js/views-repairs.js     Écran Réparations
 js/views-people-loc.js  Écrans Personnes & Emplacements
-js/app.js               Navigation, fenêtres, export/import, démarrage
+js/views-trash.js       Corbeille (restauration, purge)
+js/app.js               Navigation, fenêtres, notifications, export/import, démarrage
 sql/                    Scripts de la base de données, à exécuter dans l'ordre
 ```
 
@@ -71,6 +77,7 @@ config → helpers → db → vues → app. Ne pas le modifier.
 | Ajouter / renommer une catégorie           | `js/config.js` (`CATS` + `CATCODE`) |
 | Changer le titre, les noms d'onglets       | `js/config.js` (`LABELS`)        |
 | Changer le seuil d'alerte (7 jours)        | `js/config.js` (`ALERT_DAYS`)    |
+| Changer la durée de la corbeille (30 jours)| `js/config.js` (`TRASH_RETENTION_DAYS`) |
 | Corriger un écran                          | `js/views-….js` correspondant    |
 | Modifier un enregistrement en base         | `js/db.js`                       |
 
@@ -84,28 +91,43 @@ joués dans l'ordre (SQL Editor de Supabase) sur un nouveau projet :
 1. `001-init.sql` — schéma initial
 2. `002-reparations-sousemplacements.sql` — états de réparation + sous-emplacements
 3. `003-projets.sql` — projets / tournées
+4. `004-corbeille.sql` — suppression réversible
 
 Les identifiants Supabase (URL + clé publique `anon`) sont dans `js/config.js`.
 
 > **Sécurité** : dans la version actuelle, l'accès est libre pour toute personne
 > disposant de l'URL du site (prototype). L'authentification par comptes
-> (admin / utilisateur) est prévue pour la v1.0.
+> (admin / stagiaire) est prévue pour la v1.0.
+
+## Sauvegardes
+
+Un repo **privé séparé** (`AFM-Inventaire-Backup`) exporte automatiquement toute la
+base chaque nuit via GitHub Actions et conserve 90 jours de sauvegardes datées.
+La clé secrète Supabase n'existe que dans les Secrets de ce repo privé — jamais ici.
+
+**Restaurer** : télécharger le fichier voulu (`backups/latest.json` ou une date
+précise), puis utiliser le bouton **Importer** de l'application. Les deux formats
+(sauvegarde automatique et export manuel) sont acceptés.
+
+> À ne pas faire sur la base de production « pour voir » : l'import ajoute
+> l'historique sans écraser l'existant, ce qui créerait des doublons.
 
 ## Déploiement (mise à jour du site)
 
 1. Uploader le contenu du dossier à la racine du repo GitHub
    (`index.html` + dossiers `css/`, `js/`, `sql/`).
 2. **Important** : après chaque mise à jour, incrémenter le paramètre `?v=` dans
-   `index.html` (ex : `?v=0.6.1` → `?v=0.6.2`) pour forcer les navigateurs à
+   `index.html` (ex : `?v=0.7.0` → `?v=0.7.1`) pour forcer les navigateurs à
    recharger les fichiers au lieu d'utiliser une version en cache.
 3. GitHub Pages republie automatiquement en ~1 minute.
 
-À chaque changement, penser à mettre à jour ensemble : le `?v=` dans `index.html`,
-une entrée en haut de [CHANGELOG.md](CHANGELOG.md), et le message du commit Git.
+À chaque changement, suivre la checklist de [UPDATE-PROCESS.md](UPDATE-PROCESS.md) :
+`?v=` dans `index.html`, entrée en haut du [CHANGELOG.md](CHANGELOG.md), commit Git.
 
 ## Feuille de route
 
 **Décisions de conception (v1.0)**
+
 - Application réservée au personnel : les clients ne voient jamais l'app.
 - Les emprunteurs n'ont pas de compte (simples noms en texte libre).
 - Les artistes sont gérés via l'onglet Projets : un projet à leur nom, auquel on
@@ -114,25 +136,24 @@ une entrée en haut de [CHANGELOG.md](CHANGELOG.md), et le message du commit Git
   ajout, suppression, gestion complète).
 - Les stagiaires auront un rôle restreint, à définir (a priori : consultation +
   check-out / check-in, sans suppression).
+- La purge définitive de la corbeille sera réservée aux administrateurs.
 
 **Versions à venir**
-- **v0.7 — Filet de sécurité** : corbeille (suppression réversible pendant 30 jours),
-  sauvegardes automatiques externes (GitHub Action, puis serveur local du studio),
-  meilleure gestion des erreurs d'enregistrement.
+
 - **v1.0 — Comptes utilisateurs** : connexion du personnel par email (lien magique),
   rôles admin / stagiaire, et règles de sécurité côté base (l'accès et les
   suppressions ne sont plus ouverts à tous). L'authentification réserve l'app au
   personnel et signe chaque action dans l'historique.
+  *Préalable : créer un projet Supabase « bac à sable » pour tester sans risque.*
 - **v1.1 — Écosystème studio** : intégration au portail local du studio
   (page d'accueil, page guest wifi / bons plans), l'inventaire comme service interne.
+  Sauvegarde complète supplémentaire sur le serveur du studio.
 - **v1.2 — Automatisations** : relances email pour le matériel en retard,
   récapitulatif hebdomadaire du matériel sorti et des réparations en attente.
- 
-### Autres fonctionalités à ajouter par la suite:
 
- - Catégories de reparation
-    - Instrument
-    - Informatique
-    - Autres (pour ce qui est infrastructure par exemple)
+**Idées pour plus tard (non planifiées)**
 
-  - Recencer le prix de chaque item et trier par ordre décroissant par défaut, pour voir les 'plus gros' item en premier 
+- **Catégories de réparation** : distinguer Instrument / Informatique / Autre
+  (infrastructure, mobilier…) pour filtrer et suivre les réparations par nature.
+- **Valeur du matériel** : renseigner le prix de chaque item, avec tri décroissant
+  par défaut pour voir les pièces les plus coûteuses en premier.
