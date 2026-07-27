@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.0] — 2026-07-27
+### Ajouté
+- Sauvegarde automatique quotidienne de la base (repo privé dédié, GitHub Actions).
+- Confirmation visuelle des enregistrements et messages d'erreur explicites en cas d'échec.
+- Détection de la perte de connexion (pastille rouge, alerte, rechargement automatique au retour).
+### Modifié
+- Après un échec d'enregistrement, l'application se resynchronise avec la base pour ne
+  jamais afficher une action qui n'a pas été enregistrée. La fenêtre et la saisie sont conservées.
+- L'import accepte désormais les fichiers de sauvegarde automatique (format base
+  de données), en plus des exports manuels de l'application.
+
 ## [0.6.2] — 2026-07-25
 ### Modifié
 - Update Feuille de route dans READ ME
