@@ -6,6 +6,7 @@
 
 let sb = null;
 let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:false};
+let syncState = 'off';   // 'ok' | 'off' | 'error'
 
 /* ================= CONNEXION ================= */
 function getCfg(){
@@ -34,9 +35,10 @@ async function init(){
   document.getElementById('setup').style.display = 'none';
   document.querySelector('main').style.display = '';
   document.querySelector('nav').style.display = 'flex';
-  document.getElementById('syncdot').classList.add('on');
+  setSync('ok');
   render();
   subscribe();
+  watchConnection();
 }
 function normCond(c){ return c==='reparer' ? 'attente' : (c||'bon'); }
 async function loadAll(){
@@ -55,7 +57,11 @@ async function loadAll(){
   db.projectsError = !!pr.error;
   db.projects = pr.error ? [] : pr.data.map(p=>({...p,item_ids:p.item_ids||[],prep:p.prep||{}}));
 }
-async function refresh(){ if(!sb) return; try{ await loadAll(); render(); }catch(e){} }
+async function refresh(){
+  if(!sb) return false;
+  try{ await loadAll(); render(); setSync('ok'); return true; }
+  catch(e){ setSync(navigator.onLine === false ? 'off' : 'error'); return false; }
+}
 function subscribe(){
   let t = null;
   try{
@@ -64,9 +70,73 @@ function subscribe(){
     }).subscribe();
   }catch(e){}
 }
+
+/* ================= ÉTAT DE LA SYNCHRONISATION =================
+   Objectif : ne jamais laisser croire qu'une action est enregistrée
+   alors qu'elle a échoué (wifi capricieux en tournée, par exemple). */
+
+function setSync(state){
+  syncState = state;
+  const dot = document.getElementById('syncdot');
+  if(!dot) return;
+  dot.classList.toggle('on', state==='ok');
+  dot.classList.toggle('off', state!=='ok');
+  dot.title = state==='ok' ? "Connecté — données synchronisées"
+            : state==='off' ? "Hors ligne — les modifications ne sont pas enregistrées"
+            : "Problème de synchronisation — recharge la page";
+}
+
+/* Un enregistrement réussi : confirmation discrète et groupée
+   (une seule notification même si l'action a écrit plusieurs fois). */
+let okTimer = null;
+function markSynced(){
+  setSync('ok');
+  clearTimeout(okTimer);
+  okTimer = setTimeout(()=>{ if(typeof toast==='function') toast("Enregistré", 'ok'); }, 350);
+}
+
+function isNetworkError(e){
+  if(navigator.onLine === false) return true;
+  const m = ((e && (e.message||e.msg)) || '').toLowerCase();
+  return m.includes('fetch') || m.includes('network') || m.includes('timeout') || m.includes('connexion');
+}
+function handleWriteError(e){
+  clearTimeout(okTimer);                       // surtout pas de "Enregistré" après un échec
+  const network = isNetworkError(e);
+  setSync(network ? 'off' : 'error');
+  const msg = network
+    ? "Pas de connexion — la modification n'a PAS été enregistrée."
+    : "Refusé par la base : " + ((e && e.message) || "erreur inconnue");
+  if(typeof toast==='function'){
+    toast(msg, 'error', "Recharger", async ()=>{ await refresh(); });
+  }else{
+    alert(msg);
+  }
+  // L'état affiché peut diverger de la base : on tente de se resynchroniser.
+  setTimeout(()=>{ if(navigator.onLine !== false) refresh(); }, 1200);
+}
+
+/* Point de passage unique de TOUTES les écritures. */
 async function run(promise){
-  const {error} = await promise;
-  if(error){ alert("Erreur d'enregistrement : " + error.message); throw error; }
+  let res;
+  try{ res = await promise; }
+  catch(e){ handleWriteError(e); throw e; }
+  if(res && res.error){ handleWriteError(res.error); throw res.error; }
+  markSynced();
+  return res;
+}
+
+/* Surveillance de la connexion du navigateur */
+function watchConnection(){
+  window.addEventListener('offline', ()=>{
+    setSync('off');
+    if(typeof toast==='function') toast("Connexion perdue — ne fais pas de modification tant qu'elle n'est pas rétablie.", 'error', null, null, 8000);
+  });
+  window.addEventListener('online', async ()=>{
+    if(typeof toast==='function') toast("Connexion rétablie — actualisation…", 'info');
+    await refresh();
+  });
+  if(navigator.onLine === false) setSync('off');
 }
 
 /* ================= LECTURES (état en mémoire) ================= */
