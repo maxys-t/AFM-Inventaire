@@ -10,6 +10,7 @@ function show(v){
 }
 function curView(){ const b = document.querySelector('nav button.active'); return b?b.dataset.v:'dash'; }
 function render(){
+  if(typeof updateTrashBadge==='function') updateTrashBadge();
   const v = curView();
   if(v==='dash') renderDash();
   if(v==='inv'){ fillFilters(); renderInv(); }
@@ -68,8 +69,12 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
 
 /* ---- export / import JSON ---- */
 function exportJSON(){
+  // On inclut les items de la corbeille (avec leur date de suppression)
+  // pour que l'export soit une image complète de la base.
+  const out = {...db, items:[...db.items, ...db.trash]};
+  delete out.trash; delete out.trashSupported; delete out.projectsError;
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));
   a.download = 'afm-inventory-' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
 }
@@ -108,7 +113,8 @@ function importJSON(inp){
       if(d.users.length) await apiUpsertPeople(d.users);
       if(d.items.length) await apiUpsertItems(d.items.map(i=>({
         id:i.id,name:i.name,cat:i.cat,brand:i.brand||"",serial:i.serial||"",cond:normCond(i.cond),
-        notes:i.notes||"",photo:i.photo||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null
+        notes:i.notes||"",photo:i.photo||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null,
+        ...(db.trashSupported ? {deleted_at:i.deleted_at||null} : {})
       })));
       if(d.projects.length) await apiUpsertProjects(d.projects.map(p=>({
         id:p.id,name:p.name,description:p.description||"",status:p.status||'inactif',
