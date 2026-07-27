@@ -14,6 +14,7 @@
   <h1>AFM Inventory Tracker</h1>
   <span id="syncdot" title="Connexion Supabase"></span>
   <span class="spacer"></span>
+  <button class="btn sec small" id="trashBtn" onclick="openTrash()" title="Corbeille" style="display:none">🗑<span id="trashCount"></span></button>
   <button class="btn sec small" onclick="refresh()">↻ Actualiser</button>
   <button class="btn sec small" onclick="exportJSON()">Exporter</button>
   <button class="btn sec small" onclick="document.getElementById('importFile').click()">Importer</button>
@@ -191,6 +192,8 @@
 
 <div class="overlay" id="ovDetail"><div class="modal" id="detailBody"></div></div>
 
+<div class="overlay" id="ovTrash"><div class="modal" id="trashBody"></div></div>
+
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
@@ -203,6 +206,7 @@
 <script src="js/views-out.js?v=0.7.0"></script>
 <script src="js/views-repairs.js?v=0.7.0"></script>
 <script src="js/views-people-loc.js?v=0.7.0"></script>
+<script src="js/views-trash.js?v=0.7.0"></script>
 <script src="js/app.js?v=0.7.0"></script>
 </body>
 </html>
