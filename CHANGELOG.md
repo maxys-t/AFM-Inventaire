@@ -2,14 +2,25 @@
 
 ## [0.7.0] — 2026-07-27
 ### Ajouté
-- Sauvegarde automatique quotidienne de la base (repo privé dédié, GitHub Actions).
-- Confirmation visuelle des enregistrements et messages d'erreur explicites en cas d'échec.
-- Détection de la perte de connexion (pastille rouge, alerte, rechargement automatique au retour).
+- **Corbeille** : un item supprimé n'est plus effacé, il reste récupérable 30 jours
+  avec tout son historique. Bouton 🗑 dans l'en-tête (visible seulement si elle
+  contient quelque chose), avec restauration ou suppression définitive.
+- **Sauvegarde automatique quotidienne** de la base dans un repo privé dédié
+  (GitHub Actions), 90 jours de sauvegardes datées conservées.
+- **Confirmation visuelle des enregistrements** et messages d'erreur explicites
+  en cas d'échec, avec bouton de rechargement.
+- **Détection de la perte de connexion** : pastille rouge clignotante, alerte, et
+  rechargement automatique au retour du réseau.
 ### Modifié
-- Après un échec d'enregistrement, l'application se resynchronise avec la base pour ne
-  jamais afficher une action qui n'a pas été enregistrée. La fenêtre et la saisie sont conservées.
-- L'import accepte désormais les fichiers de sauvegarde automatique (format base
-  de données), en plus des exports manuels de l'application.
+- Après un échec d'enregistrement, l'application se resynchronise avec la base pour
+  ne jamais afficher une action qui n'a pas été enregistrée. La fenêtre reste ouverte
+  et la saisie est conservée.
+- L'export inclut désormais les items de la corbeille, pour être une image complète
+  de la base.
+- Les boîtes de dialogue bloquantes sont remplacées par des notifications discrètes.
+### Corrigé
+- L'import accepte les fichiers de sauvegarde automatique (format base de données),
+  en plus des exports manuels de l'application.
 
 ## [0.6.2] — 2026-07-25
 ### Modifié
