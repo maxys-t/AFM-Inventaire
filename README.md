@@ -145,10 +145,7 @@ précise), puis utiliser le bouton **Importer** de l'application. Les deux forma
   suppressions ne sont plus ouverts à tous). L'authentification réserve l'app au
   personnel et signe chaque action dans l'historique.
   *Préalable : créer un projet Supabase « bac à sable » pour tester sans risque.*
-- **v1.1 — Écosystème studio** : intégration au portail local du studio
-  (page d'accueil, page guest wifi / bons plans), l'inventaire comme service interne.
-  Sauvegarde complète supplémentaire sur le serveur du studio.
-- **v1.2 — Automatisations** : relances email pour le matériel en retard,
+- **v1.xx — Automatisations** : relances email pour le matériel en retard,
   récapitulatif hebdomadaire du matériel sorti et des réparations en attente.
 
 **Idées pour plus tard (non planifiées)**
