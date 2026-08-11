@@ -5,7 +5,7 @@
 /* ---- navigation entre onglets ---- */
 function show(v){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
-  ['dash','inv','proj','out','rep','people','loc'].forEach(x=>document.getElementById('v-'+x).style.display = x===v?'':'none');
+  ['dash','inv','proj','out','rep','people','loc','users'].forEach(x=>document.getElementById('v-'+x).style.display = x===v?'':'none');
   render();
 }
 function curView(){ const b = document.querySelector('nav button.active'); return b?b.dataset.v:'dash'; }
@@ -19,6 +19,7 @@ function render(){
   if(v==='rep') renderRep();
   if(v==='people') renderPeople();
   if(v==='loc') renderLoc();
+  if(v==='users') renderUsers();
 }
 
 /* ---- notifications (bandeau en bas d'écran) ----
