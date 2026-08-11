@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0] — 2026-08-09
+### Ajouté
+- **Comptes utilisateurs** : connexion du personnel par lien magique (email, sans
+  mot de passe). L'application n'est plus accessible sans compte autorisé.
+- **Rôles** : administrateur (tous les droits) et stagiaire (consultation,
+  check-out / check-in, signalement de réparations, préparation des projets).
+- **Écran Utilisateurs** réservé aux admins : autoriser un email, changer un rôle,
+  désactiver ou retirer un compte — sans passer par Supabase.
+- **Historique signé** : chaque action indique qui l'a effectuée.
+### Modifié
+- Les règles de sécurité sont désormais appliquées côté base de données : une action
+  interdite est refusée même en contournant l'interface.
+- Envoi des emails via un service dédié (Resend) au lieu du service intégré de Supabase.
+### Sécurité
+- Fin de l'accès anonyme : posséder l'URL du site ne suffit plus pour voir ou modifier
+  l'inventaire.
+  
 ## [0.7.0] — 2026-07-27
 ### Ajouté
 - **Corbeille** : un item supprimé n'est plus effacé, il reste récupérable 30 jours
