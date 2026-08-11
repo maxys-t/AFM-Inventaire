@@ -61,13 +61,23 @@ async function signOut(){
   location.reload();
 }
 
-/* ---- Profil du compte connecté ---- */
+/* ---- Profil du compte connecté ----
+   Si aucune ligne n'est rattachée à ce compte, on tente un rattachement
+   par email (cas d'un compte créé avant la mise en place des comptes),
+   puis on réessaie une fois. */
 async function loadMe(userId){
+  let p = await fetchProfile(userId);
+  if(!p){
+    try{ await sb.rpc('claim_profile'); }catch(e){}
+    p = await fetchProfile(userId);
+  }
+  if(!p || p.active === false) return null;
+  return p;
+}
+async function fetchProfile(userId){
   const {data,error} = await sb.from('profiles').select('*').eq('user_id',userId).limit(1);
   if(error || !data || !data.length) return null;
-  const p = data[0];
-  if(p.active === false) return null;
-  return p;
+  return data[0];
 }
 
 function renderUserChip(){
