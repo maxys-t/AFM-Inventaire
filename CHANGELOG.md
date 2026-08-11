@@ -12,7 +12,6 @@
 ### Modifié
 - Les règles de sécurité sont désormais appliquées côté base de données : une action
   interdite est refusée même en contournant l'interface.
-- Envoi des emails via un service dédié (Resend) au lieu du service intégré de Supabase.
 ### Sécurité
 - Fin de l'accès anonyme : posséder l'URL du site ne suffit plus pour voir ou modifier
   l'inventaire.
