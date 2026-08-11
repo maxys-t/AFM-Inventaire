@@ -6,7 +6,7 @@
 
 let sb = null;
 let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:false,
-          trash:[],trashSupported:true};
+          trash:[],trashSupported:true,profiles:[]};
 let syncState = 'off';   // 'ok' | 'off' | 'error'
 
 /* ================= CONNEXION ================= */
@@ -31,15 +31,52 @@ async function init(){
   const cfg = getCfg();
   if(!cfg || !cfg.url || !cfg.key){ showSetup(); return; }
   sb = supabase.createClient(cfg.url, cfg.key);
-  try{ await loadAll(); }
-  catch(e){ localStorage.removeItem('sbCfg'); showSetup(e.message||"connexion impossible"); return; }
   document.getElementById('setup').style.display = 'none';
-  document.querySelector('main').style.display = '';
-  document.querySelector('nav').style.display = 'flex';
+
+  // Le lien magique renvoie sur la page avec un jeton : on laisse
+  // supabase-js l'exploiter, puis on nettoie l'adresse.
+  const {data:{session}} = await sb.auth.getSession();
+  if(location.hash.includes('access_token')) history.replaceState(null,'',location.pathname);
+
+  sb.auth.onAuthStateChange((event)=>{
+    if(event === 'SIGNED_IN' && !me) startSession();
+    if(event === 'SIGNED_OUT'){ me = null; showScreen('login'); }
+  });
+
+  if(!session){ showScreen('login'); return; }
+  await startSession();
+}
+
+/* Une fois connecté : charger le profil, vérifier l'autorisation, démarrer */
+async function startSession(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){ showScreen('login'); return; }
+
+  me = await loadMe(session.user.id);
+  if(!me){
+    // Compte non inscrit par un administrateur, ou désactivé
+    const em = document.getElementById('denied-mail');
+    if(em) em.textContent = session.user.email || '';
+    showScreen('denied');
+    renderUserChip();
+    return;
+  }
+
+  try{ await loadAll(); }
+  catch(e){
+    showScreen('login');
+    const msg = document.getElementById('login-msg');
+    if(msg) msg.textContent = "Connexion à la base impossible : " + (e.message||"");
+    return;
+  }
+
+  showScreen('app');
+  applyRoleUI();
   setSync('ok');
   render();
   subscribe();
   watchConnection();
+  touchLastSeen();
 }
 function normCond(c){ return c==='reparer' ? 'attente' : (c||'bon'); }
 async function loadAll(){
@@ -58,10 +95,14 @@ async function loadAll(){
   db.items = all.filter(i=>!i.deleted_at);
   db.users = pe.data;
   db.locations = lo.data.map(l=>({name:l.name,parent:l.parent||null}));
-  db.history = hi.data.map(h=>({itemId:h.item_id,type:h.type,date:h.date,userId:h.user_id,detail:h.detail,cond:h.cond?normCond(h.cond):null}));
+  db.history = hi.data.map(h=>({itemId:h.item_id,type:h.type,date:h.date,userId:h.user_id,
+                                detail:h.detail,cond:h.cond?normCond(h.cond):null,actorName:h.actor_name||null}));
   const pr = await sb.from('projects').select('*').order('created_at');
   db.projectsError = !!pr.error;
   db.projects = pr.error ? [] : pr.data.map(p=>({...p,item_ids:p.item_ids||[],prep:p.prep||{}}));
+
+  const pf = await sb.from('profiles').select('*').order('email');
+  db.profiles = pf.error ? [] : pf.data;
 }
 async function refresh(){
   if(!sb) return false;
@@ -161,9 +202,11 @@ function projProgress(p){
 
 /* ================= HISTORIQUE ================= */
 async function hist(itemId,type,detail,userId,cond){
-  const h = {itemId,type,date:now(),detail:detail||"",userId:userId||null,cond:cond||null};
+  const actorName = me ? (me.name || me.email) : null;
+  const h = {itemId,type,date:now(),detail:detail||"",userId:userId||null,cond:cond||null,actorName};
   db.history.unshift(h);
-  await run(sb.from('history').insert({item_id:itemId,type,date:h.date,detail:h.detail,user_id:h.userId,cond:h.cond}));
+  await run(sb.from('history').insert({item_id:itemId,type,date:h.date,detail:h.detail,
+    user_id:h.userId,cond:h.cond,actor_id:me?me.user_id:null,actor_name:actorName}));
 }
 
 /* ================= API — ÉCRITURES =================
@@ -195,6 +238,11 @@ async function apiDeleteLocation(name){ await run(sb.from('locations').delete().
 async function apiInsertProject(p){ await run(sb.from('projects').insert(p)); }
 async function apiUpdateProject(id, fields){ await run(sb.from('projects').update(fields).eq('id', id)); }
 async function apiDeleteProject(id){ await run(sb.from('projects').delete().eq('id', id)); }
+
+/* --- comptes (réservé aux administrateurs par les règles de la base) --- */
+async function apiInsertProfile(p){ await run(sb.from('profiles').insert(p)); }
+async function apiUpdateProfile(id, fields){ await run(sb.from('profiles').update(fields).eq('id', id)); }
+async function apiDeleteProfile(id){ await run(sb.from('profiles').delete().eq('id', id)); }
 
 /* --- import JSON (upserts en masse) --- */
 async function apiUpsertLocations(rows){ await run(sb.from('locations').upsert(rows)); }
