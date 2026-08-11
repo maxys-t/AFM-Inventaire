@@ -147,3 +147,27 @@ tr.rowlink:hover td{background:var(--panel2)}
   #toasts{ bottom:10px }
   .toast{ font-size:13px; padding:10px 12px }
 }
+/* ============================================================
+   v1.0 — Connexion et comptes
+   À COLLER À LA FIN de css/styles.css (ne rien remplacer)
+   ============================================================ */
+
+/* Écrans de connexion / accès refusé */
+#login, #denied{ max-width:480px; margin:60px auto; padding:0 16px }
+#login .panel, #denied .panel{ padding:24px }
+#login h2, #denied h2{
+  font-size:20px; font-weight:600; letter-spacing:-.01em;
+  color:var(--txt); text-transform:none; margin-bottom:14px;
+}
+
+/* Bloc utilisateur dans l'en-tête */
+#userChip{ display:flex; align-items:center; gap:8px; font-size:13px }
+#userChip .who{
+  color:var(--txt); font-weight:500;
+  max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
+@media(max-width:700px){
+  #login, #denied{ margin:24px auto }
+  #userChip .who{ max-width:90px }
+}
