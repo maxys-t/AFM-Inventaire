@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=0.7.0">
+<link rel="stylesheet" href="css/styles.css?v=1.0.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -14,10 +14,11 @@
   <h1>AFM Inventory Tracker</h1>
   <span id="syncdot" title="Connexion Supabase"></span>
   <span class="spacer"></span>
-  <button class="btn sec small" id="trashBtn" onclick="openTrash()" title="Corbeille" style="display:none">🗑<span id="trashCount"></span></button>
+  <span id="userChip" style="display:none"></span>
+  <button class="btn sec small" id="trashBtn" data-req="delete" onclick="openTrash()" title="Corbeille" style="display:none">🗑<span id="trashCount"></span></button>
   <button class="btn sec small" onclick="refresh()">↻ Actualiser</button>
-  <button class="btn sec small" onclick="exportJSON()">Exporter</button>
-  <button class="btn sec small" onclick="document.getElementById('importFile').click()">Importer</button>
+  <button class="btn sec small" data-req="admin" onclick="exportJSON()">Exporter</button>
+  <button class="btn sec small" data-req="admin" onclick="document.getElementById('importFile').click()">Importer</button>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this)">
 </header>
 
@@ -29,7 +30,43 @@
   <button data-v="rep" onclick="show('rep')">Réparations</button>
   <button data-v="people" onclick="show('people')">Personnes</button>
   <button data-v="loc" onclick="show('loc')">Emplacements</button>
+  <button data-v="users" data-req="admin" onclick="show('users')">Utilisateurs</button>
 </nav>
+
+<div id="login" style="display:none">
+  <div class="panel">
+    <h2>Connexion</h2>
+    <div id="login-form">
+      <p class="muted" style="margin-bottom:12px">
+        Application réservée au personnel du studio. Entre ton adresse email :
+        tu recevras un lien pour te connecter, sans mot de passe.
+      </p>
+      <div class="field" style="margin-bottom:12px">
+        <label>Adresse email</label>
+        <input type="email" id="login-email" style="width:100%" placeholder="prenom@studio.fr"
+               onkeydown="if(event.key==='Enter')sendMagicLink()">
+      </div>
+      <button class="btn" id="login-btn" onclick="sendMagicLink()">Recevoir mon lien de connexion</button>
+      <p class="muted" id="login-msg" style="margin-top:10px"></p>
+    </div>
+    <div id="login-sent" style="display:none">
+      <p style="margin-bottom:8px">📧 Lien envoyé à <b id="login-sent-mail"></b></p>
+      <p class="muted">Ouvre ta boîte mail et clique sur le lien pour accéder à l'inventaire.
+      Pense à vérifier les indésirables. Le lien est valable une heure.</p>
+    </div>
+  </div>
+</div>
+
+<div id="denied" style="display:none">
+  <div class="panel">
+    <h2>Accès non autorisé</h2>
+    <p class="muted" style="margin-bottom:12px">
+      L'adresse <b id="denied-mail"></b> n'est pas autorisée à accéder à l'inventaire du studio.
+      Demande à un administrateur de t'ajouter, puis reconnecte-toi.
+    </p>
+    <button class="btn sec" onclick="signOut()">Utiliser une autre adresse</button>
+  </div>
+</div>
 
 <div id="setup" style="display:none">
   <div class="panel">
@@ -66,7 +103,7 @@
         <option value="reparation">En réparation</option>
         <option value="hs">Hors service</option>
       </select>
-      <button class="btn" onclick="openItemForm()">+ Ajouter</button>
+      <button class="btn" data-req="edit" onclick="openItemForm()">+ Ajouter</button>
     </div>
     <div class="panel"><div id="invList"></div></div>
   </section>
@@ -88,15 +125,17 @@
   <section id="v-rep" style="display:none"></section>
 
   <section id="v-people" style="display:none">
-    <div class="toolbar">
+    <div class="toolbar" data-req="edit">
       <input id="newUser" placeholder="Nom de la personne" onkeydown="if(event.key==='Enter')addUser()">
       <button class="btn" onclick="addUser()">+ Ajouter</button>
     </div>
     <div class="panel"><div id="peopleList"></div></div>
   </section>
 
+  <section id="v-users" style="display:none"></section>
+
   <section id="v-loc" style="display:none">
-    <div class="toolbar">
+    <div class="toolbar" data-req="edit">
       <input id="newLoc" placeholder="ex : Studio A, Rack synthés…" onkeydown="if(event.key==='Enter')addLoc()">
       <select id="newLocParent"></select>
       <button class="btn" onclick="addLoc()">+ Ajouter</button>
@@ -197,16 +236,18 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=0.7.0"></script>
-<script src="js/helpers.js?v=0.7.0"></script>
-<script src="js/db.js?v=0.7.0"></script>
-<script src="js/views-dashboard.js?v=0.7.0"></script>
-<script src="js/views-inventory.js?v=0.7.0"></script>
-<script src="js/views-projects.js?v=0.7.0"></script>
-<script src="js/views-out.js?v=0.7.0"></script>
-<script src="js/views-repairs.js?v=0.7.0"></script>
-<script src="js/views-people-loc.js?v=0.7.0"></script>
-<script src="js/views-trash.js?v=0.7.0"></script>
-<script src="js/app.js?v=0.7.0"></script>
+<script src="js/config.js?v=1.0.0"></script>
+<script src="js/auth.js?v=1.0.0"></script>
+<script src="js/helpers.js?v=1.0.0"></script>
+<script src="js/db.js?v=1.0.0"></script>
+<script src="js/views-dashboard.js?v=1.0.0"></script>
+<script src="js/views-inventory.js?v=1.0.0"></script>
+<script src="js/views-projects.js?v=1.0.0"></script>
+<script src="js/views-out.js?v=1.0.0"></script>
+<script src="js/views-repairs.js?v=1.0.0"></script>
+<script src="js/views-people-loc.js?v=1.0.0"></script>
+<script src="js/views-trash.js?v=1.0.0"></script>
+<script src="js/views-users.js?v=1.0.0"></script>
+<script src="js/app.js?v=1.0.0"></script>
 </body>
 </html>
