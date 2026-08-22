@@ -15,11 +15,26 @@ function daysSince(iso){ return Math.floor((Date.now()-new Date(iso))/864e5); }
 function overdue(i){ return !!(i.out && i.out.due && new Date(i.out.due+'T23:59:59') < new Date()); }
 function daysLate(i){ return Math.floor((Date.now()-new Date(i.out.due+'T23:59:59'))/864e5)+1; }
 
-/* --- Identifiants uniques (ex : CAB-003) --- */
-function uid(cat){
-  const code = CATCODE[cat]||"DIV";
+/* --- Catégories à deux niveaux --- */
+function catLabel(c){ return (CATS[c] && CATS[c].label) || c || '—'; }
+function subsOf(c){ return (CATS[c] && CATS[c].subs) || {}; }
+function subLabel(c,s){ const x = subsOf(c)[s]; return x ? x.label : (s || '—'); }
+function catPath(i){ return catLabel(i.cat) + (i.subcat ? ' › ' + subLabel(i.cat, i.subcat) : ''); }
+function catOptions(sel){
+  return Object.entries(CATS).map(([k,v])=>`<option value="${k}"${sel===k?' selected':''}>${esc(v.label)}</option>`).join("");
+}
+function subOptions(c, sel){
+  return Object.entries(subsOf(c)).map(([k,v])=>`<option value="${k}"${sel===k?' selected':''}>${esc(v.label)}</option>`).join("");
+}
+function codeFor(cat, sub){ const x = subsOf(cat)[sub]; return (x && x.code) || 'DIV'; }
+
+/* --- Identifiants uniques (ex : CAB-003), basés sur la sous-catégorie --- */
+function uid(cat, sub){
+  const code = codeFor(cat, sub);
   let max = 0;
   db.items.forEach(i=>{ const m = i.id.match(new RegExp('^'+code+'-(\\d+)$')); if(m) max = Math.max(max,+m[1]); });
+  const all = (db.trash||[]);
+  all.forEach(i=>{ const m = i.id.match(new RegExp('^'+code+'-(\\d+)$')); if(m) max = Math.max(max,+m[1]); });
   return code + "-" + String(max+1).padStart(3,"0");
 }
 
