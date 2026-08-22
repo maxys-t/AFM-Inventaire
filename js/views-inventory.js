@@ -9,19 +9,33 @@ let expanded = new Set();   // groupes d'exemplaires dépliés
 /* ---- filtres ---- */
 function fillFilters(){
   const fc = document.getElementById('fCat'), keep = fc.value;
-  fc.innerHTML = '<option value="">Catégorie : toutes</option>' + Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+  fc.innerHTML = '<option value="">Catégorie : toutes</option>' + catOptions();
   fc.value = keep;
+  fillSubFilter();
   const fl = document.getElementById('fLoc'), keepL = fl.value;
   fl.innerHTML = '<option value="">Emplacement : tous</option>' + locOptions();
   fl.value = keepL;
 }
+/* La liste des sous-catégories dépend de la catégorie choisie */
+function fillSubFilter(){
+  const fc = document.getElementById('fCat'), fs = document.getElementById('fSub');
+  if(!fs) return;
+  const keep = fs.value;
+  if(!fc.value){ fs.innerHTML = '<option value="">Sous-catégorie : toutes</option>'; fs.disabled = true; return; }
+  fs.disabled = false;
+  fs.innerHTML = '<option value="">Sous-catégorie : toutes</option>' + subOptions(fc.value);
+  fs.value = subsOf(fc.value)[keep] ? keep : "";
+}
+function onCatFilterChange(){ fillSubFilter(); renderInv(); }
 function invFiltered(){
   const q = (document.getElementById('q').value||"").toLowerCase();
   const cat = document.getElementById('fCat').value, st = document.getElementById('fStatus').value;
+  const sub = (document.getElementById('fSub')||{}).value || "";
   const lo = document.getElementById('fLoc').value, co = document.getElementById('fCond').value;
   return db.items.filter(i=>{
-    if(q && !(i.name+" "+i.brand+" "+i.serial+" "+i.id+" "+(i.notes||"")).toLowerCase().includes(q)) return false;
+    if(q && !(i.name+" "+i.brand+" "+i.serial+" "+i.id+" "+(i.notes||"")+" "+catPath(i)).toLowerCase().includes(q)) return false;
     if(cat && i.cat!==cat) return false;
+    if(sub && i.subcat!==sub) return false;
     if(st && i.status!==st) return false;
     if(lo && !inLocFilter(lo,i.loc) && !inLocFilter(lo,i.home)) return false;
     if(co && i.cond!==co) return false;
@@ -77,7 +91,7 @@ function itemRow(i, isChild){
     <td onclick="event.stopPropagation()"><input type="checkbox" ${sel.has(i.id)?'checked':''} onchange="toggleSel('${i.id}',this.checked)"></td>
     <td>${i.photo?`<img class="thumb" src="${i.photo}">`:""}</td>
     <td data-l="Item"><b>${esc(i.name)}</b><br><span class="mono">${i.id}</span>${i.brand?` <span class="muted">· ${esc(i.brand)}</span>`:""}</td>
-    <td data-l="Catégorie"><span class="tag cat">${CATS[i.cat]||i.cat}</span></td>
+    <td data-l="Catégorie"><span class="tag cat">${esc(subLabel(i.cat,i.subcat))}</span><br><span class="muted">${esc(catLabel(i.cat))}</span></td>
     <td data-l="Statut">${statusTag(i)}</td>
     <td data-l="Emplacement">${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}${i.loc!==i.home?` <span class="muted">(réf : ${esc(locLabel(i.home))})</span>`:""}</td>
     <td data-l="État"><span class="tag ${i.cond}">${CONDS[i.cond]||i.cond}</span></td>
@@ -91,12 +105,12 @@ function groupRow(key, items, open){
   const abimes = items.filter(i=>i.cond!=='bon').length;
   const allSel = items.every(i=>sel.has(i.id));
   const locs = [...new Set(items.map(i=>i.status==='sorti'?i.loc:locLabel(i.loc)))];
-  const cats = [...new Set(items.map(i=>i.cat))];
+  const cats = [...new Set(items.map(i=>i.cat+'/'+i.subcat))];
   return `<tr class="grouprow ${allSel?'selrow':''}" onclick="toggleGroup(${JSON.stringify(key).replace(/"/g,'&quot;')})">
     <td onclick="event.stopPropagation()"><input type="checkbox" ${allSel?'checked':''} onchange="selectGroup(${JSON.stringify(key).replace(/"/g,'&quot;')},this.checked)"></td>
     <td><span class="chev">${open?'▾':'▸'}</span></td>
     <td data-l="Item"><b>${esc(key)}</b><br><span class="muted">${items.length} exemplaires</span></td>
-    <td data-l="Catégorie">${cats.length===1?`<span class="tag cat">${CATS[cats[0]]||cats[0]}</span>`:'<span class="muted">mixte</span>'}</td>
+    <td data-l="Catégorie">${cats.length===1?`<span class="tag cat">${esc(subLabel(items[0].cat,items[0].subcat))}</span>`:'<span class="muted">mixte</span>'}</td>
     <td data-l="Statut">${dispo?`<span class="tag dispo">${dispo} dispo</span> `:''}${sortis?`<span class="tag sorti">${sortis} sorti(s)</span>`:''}</td>
     <td data-l="Emplacement">${locs.length===1?esc(locs[0]):'<span class="muted">plusieurs</span>'}</td>
     <td data-l="État">${abimes?`<span class="tag attente">${abimes} à réparer</span>`:'<span class="tag bon">OK</span>'}</td>
@@ -146,6 +160,7 @@ function renderBulkBar(){
     ${nDispo?`<button class="btn small" onclick="openBulkCheckout()">Check-out (${nDispo})</button>`:''}
     ${nSortis?`<button class="btn small ok" onclick="openBulkCheckin()">Check-in (${nSortis})</button>`:''}
     ${can('edit')?`<button class="btn small sec" onclick="openBulkMove()">Emplacement</button>`:''}
+    ${can('edit')?`<button class="btn small sec" onclick="openBulkCat()">Catégorie</button>`:''}
     <button class="btn small sec" onclick="openBulkCond()">État</button>
     ${can('delete')?`<button class="btn small danger" onclick="bulkTrash()">Corbeille</button>`:''}
     <button class="btn small sec" onclick="clearSel()">Annuler</button>`;
@@ -153,17 +168,42 @@ function renderBulkBar(){
 
 /* ---- fenêtre générique pour les actions groupées ---- */
 let bulkAction = null;
-function openBulkModal(title, label, optionsHtml, action){
+function openBulkModal(title, label, optionsHtml, action, second){
   bulkAction = action;
   document.getElementById('bulk-title').textContent = title;
   document.getElementById('bulk-label').textContent = label;
   document.getElementById('bulk-select').innerHTML = optionsHtml;
+  document.getElementById('bulk-select').onchange = second ? fillBulkSub : null;
+  const row2 = document.getElementById('bulk-row2');
+  row2.style.display = second ? '' : 'none';
+  if(second){ document.getElementById('bulk-label2').textContent = second; fillBulkSub(); }
   open_('ovBulk');
+}
+function fillBulkSub(){
+  const c = document.getElementById('bulk-select').value;
+  document.getElementById('bulk-select2').innerHTML = '<option value="">— choisir —</option>' + subOptions(c);
 }
 async function doBulk(){
   const v = document.getElementById('bulk-select').value;
+  const v2 = document.getElementById('bulk-select2').value;
+  if(document.getElementById('bulk-row2').style.display !== 'none' && !v2){
+    alert("La sous-catégorie est obligatoire."); return;
+  }
   close_('ovBulk');
-  if(bulkAction) await bulkAction(v);
+  if(bulkAction) await bulkAction(v, v2);
+}
+
+function openBulkCat(){
+  openBulkModal(`Reclasser ${sel.size} item(s)`, "Catégorie", catOptions(), doBulkCat, "Sous-catégorie");
+}
+async function doBulkCat(cat, subcat){
+  const targets = selItems();
+  if(!targets.length) return;
+  targets.forEach(i=>{ i.cat = cat; i.subcat = subcat; });
+  await apiUpdateItemsIn(targets.map(i=>i.id), {cat, subcat});
+  await histMany(targets.map(i=>({itemId:i.id, type:'edit', detail:`reclassé : ${catLabel(cat)} › ${subLabel(cat,subcat)}`})));
+  clearSel(); render();
+  toast(`${targets.length} item(s) reclassé(s).`, 'ok');
 }
 
 function openBulkMove(){
@@ -216,11 +256,12 @@ let editingId = null;
 function openItemForm(id){
   editingId = id||null;
   document.getElementById('itemFormTitle').textContent = id?'Modifier l\'item':'Ajouter un item';
-  document.getElementById('i-cat').innerHTML = Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+  document.getElementById('i-cat').innerHTML = '<option value="">— choisir —</option>' + catOptions();
   document.getElementById('i-home').innerHTML = locOptions();
   const i = id?item(id):null;
   document.getElementById('i-name').value = i?i.name:"";
-  document.getElementById('i-cat').value = i?i.cat:"cable";
+  document.getElementById('i-cat').value = i?i.cat:"";
+  fillSubForm(i?i.subcat:"");
   document.getElementById('i-brand').value = i?i.brand:"";
   document.getElementById('i-serial').value = i?i.serial:"";
   document.getElementById('i-cond').value = i?i.cond:"bon";
@@ -231,12 +272,26 @@ function openItemForm(id){
   document.getElementById('i-qty').value = 1;
   open_('ovItem');
 }
+/* Sous-catégories du formulaire, dépendantes de la catégorie choisie */
+function fillSubForm(sel){
+  const c = document.getElementById('i-cat').value;
+  const el = document.getElementById('i-subcat');
+  if(!c){ el.innerHTML = '<option value="">— choisir une catégorie d\'abord —</option>'; el.disabled = true; return; }
+  el.disabled = false;
+  el.innerHTML = '<option value="">— choisir —</option>' + subOptions(c, sel);
+  if(sel) el.value = sel;
+}
+
 function saveItem(){
   const name = document.getElementById('i-name').value.trim();
   if(!name){ alert("Le nom est obligatoire."); return; }
+  const cat = document.getElementById('i-cat').value;
+  const subcat = document.getElementById('i-subcat').value;
+  if(!cat){ alert("La catégorie est obligatoire."); return; }
+  if(!subcat){ alert("La sous-catégorie est obligatoire."); return; }
   if(!db.locations.length){ alert("Créez d'abord un emplacement (onglet Emplacements)."); return; }
   const vals = {
-    name, cat:document.getElementById('i-cat').value, brand:document.getElementById('i-brand').value.trim(),
+    name, cat, subcat, brand:document.getElementById('i-brand').value.trim(),
     serial:document.getElementById('i-serial').value.trim(), cond:document.getElementById('i-cond').value,
     home:document.getElementById('i-home').value, notes:document.getElementById('i-notes').value.trim()
   };
@@ -259,7 +314,7 @@ function saveItem(){
       const start = 1 + db.items.filter(x=>x.name===base || groupKeyOf(x.name)===base).length;
       const rows = [];
       for(let k=0;k<qty;k++){
-        const id = uid(vals.cat);
+        const id = uid(vals.cat, vals.subcat);
         const nm = qty>1 ? `${base} #${start+k}` : name;
         const row = {id,...vals,name:nm,photo:photo||null,loc:vals.home,status:"dispo",out:null};
         db.items.push(row); rows.push(row);
@@ -391,7 +446,7 @@ function openDetail(id){
     <h3>${esc(i.name)} <span class="mono">${i.id}</span></h3>
     ${i.photo?`<img class="itemphoto" src="${i.photo}">`:""}
     <p style="margin-bottom:10px">
-      <span class="tag cat">${CATS[i.cat]||i.cat}</span> ${statusTag(i)} <span class="tag ${i.cond}">${CONDS[i.cond]||i.cond}</span>
+      <span class="tag cat">${esc(catPath(i))}</span> ${statusTag(i)} <span class="tag ${i.cond}">${CONDS[i.cond]||i.cond}</span>
     </p>
     ${outInfo}
     <p class="muted" style="margin-bottom:4px">
