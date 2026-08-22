@@ -171,3 +171,37 @@ tr.rowlink:hover td{background:var(--panel2)}
   #login, #denied{ margin:24px auto }
   #userChip .who{ max-width:90px }
 }
+/* ============================================================
+   v1.1 — Sélection multiple et groupes d'exemplaires
+   À COLLER À LA FIN de css/styles.css (ne rien remplacer)
+   ============================================================ */
+
+/* Barre d'actions groupées (bas d'écran) */
+#bulkbar{
+  position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+  z-index:90; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  background:var(--panel); border:1px solid var(--border); border-radius:980px;
+  padding:9px 16px; box-shadow:0 8px 30px rgba(0,0,0,.35);
+  max-width:calc(100% - 24px);
+}
+#bulkbar .count{ font-size:14px; margin-right:4px; white-space:nowrap }
+
+/* Lignes sélectionnées */
+tr.selrow td{ background:rgba(0,113,227,.10) }
+
+/* Groupes d'exemplaires */
+tr.grouprow{ cursor:pointer }
+tr.grouprow td{ background:var(--panel2); font-size:14px }
+tr.grouprow:hover td{ background:var(--border) }
+.chev{ color:var(--muted); font-size:12px }
+tr.childrow td:nth-child(3){ padding-left:26px }
+tr.childrow td{ background:transparent }
+
+@media(max-width:700px){
+  #bulkbar{ bottom:10px; padding:8px 12px; gap:6px; border-radius:16px }
+  #bulkbar .count{ width:100%; margin:0 0 2px }
+  tr.grouprow td, tr.childrow td{ background:transparent }
+  tr.childrow{ margin-left:14px }
+  tr.selrow{ outline:2px solid var(--accent) }
+}
+
