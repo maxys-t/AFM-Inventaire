@@ -6,7 +6,7 @@
 
 /* --- Connexion Supabase --- */
 const SUPABASE_URL = "https://umqocgzeafhtqtcoygeo.supabase.co";
-const SUPABASE_KEY = "";
+const SUPABASE_KEY = "sb_publishable_s9Yip985Howj4yDog-2TTA_ufNaQPVk";
 
 /* --- Catégories de matériel ---
    Ajouter une catégorie = une ligne ici + son préfixe d'ID dans CATCODE. */
