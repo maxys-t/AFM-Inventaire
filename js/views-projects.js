@@ -4,7 +4,7 @@
    ============================================================ */
 
 function renderProj(){
-  let html = `<div class="toolbar"><button class="btn" onclick="openProjForm()">+ Nouveau projet</button></div>`;
+  let html = can('edit') ? `<div class="toolbar"><button class="btn" onclick="openProjForm()">+ Nouveau projet</button></div>` : '';
   if(db.projectsError){
     html += `<div class="alert bad">La table des projets n'existe pas encore : exécute <b>sql/003-projets.sql</b> dans Supabase (SQL Editor), puis clique sur ↻ Actualiser.</div>`;
     document.getElementById('v-proj').innerHTML = html; return;
@@ -45,10 +45,10 @@ function openProjForm(id){
 }
 function renderPicker(){
   const q = (document.getElementById('p-search').value||"").toLowerCase();
-  const rows = db.items.filter(i=>!q || (i.name+" "+i.id+" "+(CATS[i.cat]||"")).toLowerCase().includes(q));
+  const rows = db.items.filter(i=>!q || (i.name+" "+i.id+" "+catPath(i)).toLowerCase().includes(q));
   document.getElementById('p-picker').innerHTML = rows.map(i=>`
     <label><input type="checkbox" ${pickerSel.has(i.id)?'checked':''} onchange="togglePick('${i.id}',this.checked)">
-    <span style="flex:1"><b>${esc(i.name)}</b> <span class="mono">${i.id}</span> <span class="muted">· ${CATS[i.cat]||i.cat}</span></span></label>`).join("")
+    <span style="flex:1"><b>${esc(i.name)}</b> <span class="mono">${i.id}</span> <span class="muted">· ${esc(subLabel(i.cat,i.subcat))}</span></span></label>`).join("")
     || '<div class="muted" style="padding:8px">Aucun item.</div>';
   document.getElementById('p-count').textContent = pickerSel.size + " item(s) sélectionné(s)";
 }
@@ -115,8 +115,8 @@ function renderProjDetail(id){
     <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap">${actions}</div>
     <div class="modal-actions" style="justify-content:space-between">
       <span>
-        ${p.status!=='show'?`<button class="btn sec small" onclick="openProjForm('${p.id}')">Modifier</button>`:""}
-        <button class="btn danger small" onclick="deleteProj('${p.id}')">Supprimer</button>
+        ${(can('edit') && p.status!=='show')?`<button class="btn sec small" onclick="openProjForm('${p.id}')">Modifier</button>`:""}
+        ${can('edit')?`<button class="btn danger small" onclick="deleteProj('${p.id}')">Supprimer</button>`:""}
       </span>
       <button class="btn sec" onclick="close_('ovProjDetail')">Fermer</button>
     </div>`;
