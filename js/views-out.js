@@ -4,7 +4,7 @@
 
 function renderOut(){
   const oc = document.getElementById('oCat'), keep = oc.value;
-  oc.innerHTML = '<option value="">Catégorie : toutes</option>' + Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+  oc.innerHTML = '<option value="">Catégorie : toutes</option>' + catOptions();
   oc.value = keep;
   const ou = document.getElementById('oUser'), keepU = ou.value;
   ou.innerHTML = '<option value="">Personne : toutes</option>' + db.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join("")
