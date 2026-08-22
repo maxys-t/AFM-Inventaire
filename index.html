@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.1.0">
+<link rel="stylesheet" href="css/styles.css?v=1.2.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -89,7 +89,8 @@
   <section id="v-inv" style="display:none">
     <div class="toolbar">
       <input type="search" id="q" placeholder="Rechercher (nom, marque, n° série, ID…)" oninput="renderInv()">
-      <select id="fCat" onchange="renderInv()"></select>
+      <select id="fCat" onchange="onCatFilterChange()"></select>
+      <select id="fSub" onchange="renderInv()" disabled></select>
       <select id="fStatus" onchange="renderInv()">
         <option value="">Statut : tous</option>
         <option value="dispo">Disponible</option>
@@ -150,7 +151,8 @@
   <h3 id="itemFormTitle">Ajouter un item</h3>
   <div class="form-grid">
     <div class="field full"><label>Nom *</label><input id="i-name" placeholder="ex : Câble XLR 5m #3"></div>
-    <div class="field"><label>Catégorie *</label><select id="i-cat"></select></div>
+    <div class="field"><label>Catégorie *</label><select id="i-cat" onchange="fillSubForm()"></select></div>
+    <div class="field"><label>Sous-catégorie *</label><select id="i-subcat"></select></div>
     <div class="field"><label>Marque / modèle</label><input id="i-brand"></div>
     <div class="field"><label>N° de série</label><input id="i-serial"></div>
     <div class="field" id="qtyField"><label>Quantité</label><input type="number" id="i-qty" min="1" value="1"></div>
@@ -236,6 +238,7 @@
 <div class="overlay" id="ovBulk"><div class="modal" style="max-width:420px">
   <h3 id="bulk-title"></h3>
   <div class="field"><label id="bulk-label"></label><select id="bulk-select" style="width:100%"></select></div>
+  <div class="field" id="bulk-row2" style="display:none;margin-top:10px"><label id="bulk-label2"></label><select id="bulk-select2" style="width:100%"></select></div>
   <div class="modal-actions">
     <button class="btn sec" onclick="close_('ovBulk')">Annuler</button>
     <button class="btn" onclick="doBulk()">Valider</button>
@@ -247,18 +250,18 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.1.0"></script>
-<script src="js/auth.js?v=1.1.0"></script>
-<script src="js/helpers.js?v=1.1.0"></script>
-<script src="js/db.js?v=1.1.0"></script>
-<script src="js/views-dashboard.js?v=1.1.0"></script>
-<script src="js/views-inventory.js?v=1.1.0"></script>
-<script src="js/views-projects.js?v=1.1.0"></script>
-<script src="js/views-out.js?v=1.1.0"></script>
-<script src="js/views-repairs.js?v=1.1.0"></script>
-<script src="js/views-people-loc.js?v=1.1.0"></script>
-<script src="js/views-trash.js?v=1.1.0"></script>
-<script src="js/views-users.js?v=1.1.0"></script>
-<script src="js/app.js?v=1.1.0"></script>
+<script src="js/config.js?v=1.2.0"></script>
+<script src="js/auth.js?v=1.2.0"></script>
+<script src="js/helpers.js?v=1.2.0"></script>
+<script src="js/db.js?v=1.2.0"></script>
+<script src="js/views-dashboard.js?v=1.2.0"></script>
+<script src="js/views-inventory.js?v=1.2.0"></script>
+<script src="js/views-projects.js?v=1.2.0"></script>
+<script src="js/views-out.js?v=1.2.0"></script>
+<script src="js/views-repairs.js?v=1.2.0"></script>
+<script src="js/views-people-loc.js?v=1.2.0"></script>
+<script src="js/views-trash.js?v=1.2.0"></script>
+<script src="js/views-users.js?v=1.2.0"></script>
+<script src="js/app.js?v=1.2.0"></script>
 </body>
 </html>
