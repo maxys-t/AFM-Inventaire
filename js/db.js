@@ -33,6 +33,14 @@ async function init(){
   sb = supabase.createClient(cfg.url, cfg.key);
   document.getElementById('setup').style.display = 'none';
 
+  // Arrivée par QR code (…?item=CAB-003) : on retient la fiche à ouvrir.
+  // Elle sera affichée après connexion, même si un lien magique passe entre-temps.
+  const params = new URLSearchParams(location.search);
+  if(params.get('item')){
+    localStorage.setItem('pendingItem', params.get('item'));
+    history.replaceState(null, '', location.pathname);
+  }
+
   // Le lien magique renvoie sur la page avec un jeton : on laisse
   // supabase-js l'exploiter, puis on nettoie l'adresse.
   const {data:{session}} = await sb.auth.getSession();
@@ -77,6 +85,7 @@ async function startSession(){
   subscribe();
   watchConnection();
   touchLastSeen();
+  if(typeof consumePendingItem === 'function') consumePendingItem();
 }
 function normCond(c){ return c==='reparer' ? 'attente' : (c||'bon'); }
 async function loadAll(){
@@ -201,6 +210,20 @@ function projProgress(p){
 }
 
 /* ================= HISTORIQUE ================= */
+/* Écriture groupée de l'historique (une seule requête pour tout un lot) */
+async function histMany(rows){
+  if(!rows.length) return;
+  const actorName = me ? (me.name || me.email) : null;
+  const date = now();
+  const local = rows.map(r=>({itemId:r.itemId,type:r.type,date,detail:r.detail||"",
+                              userId:r.userId||null,cond:r.cond||null,actorName}));
+  local.forEach(h=>db.history.unshift(h));
+  await run(sb.from('history').insert(local.map(h=>({
+    item_id:h.itemId,type:h.type,date:h.date,detail:h.detail,user_id:h.userId,
+    cond:h.cond,actor_id:me?me.user_id:null,actor_name:actorName
+  }))));
+}
+
 async function hist(itemId,type,detail,userId,cond){
   const actorName = me ? (me.name || me.email) : null;
   const h = {itemId,type,date:now(),detail:detail||"",userId:userId||null,cond:cond||null,actorName};
@@ -224,6 +247,17 @@ async function apiRestoreItem(id){ await run(sb.from('items').update({deleted_at
 async function apiPurgeItem(id){
   await run(sb.from('history').delete().eq('item_id', id));
   await run(sb.from('items').delete().eq('id', id));
+}
+
+/* --- opérations groupées (une requête pour tout un lot) --- */
+async function apiUpdateItemsIn(ids, fields){
+  if(!ids.length) return;
+  await run(sb.from('items').update(fields).in('id', ids));
+}
+async function apiPurgeItems(ids){
+  if(!ids.length) return;
+  await run(sb.from('history').delete().in('item_id', ids));
+  await run(sb.from('items').delete().in('id', ids));
 }
 
 /* --- personnes --- */
