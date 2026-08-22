@@ -114,7 +114,7 @@ function importJSON(inp){
       if(d.locations.length) await apiUpsertLocations(d.locations);
       if(d.users.length) await apiUpsertPeople(d.users);
       if(d.items.length) await apiUpsertItems(d.items.map(i=>({
-        id:i.id,name:i.name,cat:i.cat,brand:i.brand||"",serial:i.serial||"",cond:normCond(i.cond),
+        id:i.id,name:i.name,cat:i.cat||'divers',subcat:i.subcat||'autre',brand:i.brand||"",serial:i.serial||"",cond:normCond(i.cond),
         notes:i.notes||"",photo:i.photo||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null,
         ...(db.trashSupported ? {deleted_at:i.deleted_at||null} : {})
       })));
