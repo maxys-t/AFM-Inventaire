@@ -20,6 +20,7 @@ function render(){
   if(v==='people') renderPeople();
   if(v==='loc') renderLoc();
   if(v==='users') renderUsers();
+  if(typeof renderBulkBar==='function' && v!=='inv') renderBulkBar();
 }
 
 /* ---- notifications (bandeau en bas d'écran) ----
