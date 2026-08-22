@@ -23,6 +23,24 @@ function uid(cat){
   return code + "-" + String(max+1).padStart(3,"0");
 }
 
+/* --- Exemplaires multiples ---
+   « Câble XLR 5m #3 » appartient à la famille « Câble XLR 5m ».
+   Renvoie null si le nom ne suit pas cette convention. */
+function groupKeyOf(name){
+  const m = (name||'').match(/^(.*\S)\s+#\d+$/);
+  return m ? m[1] : null;
+}
+
+/* --- Adresse d'une fiche (utilisée par les QR codes) ---
+   Calculée depuis l'adresse du site : si le domaine change un jour,
+   les nouveaux QR suivent automatiquement. */
+function itemUrl(id){
+  const base = (typeof APP_URL !== 'undefined' && APP_URL)
+    ? APP_URL.replace(/\/$/,'') + '/'
+    : location.origin + location.pathname;
+  return base + '?item=' + encodeURIComponent(id);
+}
+
 /* --- Emplacements hiérarchiques --- */
 function locObj(n){ return db.locations.find(l=>l.name===n); }
 function locLabel(n){ const l = locObj(n); return l&&l.parent ? l.parent+" › "+n : n; }
@@ -45,6 +63,7 @@ function inLocFilter(sel,name){
 
 /* --- Formatage des lignes d'historique --- */
 function histIcon(t){ return {create:"➕",out:"📤",in:"📥",move:"📍",edit:"✏️",repair:"🔧"}[t]||"•"; }
+function histBy(h){ return h.actorName ? ` <span class="muted">· par ${esc(h.actorName)}</span>` : ""; }
 function histText(h){
   const u = h.userId ? " — " + esc(userName(h.userId)) : "";
   if(h.type==='out') return `sortie${u} (${esc(h.detail)})`;
