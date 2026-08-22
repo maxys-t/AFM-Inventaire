@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.0] — 2026-08-09
+### Ajouté
+- **Catégories à deux niveaux** (10 familles, 43 sous-catégories), les deux
+  obligatoires à la création d'un item. Menus en cascade, filtres en cascade.
+- Action groupée « Catégorie » pour reclasser plusieurs items d'un coup.
+### Modifié
+- Les identifiants se basent désormais sur la sous-catégorie (DLY-001, MIC-001…).
+  Les identifiants déjà attribués restent inchangés.
+- La recherche trouve aussi par libellé de catégorie.
+
 ## [1.1.0] — 2026-08-09
 ### Ajouté
 - **Sélection multiple** dans l'inventaire : check-out et check-in groupés,
