@@ -14,7 +14,7 @@ function updateTrashBadge(){
   const btn = document.getElementById('trashBtn');
   if(!btn) return;
   const n = db.trash.length;
-  btn.style.display = n ? '' : 'none';
+  btn.style.display = (n && (typeof can!=='function' || can('delete'))) ? '' : 'none';
   const b = document.getElementById('trashCount');
   if(b) b.textContent = n ? ' ' + n : '';
 }
@@ -48,8 +48,11 @@ function renderTrash(){
     ${db.trash.length
       ? `<table><thead><tr><th>Item</th><th>Expiration</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
       : '<div class="empty">La corbeille est vide.</div>'}
-    <div class="modal-actions" style="justify-content:space-between">
-      <span>${nExp ? `<button class="btn danger small" onclick="purgeExpired()">Vider les ${nExp} item(s) expiré(s)</button>` : ''}</span>
+    <div class="modal-actions" style="justify-content:space-between;flex-wrap:wrap">
+      <span>
+        ${nExp ? `<button class="btn sec small" onclick="purgeExpired()">Vider les ${nExp} expiré(s)</button> ` : ''}
+        ${db.trash.length ? `<button class="btn danger small" onclick="purgeAll()">Tout supprimer définitivement</button>` : ''}
+      </span>
       <button class="btn sec" onclick="close_('ovTrash')">Fermer</button>
     </div>`;
 }
@@ -77,6 +80,18 @@ async function purgeItem(id){
   db.history = db.history.filter(h=>h.itemId!==id);
   renderTrash(); updateTrashBadge();
   await apiPurgeItem(id);
+}
+
+async function purgeAll(){
+  const list = [...db.trash];
+  if(!list.length) return;
+  if(!confirm(`Supprimer DÉFINITIVEMENT les ${list.length} item(s) de la corbeille, avec tout leur historique ?\n\nCette action est irréversible.`)) return;
+  const ids = list.map(i=>i.id);
+  db.trash = [];
+  db.history = db.history.filter(h=>!ids.includes(h.itemId));
+  renderTrash(); updateTrashBadge();
+  await apiPurgeItems(ids);
+  toast(`${list.length} item(s) supprimé(s) définitivement.`, 'ok');
 }
 
 async function purgeExpired(){
