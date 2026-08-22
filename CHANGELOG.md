@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0] — 2026-08-09
+### Ajouté
+- **Sélection multiple** dans l'inventaire : check-out et check-in groupés,
+  changement d'emplacement ou d'état en lot, mise à la corbeille groupée.
+- **Regroupement des exemplaires** d'un même modèle en ligne dépliable, avec
+  bilan agrégé (disponibles, sortis, à réparer).
+- **QR codes menant à la fiche de l'item** : scanner ouvre l'app sur l'item, prêt
+  pour un check-out. Fonctionne même déconnecté (la fiche s'ouvre après connexion).
+- Bouton « Tout supprimer définitivement » dans la corbeille.
+### Modifié
+- Les actions groupées n'envoient qu'une requête pour tout le lot.
+
 ## [1.0.0] — 2026-08-09
 ### Ajouté
 - **Comptes utilisateurs** : connexion du personnel par lien magique (email, sans
