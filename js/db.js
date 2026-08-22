@@ -98,7 +98,7 @@ async function loadAll(){
   for(const r of [it,pe,lo,hi]) if(r.error) throw r.error;
   // Corbeille : les items portant une date de suppression sont mis de côté.
   // Si la colonne n'existe pas encore (migration 004 non passée), tout reste actif.
-  const all = it.data.map(i=>({...i,cond:normCond(i.cond)}));
+  const all = it.data.map(i=>({...i,cond:normCond(i.cond),cat:i.cat||'divers',subcat:i.subcat||'autre'}));
   db.trashSupported = all.length===0 || Object.prototype.hasOwnProperty.call(all[0],'deleted_at');
   db.trash = all.filter(i=>i.deleted_at).sort((a,b)=>new Date(b.deleted_at)-new Date(a.deleted_at));
   db.items = all.filter(i=>!i.deleted_at);
