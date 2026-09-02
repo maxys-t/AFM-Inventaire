@@ -48,7 +48,7 @@ function renderPicker(){
   const rows = db.items.filter(i=>!q || (i.name+" "+i.id+" "+catPath(i)).toLowerCase().includes(q));
   document.getElementById('p-picker').innerHTML = rows.map(i=>`
     <label><input type="checkbox" ${pickerSel.has(i.id)?'checked':''} onchange="togglePick('${i.id}',this.checked)">
-    <span style="flex:1"><b>${esc(i.name)}</b> <span class="mono">${i.id}</span> <span class="muted">· ${esc(subLabel(i.cat,i.subcat))}</span></span></label>`).join("")
+    <span style="flex:1">${itemTitle(i)} <span class="mono">${i.id}</span> <span class="muted">· ${esc(subLabel(i.cat,i.subcat))}</span></span></label>`).join("")
     || '<div class="muted" style="padding:8px">Aucun item.</div>';
   document.getElementById('p-count').textContent = pickerSel.size + " item(s) sélectionné(s)";
 }
@@ -99,7 +99,7 @@ function renderProjDetail(id){
       : '<span class="tag dispo">dispo</span>';
     const check = p.status==='show' ? '' :
       `<input type="checkbox" ${p.prep&&p.prep[i.id]?'checked':''} onchange="toggleProjItem('${p.id}','${i.id}',this.checked)">`;
-    return `<label>${check}<span style="flex:1"><b>${esc(i.name)}</b> <span class="mono">${i.id}</span></span>${avail}</label>`;
+    return `<label>${check}<span style="flex:1">${itemTitle(i)} <span class="mono">${i.id}</span></span>${avail}</label>`;
   }).join("");
   const missing = (p.item_ids||[]).length - its.length;
   if(missing>0) list += `<div class="muted" style="padding:8px">⚠️ ${missing} item(s) du template ont été supprimés de l'inventaire.</div>`;
