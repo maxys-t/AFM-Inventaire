@@ -22,7 +22,7 @@ function openCropper(src, cb){
     const sl = document.getElementById('crop-zoom');
     sl.min = "1"; sl.max = "4"; sl.step = "0.01"; sl.value = "1";
     drawCrop();
-    open_('ovCrop');
+    openOver('ovCrop');
   };
   img.onerror = ()=> toast("Image illisible.", 'error');
   img.src = src;
