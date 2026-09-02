@@ -90,7 +90,7 @@ function itemRow(i, isChild){
   return `<tr class="rowlink ${isChild?'childrow':''} ${sel.has(i.id)?'selrow':''}" onclick="openDetail('${i.id}')">
     <td onclick="event.stopPropagation()"><input type="checkbox" ${sel.has(i.id)?'checked':''} onchange="toggleSel('${i.id}',this.checked)"></td>
     <td>${i.photo?`<img class="thumb" src="${i.photo}">`:""}</td>
-    <td data-l="Item"><b>${esc(i.name)}</b><br><span class="mono">${i.id}</span>${i.brand?` <span class="muted">· ${esc(i.brand)}</span>`:""}</td>
+    <td data-l="Item">${itemTitle(i)}<br><span class="mono">${i.id}</span></td>
     <td data-l="Catégorie"><span class="tag cat">${esc(subLabel(i.cat,i.subcat))}</span><br><span class="muted">${esc(catLabel(i.cat))}</span></td>
     <td data-l="Statut">${statusTag(i)}</td>
     <td data-l="Emplacement">${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}${i.loc!==i.home?` <span class="muted">(réf : ${esc(locLabel(i.home))})</span>`:""}</td>
@@ -106,10 +106,11 @@ function groupRow(key, items, open){
   const allSel = items.every(i=>sel.has(i.id));
   const locs = [...new Set(items.map(i=>i.status==='sorti'?i.loc:locLabel(i.loc)))];
   const cats = [...new Set(items.map(i=>i.cat+'/'+i.subcat))];
+  const brands = [...new Set(items.map(i=>(i.brand||'').trim()))];
   return `<tr class="grouprow ${allSel?'selrow':''}" onclick="toggleGroup(${JSON.stringify(key).replace(/"/g,'&quot;')})">
     <td onclick="event.stopPropagation()"><input type="checkbox" ${allSel?'checked':''} onchange="selectGroup(${JSON.stringify(key).replace(/"/g,'&quot;')},this.checked)"></td>
     <td><span class="chev">${open?'▾':'▸'}</span></td>
-    <td data-l="Item"><b>${esc(key)}</b><br><span class="muted">${items.length} exemplaires</span></td>
+    <td data-l="Item">${brands.length===1&&brands[0]?`<b>${esc(brands[0])}</b> `:''}${esc(key)}<br><span class="muted">${items.length} exemplaires</span></td>
     <td data-l="Catégorie">${cats.length===1?`<span class="tag cat">${esc(subLabel(items[0].cat,items[0].subcat))}</span>`:'<span class="muted">mixte</span>'}</td>
     <td data-l="Statut">${dispo?`<span class="tag dispo">${dispo} dispo</span> `:''}${sortis?`<span class="tag sorti">${sortis} sorti(s)</span>`:''}</td>
     <td data-l="Emplacement">${locs.length===1?esc(locs[0]):'<span class="muted">plusieurs</span>'}</td>
@@ -463,14 +464,13 @@ function openDetail(id){
     ? `<button class="btn sec small" onclick="openRepair('${i.id}','attente')">Signaler à réparer</button>`
     : `<button class="btn small ok" onclick="openRepair('${i.id}','bon')">Marquer réparé</button>`;
   document.getElementById('detailBody').innerHTML = `
-    <h3>${esc(i.name)} <span class="mono">${i.id}</span></h3>
+    <h3>${itemTitle(i)} <span class="mono">${i.id}</span></h3>
     ${i.photo?`<img class="itemphoto" src="${i.photo}">`:""}
     <p style="margin-bottom:10px">
       <span class="tag cat">${esc(catPath(i))}</span> ${statusTag(i)} <span class="tag ${i.cond}">${CONDS[i.cond]||i.cond}</span>
     </p>
     ${outInfo}
     <p class="muted" style="margin-bottom:4px">
-      ${i.brand?`Marque/modèle : <b>${esc(i.brand)}</b><br>`:""}
       ${i.serial?`N° série : <b>${esc(i.serial)}</b><br>`:""}
       Emplacement de référence : <b>${esc(locLabel(i.home))}</b><br>
       Emplacement actuel : <b>${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}</b>
