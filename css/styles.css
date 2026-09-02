@@ -204,4 +204,43 @@ tr.childrow td{ background:transparent }
   tr.childrow{ margin-left:14px }
   tr.selrow{ outline:2px solid var(--accent) }
 }
+/* ============================================================
+   v1.3 — Photos carrées, recadrage, import CSV
+   À COLLER À LA FIN de css/styles.css (ne rien remplacer)
+   ============================================================ */
+
+/* Toutes les photos s'affichent en carré, même les anciennes */
+.thumb{ width:44px; height:44px; aspect-ratio:1/1; object-fit:cover; border-radius:10px }
+.itemphoto{
+  width:220px; height:220px; max-width:100%; max-height:none;
+  aspect-ratio:1/1; object-fit:cover; border-radius:14px; margin-bottom:10px;
+}
+.sqphoto{
+  width:96px; height:96px; aspect-ratio:1/1; object-fit:cover;
+  border-radius:12px; vertical-align:middle; margin-right:10px;
+}
+.photozone{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:40px }
+
+/* Recadrage */
+.cropwrap{
+  width:300px; max-width:100%; margin:0 auto;
+  border-radius:14px; overflow:hidden; border:1px solid var(--border2);
+  position:relative; background:#000;
+}
+#crop-canvas{ display:block; width:100%; height:auto; cursor:grab; touch-action:none }
+#crop-canvas:active{ cursor:grabbing }
+#crop-zoom{ accent-color:var(--accent) }
+
+/* Import CSV */
+.csv-sum{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px }
+.csv-table{ max-height:340px; overflow:auto; border:1px solid var(--border); border-radius:12px }
+.csv-table table{ font-size:13px }
+.csv-table th{ position:sticky; top:0; background:var(--panel); z-index:1 }
+tr.csv-err td{ background:rgba(255,59,48,.07) }
+
+@media(max-width:700px){
+  .itemphoto{ width:100%; height:auto }
+  .csv-table{ max-height:260px }
+}
+
 
