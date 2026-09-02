@@ -253,6 +253,34 @@ async function bulkTrash(){
 
 /* ---- formulaire item (ajout / modification) ---- */
 let editingId = null;
+let pendingPhoto = null;    // photo recadrée en attente d'enregistrement
+
+/* Choix d'une photo → recadrage carré immédiat */
+function onPhotoChosen(input){
+  const f = input.files[0];
+  if(!f) return;
+  const rd = new FileReader();
+  rd.onload = e=> openCropper(e.target.result, d=>{ pendingPhoto = d; showPhotoPreview(d); });
+  rd.readAsDataURL(f);
+  input.value = "";
+}
+function recropPhoto(){
+  const cur = pendingPhoto || (editingId && item(editingId) ? item(editingId).photo : null);
+  if(!cur){ toast("Aucune photo à recadrer.", 'error'); return; }
+  openCropper(cur, d=>{ pendingPhoto = d; showPhotoPreview(d); });
+}
+function removePhoto(){
+  pendingPhoto = '';           // chaîne vide = suppression explicite
+  showPhotoPreview(null);
+}
+function showPhotoPreview(src){
+  const z = document.getElementById('i-photo-zone');
+  z.innerHTML = src
+    ? `<img class="sqphoto" src="${src}">
+       <button type="button" class="btn sec small" onclick="recropPhoto()">Recadrer</button>
+       <button type="button" class="btn sec small" onclick="removePhoto()">Retirer</button>`
+    : `<span class="muted">Aucune photo</span>`;
+}
 function openItemForm(id){
   editingId = id||null;
   document.getElementById('itemFormTitle').textContent = id?'Modifier l\'item':'Ajouter un item';
@@ -268,6 +296,8 @@ function openItemForm(id){
   if(i) document.getElementById('i-home').value = i.home;
   document.getElementById('i-notes').value = i?i.notes:"";
   document.getElementById('i-photo').value = "";
+  pendingPhoto = null;
+  showPhotoPreview(i ? i.photo : null);
   document.getElementById('qtyField').style.display = id?'none':'';
   document.getElementById('i-qty').value = 1;
   open_('ovItem');
@@ -295,14 +325,13 @@ function saveItem(){
     serial:document.getElementById('i-serial').value.trim(), cond:document.getElementById('i-cond').value,
     home:document.getElementById('i-home').value, notes:document.getElementById('i-notes').value.trim()
   };
-  const file = document.getElementById('i-photo').files[0];
   const finish = async (photo)=>{
     if(editingId){
       const i = item(editingId);
       const movedHome = i.home!==vals.home;
       const condChanged = i.cond!==vals.cond;
       Object.assign(i,vals);
-      if(photo) i.photo = photo;
+      if(photo !== null) i.photo = photo || null;
       if(i.status==='dispo' && movedHome) i.loc = vals.home;
       await apiUpdateItem(i.id, {...vals, photo:i.photo, loc:i.loc});
       if(movedHome && i.status==='dispo') await hist(i.id,'move',`nouvel emplacement de référence : ${locLabel(vals.home)}`);
@@ -324,16 +353,7 @@ function saveItem(){
     }
     close_('ovItem'); render();
   };
-  if(file){
-    const img = new Image(), rd = new FileReader();
-    rd.onload = e=>{ img.onload = ()=>{
-      const c = document.createElement('canvas'), s = Math.min(1, 400/Math.max(img.width,img.height));
-      c.width = img.width*s; c.height = img.height*s;
-      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-      finish(c.toDataURL('image/jpeg',.75));
-    }; img.src = e.target.result; };
-    rd.readAsDataURL(file);
-  } else finish(null);
+  finish(pendingPhoto);
 }
 async function deleteItem(id){
   const i = item(id);
