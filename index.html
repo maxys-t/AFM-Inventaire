@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.2.0">
+<link rel="stylesheet" href="css/styles.css?v=1.3.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -105,6 +105,7 @@
         <option value="hs">Hors service</option>
       </select>
       <button class="btn" data-req="edit" onclick="openItemForm()">+ Ajouter</button>
+      <button class="btn sec" data-req="edit" onclick="openCsvImport()">Importer CSV</button>
     </div>
     <div class="panel"><div id="invList"></div></div>
   </section>
@@ -161,7 +162,10 @@
       <option value="reparation">En réparation</option><option value="hs">Hors service</option>
     </select></div>
     <div class="field full"><label>Emplacement de référence *</label><select id="i-home"></select></div>
-    <div class="field full"><label>Photo (optionnel)</label><input type="file" id="i-photo" accept="image/*"></div>
+    <div class="field full"><label>Photo (optionnel) — recadrée en carré</label>
+      <div id="i-photo-zone" class="photozone"></div>
+      <input type="file" id="i-photo" accept="image/*" onchange="onPhotoChosen(this)" style="margin-top:8px">
+    </div>
     <div class="field full"><label>Notes</label><textarea id="i-notes" rows="2"></textarea></div>
   </div>
   <div class="modal-actions">
@@ -245,23 +249,59 @@
   </div>
 </div></div>
 
+<div class="overlay" id="ovCrop"><div class="modal" style="max-width:380px">
+  <h3>Recadrer la photo</h3>
+  <p class="muted" style="margin-bottom:10px">Déplace l'image et ajuste le zoom : le carré visible sera enregistré.</p>
+  <div class="cropwrap"><canvas id="crop-canvas"
+       onmousedown="cropDragStart(event)" onmousemove="cropDragMove(event)"
+       onmouseup="cropDragEnd()" onmouseleave="cropDragEnd()"
+       ontouchstart="cropDragStart(event)" ontouchmove="cropDragMove(event)"
+       ontouchend="cropDragEnd()"></canvas></div>
+  <div class="field" style="margin-top:12px"><label>Zoom</label>
+    <input type="range" id="crop-zoom" oninput="cropZoom(this.value)" style="width:100%"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="cancelCrop()">Annuler</button>
+    <button class="btn" onclick="applyCrop()">Valider</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="ovCsv"><div class="modal" style="max-width:760px">
+  <h3>Importer un fichier CSV</h3>
+  <p class="muted" style="margin-bottom:12px">
+    Remplis le modèle dans ton tableur, enregistre-le au format CSV, puis dépose-le ici.
+    Rien n'est enregistré avant ta confirmation.
+  </p>
+  <div class="toolbar">
+    <button class="btn sec small" onclick="downloadCsvTemplate()">⬇ Télécharger le modèle</button>
+    <button class="btn sec small" onclick="exportCsv()">⬇ Exporter l'inventaire actuel</button>
+    <input type="file" id="csv-file" accept=".csv,text/csv" onchange="onCsvChosen(this)">
+  </div>
+  <div id="csv-preview"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovCsv')">Fermer</button>
+    <button class="btn" id="csv-go" style="display:none" onclick="runCsvImport()">Importer</button>
+  </div>
+</div></div>
+
 <div id="bulkbar" style="display:none"></div>
 
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.2.0"></script>
-<script src="js/auth.js?v=1.2.0"></script>
-<script src="js/helpers.js?v=1.2.0"></script>
-<script src="js/db.js?v=1.2.0"></script>
-<script src="js/views-dashboard.js?v=1.2.0"></script>
-<script src="js/views-inventory.js?v=1.2.0"></script>
-<script src="js/views-projects.js?v=1.2.0"></script>
-<script src="js/views-out.js?v=1.2.0"></script>
-<script src="js/views-repairs.js?v=1.2.0"></script>
-<script src="js/views-people-loc.js?v=1.2.0"></script>
-<script src="js/views-trash.js?v=1.2.0"></script>
-<script src="js/views-users.js?v=1.2.0"></script>
-<script src="js/app.js?v=1.2.0"></script>
+<script src="js/config.js?v=1.3.0"></script>
+<script src="js/auth.js?v=1.3.0"></script>
+<script src="js/helpers.js?v=1.3.0"></script>
+<script src="js/crop.js?v=1.3.0"></script>
+<script src="js/db.js?v=1.3.0"></script>
+<script src="js/views-dashboard.js?v=1.3.0"></script>
+<script src="js/views-inventory.js?v=1.3.0"></script>
+<script src="js/views-projects.js?v=1.3.0"></script>
+<script src="js/views-out.js?v=1.3.0"></script>
+<script src="js/views-repairs.js?v=1.3.0"></script>
+<script src="js/views-people-loc.js?v=1.3.0"></script>
+<script src="js/views-trash.js?v=1.3.0"></script>
+<script src="js/views-users.js?v=1.3.0"></script>
+<script src="js/import-csv.js?v=1.3.0"></script>
+<script src="js/app.js?v=1.3.0"></script>
 </body>
 </html>
