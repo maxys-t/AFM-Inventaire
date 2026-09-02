@@ -39,7 +39,7 @@ const CSV_COLS = {
   name:      ['nom','name','designation','libelle','materiel','matériel'],
   cat:       ['categorie','catégorie','famille','category'],
   subcat:    ['sous categorie','sous-categorie','souscategorie','sous_categorie','sous categorie','subcategory','type'],
-  brand:     ['marque','modele','marque modele','marque/modele','brand'],
+  brand:     ['manufacturer','marque','fabricant','modele','marque modele','marque/modele','brand'],
   serial:    ['serie','numero de serie','n serie','numero serie','serial','sn'],
   cond:      ['etat','état','condition'],
   home:      ['emplacement','lieu','rangement','location'],
@@ -96,10 +96,10 @@ function openCsvImport(){
 
 function downloadCsvTemplate(){
   const lignes = [
-    'id;nom;categorie;sous_categorie;marque;numero_serie;etat;emplacement;quantite;notes',
-    ';Juno-106;Instruments;Synthé / clavier;Roland;JU12345;Bon état;Studio A;1;Révisé en 2025',
-    ';Câble XLR 5m;Câblage & connectique;Câble XLR;;;Bon état;Tiroir câbles;12;',
-    ';SM58;Micros & captation;Micro dynamique;Shure;;Bon état;Régie;4;'
+    'id;manufacturer;nom;categorie;sous_categorie;numero_serie;etat;emplacement;quantite;notes',
+    ';Roland;Juno-106;Instruments;Synthé / clavier;JU12345;Bon état;Studio A;1;Révisé en 2025',
+    ';;Câble XLR 5m;Câblage & connectique;Câble XLR;;Bon état;Tiroir câbles;12;',
+    ';Shure;SM58;Micros & captation;Micro dynamique;;Bon état;Régie;4;'
   ];
   const blob = new Blob(["﻿" + lignes.join('\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
@@ -112,7 +112,7 @@ function downloadCsvTemplate(){
    puis réimporter : les identifiants font la correspondance) */
 function exportCsv(){
   const esc2 = v => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
-  const head = 'id;nom;categorie;sous_categorie;marque;numero_serie;etat;emplacement;quantite;notes';
+  const head = 'id;manufacturer;nom;categorie;sous_categorie;numero_serie;etat;emplacement;quantite;notes';
   const lines = db.items.map(i=>[
     i.id, i.name, catLabel(i.cat), subLabel(i.cat,i.subcat), i.brand||'', i.serial||'',
     CONDS[i.cond]||i.cond, i.home, 1, i.notes||''
