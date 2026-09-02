@@ -61,13 +61,21 @@ function toast(msg, type='info', actionLabel=null, actionFn=null, ms=null){
    on évite juste les avertissements bruyants dans la console. */
 window.addEventListener('unhandledrejection', e=>{ console.warn('Action interrompue :', e.reason); e.preventDefault(); });
 
-/* ---- modales (une seule ouverte à la fois) ---- */
-function close_(id){ document.getElementById(id).classList.remove('open'); }
+/* ---- modales ----
+   Règle générale : une seule fenêtre à la fois (open_).
+   Exception : les fenêtres imbriquées, comme le recadrage ouvert
+   depuis le formulaire d'un item, s'empilent par-dessus (openOver). */
+function close_(id){ document.getElementById(id).classList.remove('open','stacked'); }
 function open_(id){
-  document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+  document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open','stacked'));
   document.getElementById(id).classList.add('open');
 }
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
+function openOver(id){ document.getElementById(id).classList.add('open','stacked'); }
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
+  if(e.target!==o) return;
+  if(o.id === 'ovCrop' && typeof cancelCrop === 'function') return cancelCrop();
+  o.classList.remove('open','stacked');
+}));
 
 /* ---- export / import JSON ---- */
 function exportJSON(){
