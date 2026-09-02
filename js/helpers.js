@@ -38,6 +38,16 @@ function uid(cat, sub){
   return code + "-" + String(max+1).padStart(3,"0");
 }
 
+/* --- Affichage d'un item : « Manufacturer » en gras puis le modèle --- */
+function itemTitle(i){
+  const b = (i.brand||'').trim();
+  return (b ? `<b>${esc(b)}</b> ` : '') + esc(i.name);
+}
+function itemTitleText(i){
+  const b = (i.brand||'').trim();
+  return (b ? b + ' ' : '') + (i.name||'');
+}
+
 /* --- Exemplaires multiples ---
    « Câble XLR 5m #3 » appartient à la famille « Câble XLR 5m ».
    Renvoie null si le nom ne suit pas cette convention. */
