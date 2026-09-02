@@ -10,17 +10,17 @@ function renderDash(){
   out.forEach(i=>{
     const o = i.out;
     if(o.due && o.alertOn!==false && overdue(i)){
-      alerts += `<div class="alert bad">⚠️ <b>${esc(i.name)}</b> — retour prévu le <b>${fdateD(o.due)}</b>, en retard de <b>${daysLate(i)} j</b> — ${esc(outBy(i))} (${esc(o.reason)})</div>`;
+      alerts += `<div class="alert bad">⚠️ ${itemTitle(i)} — retour prévu le <b>${fdateD(o.due)}</b>, en retard de <b>${daysLate(i)} j</b> — ${esc(outBy(i))} (${esc(o.reason)})</div>`;
     }else if(!o.due && !o.projectId && daysSince(o.date)>=ALERT_DAYS){
-      alerts += `<div class="alert">⏰ <b>${esc(i.name)}</b> sorti depuis <b>${daysSince(o.date)} j</b> — ${esc(outBy(i))} (${esc(o.reason)})</div>`;
+      alerts += `<div class="alert">⏰ ${itemTitle(i)} sorti depuis <b>${daysSince(o.date)} j</b> — ${esc(outBy(i))} (${esc(o.reason)})</div>`;
     }
   });
   rep.forEach(i=>{
-    alerts += `<div class="alert ${i.cond==='hs'?'bad':''}">🔧 <b>${esc(i.name)}</b> — ${CONDS[i.cond]}</div>`;
+    alerts += `<div class="alert ${i.cond==='hs'?'bad':''}">🔧 ${itemTitle(i)} — ${CONDS[i.cond]}</div>`;
   });
   const recent = db.history.slice(0,8).map(h=>{
     const it = item(h.itemId);
-    return `<li>${histIcon(h.type)} <b>${esc(it?it.name:h.itemId)}</b> — ${histText(h)}<div class="when">${fdate(h.date)}</div></li>`;
+    return `<li>${histIcon(h.type)} ${it?itemTitle(it):`<b>${esc(h.itemId)}</b>`} — ${histText(h)}<div class="when">${fdate(h.date)}${histBy(h)}</div></li>`;
   }).join("");
   document.getElementById('v-dash').innerHTML = `
     <div class="cards">
