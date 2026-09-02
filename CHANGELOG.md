@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.3.0] — 2026-09-02
+### Ajouté
+- **Recadrage carré des photos** : cadre, déplacement et zoom au moment de l'ajout ;
+  bouton « Recadrer » sur les photos existantes. Toutes les photos s'affichent en
+  carré, y compris les anciennes.
+- **Import CSV** : modèle téléchargeable, aperçu détaillé avec erreurs signalées
+  ligne par ligne, création et mise à jour (par identifiant), création confirmée des
+  emplacements manquants, colonne quantité pour les lots. Rien n'est écrit avant
+  confirmation. Tolérant sur les séparateurs, les accents et les états écrits en
+  langage courant.
+- **Export CSV** de l'inventaire, au même format que l'import — permet de corriger
+  en masse dans un tableur puis de réimporter.
+### Modifié
+- Affichage des items façon catalogue : **fabricant** en gras suivi du modèle, dans
+  tous les écrans. Le champ « Marque / modèle » devient « Manufacturer », et « Nom »
+  devient « Modèle ».
+### Corrigé
+- Catégorie mal affichée dans la corbeille depuis le passage aux catégories à deux niveaux.
+
 ## [1.2.0] — 2026-08-09
 ### Ajouté
 - **Catégories à deux niveaux** (10 familles, 43 sous-catégories), les deux
