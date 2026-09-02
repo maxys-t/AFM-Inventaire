@@ -33,7 +33,7 @@ function renderOutList(){
   </tr></thead><tbody>` + rows.map(i=>{
     const d = daysSince(i.out.date), od = overdue(i);
     return `<tr class="rowlink" onclick="openDetail('${i.id}')">
-      <td data-l="Item"><b>${esc(i.name)}</b> <span class="mono">${i.id}</span></td>
+      <td data-l="Item">${itemTitle(i)} <span class="mono">${i.id}</span></td>
       <td data-l="Qui">${esc(outBy(i))}</td>
       <td data-l="Depuis">${fdate(i.out.date)}</td>
       <td data-l="Durée"><span class="${(!i.out.due && d>=ALERT_DAYS)?'days-late':''}">${d} j</span></td>
