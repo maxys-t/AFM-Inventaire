@@ -7,8 +7,8 @@ function renderPeople(){
   const list = db.users.map(u=>{
     const holding = db.items.filter(i=>i.status==='sorti' && i.out.userId===u.id);
     return `<tr><td data-l="Nom"><b>${esc(u.name)}</b></td>
-      <td data-l="A en sa possession">${holding.length?holding.map(i=>`<span class="chip" style="cursor:pointer" onclick="openDetail('${i.id}')">${esc(i.name)} · ${daysSince(i.out.date)} j</span>`).join(""):'<span class="muted">rien</span>'}</td>
-      <td><button class="btn danger small" data-id="${u.id}" onclick="delUser(this.dataset.id)">✕</button></td></tr>`;
+      <td data-l="A en sa possession">${holding.length?holding.map(i=>`<span class="chip" style="cursor:pointer" onclick="openDetail('${i.id}')">${itemTitleText(i)} · ${daysSince(i.out.date)} j</span>`).join(""):'<span class="muted">rien</span>'}</td>
+      <td>${can('edit')?`<button class="btn danger small" data-id="${u.id}" onclick="delUser(this.dataset.id)">✕</button>`:''}</td></tr>`;
   }).join("");
   document.getElementById('peopleList').innerHTML = db.users.length
     ? `<table><thead><tr><th>Nom</th><th>A en sa possession</th><th></th></tr></thead><tbody>${list}</tbody></table>`
@@ -42,7 +42,7 @@ function renderLoc(){
     const present = db.items.filter(i=>i.loc===l.name).length;
     return `<tr><td data-l="Emplacement" class="${sub?'subloc':''}"><b>${esc(l.name)}</b></td>
       <td data-l="Contenu">${n} rattaché(s) · ${present} présent(s)</td>
-      <td><button class="btn danger small" data-n="${esc(l.name)}" onclick="delLoc(this.dataset.n)">✕</button></td></tr>`;
+      <td>${can('edit')?`<button class="btn danger small" data-n="${esc(l.name)}" onclick="delLoc(this.dataset.n)">✕</button>`:''}</td></tr>`;
   };
   let list = "";
   locRoots().forEach(r=>{ list += locRow(r,false); locChildren(r.name).forEach(c=>list += locRow(c,true)); });
