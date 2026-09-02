@@ -26,8 +26,8 @@ function renderTrash(){
     const left = trashDaysLeft(i);
     const exp = left <= 0;
     return `<tr>
-      <td data-l="Item"><b>${esc(i.name)}</b> <span class="mono">${i.id}</span>
-        <br><span class="muted">${CATS[i.cat]||i.cat} · supprimé le ${fdate(i.deleted_at)}</span></td>
+      <td data-l="Item">${itemTitle(i)} <span class="mono">${i.id}</span>
+        <br><span class="muted">${esc(catPath(i))} · supprimé le ${fdate(i.deleted_at)}</span></td>
       <td data-l="Expiration">${exp
         ? '<span class="tag hs">à purger</span>'
         : `<span class="muted">encore ${left} j</span>`}</td>
