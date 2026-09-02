@@ -221,6 +221,9 @@ tr.childrow td{ background:transparent }
 }
 .photozone{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:40px }
 
+/* Fenêtre imbriquée (recadrage par-dessus le formulaire) */
+.overlay.stacked{ z-index:70; background:rgba(0,0,0,.55) }
+
 /* Recadrage */
 .cropwrap{
   width:300px; max-width:100%; margin:0 auto;
@@ -242,6 +245,7 @@ tr.csv-err td{ background:rgba(255,59,48,.07) }
   .itemphoto{ width:100%; height:auto }
   .csv-table{ max-height:260px }
 }
+
 
 
 
