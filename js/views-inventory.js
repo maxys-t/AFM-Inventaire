@@ -33,7 +33,7 @@ function invFiltered(){
   const sub = (document.getElementById('fSub')||{}).value || "";
   const lo = document.getElementById('fLoc').value, co = document.getElementById('fCond').value;
   return db.items.filter(i=>{
-    if(q && !(i.name+" "+i.brand+" "+i.serial+" "+i.id+" "+(i.notes||"")+" "+catPath(i)).toLowerCase().includes(q)) return false;
+    if(q && !(i.name+" "+i.brand+" "+i.serial+" "+i.id+" "+(i.notes||"")+" "+(i.owner||"")+" "+(i.provider||"")+" "+catPath(i)).toLowerCase().includes(q)) return false;
     if(cat && i.cat!==cat) return false;
     if(sub && i.subcat!==sub) return false;
     if(st && i.status!==st) return false;
@@ -293,6 +293,9 @@ function openItemForm(id){
   fillSubForm(i?i.subcat:"");
   document.getElementById('i-brand').value = i?i.brand:"";
   document.getElementById('i-serial').value = i?i.serial:"";
+  document.getElementById('i-owner').value = i?(i.owner||""):"";
+  document.getElementById('i-provider').value = i?(i.provider||""):"";
+  document.getElementById('i-price').value = (i && i.price!=null)?String(i.price).replace('.',','):"";
   document.getElementById('i-cond').value = i?i.cond:"bon";
   if(i) document.getElementById('i-home').value = i.home;
   document.getElementById('i-notes').value = i?i.notes:"";
@@ -324,7 +327,9 @@ function saveItem(){
   const vals = {
     name, cat, subcat, brand:document.getElementById('i-brand').value.trim(),
     serial:document.getElementById('i-serial').value.trim(), cond:document.getElementById('i-cond').value,
-    home:document.getElementById('i-home').value, notes:document.getElementById('i-notes').value.trim()
+    home:document.getElementById('i-home').value, notes:document.getElementById('i-notes').value.trim(),
+    owner:document.getElementById('i-owner').value.trim(), provider:document.getElementById('i-provider').value.trim(),
+    price:parsePrice(document.getElementById('i-price').value)
   };
   const finish = async (photo)=>{
     if(editingId){
@@ -472,6 +477,9 @@ function openDetail(id){
     ${outInfo}
     <p class="muted" style="margin-bottom:4px">
       ${i.serial?`N° série : <b>${esc(i.serial)}</b><br>`:""}
+      ${i.owner?`Propriétaire : <b>${esc(i.owner)}</b><br>`:""}
+      ${i.provider?`Fournisseur : <b>${esc(i.provider)}</b><br>`:""}
+      ${i.price!=null?`Prix d'achat : <b>${fprice(i.price)}</b><br>`:""}
       Emplacement de référence : <b>${esc(locLabel(i.home))}</b><br>
       Emplacement actuel : <b>${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}</b>
     </p>
