@@ -48,6 +48,23 @@ function itemTitleText(i){
   return (b ? b + ' ' : '') + (i.name||'');
 }
 
+/* --- Prix --- */
+function fprice(v){ return (v==null || v==='' || isNaN(v)) ? '' : Number(v).toLocaleString('fr-FR',{style:'currency',currency:'EUR'}); }
+/* « 1 200,50 € » → 1200.5 ; « 1,299.00 » → 1299 ; « 1.200 » → 1200 ; vide → null */
+function parsePrice(v){
+  let t = String(v==null?'':v).replace(/[^\d,.-]/g,'');
+  if(!t) return null;
+  const c = t.lastIndexOf(','), d = t.lastIndexOf('.');
+  if(c>=0 && d>=0){                       // les deux : le dernier est la décimale
+    t = c>d ? t.replace(/\./g,'').replace(',','.') : t.replace(/,/g,'');
+  }else if(c>=0){                         // virgule seule
+    t = /^\d{1,3}(,\d{3})+$/.test(t) ? t.replace(/,/g,'') : t.replace(',','.');
+  }else if(d>=0){                         // point seul : « 1.200 » = milliers, « 9.90 » = décimale
+    if(/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g,'');
+  }
+  const n = parseFloat(t); return isNaN(n) ? null : Math.round(n*100)/100;
+}
+
 /* --- Exemplaires multiples ---
    « Câble XLR 5m #3 » appartient à la famille « Câble XLR 5m ».
    Renvoie null si le nom ne suit pas cette convention. */
