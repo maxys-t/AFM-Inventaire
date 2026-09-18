@@ -36,22 +36,25 @@ function parseCSV(text){
 /* Colonnes acceptées (plusieurs orthographes tolérées) */
 const CSV_COLS = {
   id:        ['id','identifiant','ref','reference'],
-  name:      ['nom','name','designation','libelle','materiel','matériel'],
+  name:      ['nom','name','item','modele','model','designation','libelle','materiel','matériel'],
   cat:       ['categorie','catégorie','famille','category'],
   subcat:    ['sous categorie','sous-categorie','souscategorie','sous_categorie','sous categorie','subcategory','type'],
-  brand:     ['manufacturer','marque','fabricant','modele','marque modele','marque/modele','brand'],
-  serial:    ['serie','numero de serie','n serie','numero serie','serial','sn'],
+  brand:     ['manufacturer','marque','fabricant','marque modele','marque/modele','brand'],
+  serial:    ['serie','numero de serie','n serie','numero serie','serial','serial #','serial number','sn'],
+  owner:     ['owner','proprietaire','propriétaire'],
+  provider:  ['provider','fournisseur','vendeur','supplier','magasin'],
+  price:     ['purchase price','price','prix','prix d achat','prix dachat','prix achat','cout','coût'],
   cond:      ['etat','état','condition'],
   home:      ['emplacement','lieu','rangement','location'],
-  qty:       ['quantite','quantité','qte','qty','nombre'],
+  qty:       ['quantite','quantité','quantity','qte','qty','nombre'],
   notes:     ['notes','remarques','commentaire','commentaires']
 };
 function colIndexes(header){
   const idx = {};
   header.forEach((h,i)=>{
-    const n = norm(h).replace(/[_-]/g,' ');
+    const n = norm(h).replace(/[_\-/']/g,' ').replace(/\s+/g,' ').trim();
     for(const [key,aliases] of Object.entries(CSV_COLS)){
-      if(aliases.some(a=>norm(a).replace(/[_-]/g,' ') === n)) idx[key] = i;
+      if(aliases.some(a=>norm(a).replace(/[_\-/']/g,' ').replace(/\s+/g,' ').trim() === n)) idx[key] = i;
     }
   });
   return idx;
@@ -85,8 +88,11 @@ function resolveLoc(v){
 }
 
 /* ---------- écran d'import ---------- */
+let csvText = null;   // dernier fichier analysé (pour ré-analyser si l'emplacement par défaut change)
 function openCsvImport(){
-  csvPlan = null;
+  csvPlan = null; csvText = null;
+  const dl = document.getElementById('csv-defloc');
+  if(dl) dl.innerHTML = '<option value="">— aucun (l\'emplacement devient obligatoire) —</option>' + locOptions();
   document.getElementById('csv-file').value = "";
   document.getElementById('csv-preview').innerHTML =
     '<div class="muted">Choisis un fichier CSV pour voir l\'aperçu.</div>';
@@ -96,10 +102,10 @@ function openCsvImport(){
 
 function downloadCsvTemplate(){
   const lignes = [
-    'id;manufacturer;nom;categorie;sous_categorie;numero_serie;etat;emplacement;quantite;notes',
-    ';Roland;Juno-106;Instruments;Synthé / clavier;JU12345;Bon état;Studio A;1;Révisé en 2025',
-    ';;Câble XLR 5m;Câblage & connectique;Câble XLR;;Bon état;Tiroir câbles;12;',
-    ';Shure;SM58;Micros & captation;Micro dynamique;;Bon état;Régie;4;'
+    'Categorie;Sous Categorie;Manufacturer;Item;Owner;Serial #;Provider;Quantity;Purchase Price;Emplacement;Etat;Notes;id',
+    'Instruments;Synthé / clavier;Roland;Juno-106;AFM;JU12345;Occasion;1;900;Studio A;Bon état;Révisé en 2025;',
+    'Câblage & connectique;Câble XLR;;Câble XLR 5m;AFM;;Thomann;12;9,90;Tiroir câbles;;;',
+    'Micros & captation;Micro dynamique;Shure;SM58;AFM;;Thomann;4;99;;;;'
   ];
   const blob = new Blob(["﻿" + lignes.join('\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
@@ -112,10 +118,10 @@ function downloadCsvTemplate(){
    puis réimporter : les identifiants font la correspondance) */
 function exportCsv(){
   const esc2 = v => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
-  const head = 'id;manufacturer;nom;categorie;sous_categorie;numero_serie;etat;emplacement;quantite;notes';
+  const head = 'Categorie;Sous Categorie;Manufacturer;Item;Owner;Serial #;Provider;Quantity;Purchase Price;Emplacement;Etat;Notes;id';
   const lines = db.items.map(i=>[
-    i.id, i.name, catLabel(i.cat), subLabel(i.cat,i.subcat), i.brand||'', i.serial||'',
-    CONDS[i.cond]||i.cond, i.home, 1, i.notes||''
+    catLabel(i.cat), subLabel(i.cat,i.subcat), i.brand||'', i.name, i.owner||'', i.serial||'', i.provider||'',
+    1, i.price!=null?String(i.price).replace('.',','):'', i.home, CONDS[i.cond]||i.cond, i.notes||'', i.id
   ].map(esc2).join(';'));
   const blob = new Blob(["﻿" + [head, ...lines].join('\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
@@ -127,9 +133,12 @@ function exportCsv(){
 function onCsvChosen(input){
   const f = input.files[0]; if(!f) return;
   const rd = new FileReader();
-  rd.onload = e => analyseCsv(e.target.result);
+  rd.onload = e => { csvText = e.target.result; analyseCsv(csvText); };
   rd.readAsText(f, 'utf-8');
 }
+
+function reanalyseCsv(){ if(csvText) analyseCsv(csvText); }
+function csvDefaultLoc(){ const d = document.getElementById('csv-defloc'); return d ? d.value : ''; }
 
 function analyseCsv(text){
   const rows = parseCSV(text);
@@ -140,9 +149,10 @@ function analyseCsv(text){
     go.style.display = 'none'; return;
   }
   const idx = colIndexes(rows[0]);
-  const missing = ['name','cat','subcat','home'].filter(k=>idx[k]===undefined);
+  const missing = ['name','cat','subcat'].filter(k=>idx[k]===undefined);
+  if(idx.home===undefined && !csvDefaultLoc()) missing.push('home');
   if(missing.length){
-    const noms = {name:'nom', cat:'categorie', subcat:'sous_categorie', home:'emplacement'};
+    const noms = {name:'Item', cat:'Categorie', subcat:'Sous Categorie', home:'Emplacement (ou choisis un emplacement par défaut ci-dessus)'};
     box.innerHTML = `<div class="alert bad">Colonnes obligatoires absentes : <b>${missing.map(m=>noms[m]).join(', ')}</b>.<br>
       Utilise le modèle pour repartir sur de bonnes bases.</div>`;
     go.style.display = 'none'; return;
@@ -159,6 +169,10 @@ function analyseCsv(text){
     L.brand  = get(r,'brand');
     L.serial = get(r,'serial');
     L.notes  = get(r,'notes');
+    L.owner  = get(r,'owner');
+    L.provider = get(r,'provider');
+    L.price  = parsePrice(get(r,'price'));
+    if(get(r,'price') && L.price===null) L.errors.push(`prix illisible « ${get(r,'price')} »`);
     L.qty    = Math.max(1, Math.min(200, parseInt(get(r,'qty')||'1',10) || 1));
 
     if(!L.name) L.errors.push("nom manquant");
@@ -171,7 +185,7 @@ function analyseCsv(text){
     L.cond = resolveCond(get(r,'cond'));
     if(!L.cond){ L.errors.push(`état inconnu « ${get(r,'cond')} »`); L.cond = 'bon'; }
 
-    const rawLoc = get(r,'home');
+    const rawLoc = get(r,'home') || csvDefaultLoc();
     L.home = resolveLoc(rawLoc);
     if(!L.home){
       if(rawLoc){ L.home = rawLoc; L.newLoc = true; newLocs.add(rawLoc); }
@@ -236,7 +250,8 @@ async function runCsvImport(){
     for(const L of updates){
       const i = item(L.id);
       const vals = {name:L.name, cat:L.cat, subcat:L.subcat, brand:L.brand,
-                    serial:L.serial, cond:L.cond, home:L.home, notes:L.notes};
+                    serial:L.serial, cond:L.cond, home:L.home, notes:L.notes,
+                    owner:L.owner, provider:L.provider, price:L.price};
       Object.assign(i, vals);
       if(i.status==='dispo') i.loc = L.home;
       await apiUpdateItem(i.id, {...vals, loc:i.loc});
@@ -252,6 +267,7 @@ async function runCsvImport(){
         const id = uid(L.cat, L.subcat);
         const row = {id, name:(L.qty>1?`${base} #${start+k}`:L.name), cat:L.cat, subcat:L.subcat,
                      brand:L.brand, serial:L.serial, cond:L.cond, notes:L.notes, photo:null,
+                     owner:L.owner, provider:L.provider, price:L.price,
                      home:L.home, loc:L.home, status:'dispo', out:null};
         db.items.push(row); rows.push(row);
       }
