@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.3.1">
+<link rel="stylesheet" href="css/styles.css?v=1.4.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -156,6 +156,9 @@
     <div class="field"><label>Sous-catégorie *</label><select id="i-subcat"></select></div>
     <div class="field"><label>Manufacturer</label><input id="i-brand" placeholder="ex : Roland, Shure…"></div>
     <div class="field"><label>N° de série</label><input id="i-serial"></div>
+    <div class="field"><label>Propriétaire</label><input id="i-owner" placeholder="ex : AFM, Maxys…"></div>
+    <div class="field"><label>Fournisseur</label><input id="i-provider" placeholder="ex : Thomann"></div>
+    <div class="field"><label>Prix d'achat (€)</label><input id="i-price" inputmode="decimal" placeholder="ex : 1200"></div>
     <div class="field" id="qtyField"><label>Quantité</label><input type="number" id="i-qty" min="1" value="1"></div>
     <div class="field"><label>État</label><select id="i-cond">
       <option value="bon">Bon état</option><option value="attente">En attente de réparation</option>
@@ -276,6 +279,8 @@
     <button class="btn sec small" onclick="exportCsv()">⬇ Exporter l'inventaire actuel</button>
     <input type="file" id="csv-file" accept=".csv,text/csv" onchange="onCsvChosen(this)">
   </div>
+  <div class="field" style="margin:10px 0"><label>Emplacement par défaut (lignes sans emplacement)</label>
+    <select id="csv-defloc" onchange="reanalyseCsv()"></select></div>
   <div id="csv-preview"></div>
   <div class="modal-actions">
     <button class="btn sec" onclick="close_('ovCsv')">Fermer</button>
@@ -288,20 +293,20 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.3.1"></script>
-<script src="js/auth.js?v=1.3.1"></script>
-<script src="js/helpers.js?v=1.3.1"></script>
-<script src="js/crop.js?v=1.3.1"></script>
-<script src="js/db.js?v=1.3.1"></script>
-<script src="js/views-dashboard.js?v=1.3.1"></script>
-<script src="js/views-inventory.js?v=1.3.1"></script>
-<script src="js/views-projects.js?v=1.3.1"></script>
-<script src="js/views-out.js?v=1.3.1"></script>
-<script src="js/views-repairs.js?v=1.3.1"></script>
-<script src="js/views-people-loc.js?v=1.3.1"></script>
-<script src="js/views-trash.js?v=1.3.1"></script>
-<script src="js/views-users.js?v=1.3.1"></script>
-<script src="js/import-csv.js?v=1.3.1"></script>
-<script src="js/app.js?v=1.3.1"></script>
+<script src="js/config.js?v=1.4.0"></script>
+<script src="js/auth.js?v=1.4.0"></script>
+<script src="js/helpers.js?v=1.4.0"></script>
+<script src="js/crop.js?v=1.4.0"></script>
+<script src="js/db.js?v=1.4.0"></script>
+<script src="js/views-dashboard.js?v=1.4.0"></script>
+<script src="js/views-inventory.js?v=1.4.0"></script>
+<script src="js/views-projects.js?v=1.4.0"></script>
+<script src="js/views-out.js?v=1.4.0"></script>
+<script src="js/views-repairs.js?v=1.4.0"></script>
+<script src="js/views-people-loc.js?v=1.4.0"></script>
+<script src="js/views-trash.js?v=1.4.0"></script>
+<script src="js/views-users.js?v=1.4.0"></script>
+<script src="js/import-csv.js?v=1.4.0"></script>
+<script src="js/app.js?v=1.4.0"></script>
 </body>
 </html>
