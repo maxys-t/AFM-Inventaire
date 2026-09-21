@@ -34,20 +34,32 @@ const CATS = {
     guitare:     {label:"Guitare / basse",            code:"GTR"},
     batterie:    {label:"Batterie",                   code:"DRM"},
     percussion:  {label:"Percussion",                 code:"PRC"},
+    peau10:      {label:"Peau 10\"",   code:"P10"},
+    peau12:      {label:"Peau 12\"",   code:"P12"},
+    peau13:      {label:"Peau 13\"",   code:"P13"},
+    peau14:      {label:"Peau 14\"",   code:"P14"},
+    peau16:      {label:"Peau 16\"",   code:"P16"},
+    peau18:      {label:"Peau 18\"",   code:"P18"},
+    peau22:      {label:"Peau 22\"",   code:"P22"},
+    peau_autre:  {label:"Peau — autre taille", code:"PEA"},
     autre_inst:  {label:"Autre instrument",           code:"INS"}
   }},
 
   captation: { label:"Micros & captation", subs:{
     condensateur:{label:"Micro condensateur", code:"MIC"},
     dynamique:   {label:"Micro dynamique",    code:"MID"},
-    ruban:       {label:"Micro ruban",        code:"MIR"}
+    ruban:       {label:"Micro ruban",        code:"MIR"},
+    mesure_mic:  {label:"Micro de mesure",   code:"MME"},
+    trigger:     {label:"Trigger",           code:"TRG"},
+    accessoire:  {label:"Accessoire micro",  code:"MAC"}
   }},
 
   peripheriques: { label:"Périphs", subs:{
     compresseur: {label:"Compresseur", code:"CMP"},
     eq:          {label:"EQ",          code:"EQU"},
     preampli:    {label:"Préampli",    code:"PRE"},
-    effets:      {label:"Effets",      code:"FXR"}
+    effets:      {label:"Effets",      code:"FXR"},
+    chassis:     {label:"Châssis 500",        code:"CH5"}
   }},
 
   pedales: { label:"Pédales", subs:{
@@ -59,7 +71,9 @@ const CATS = {
     pitch:       {label:"Pitch / Octave",       code:"PIT"},
     dynamique_p: {label:"Dynamique",            code:"DYN"},
     multi:       {label:"Multi-effets / Looper",code:"MFX"},
-    alim:        {label:"Alimentation",         code:"ALP"}
+    alim:        {label:"Alimentation",         code:"ALP"},
+    accordeur:   {label:"Accordeur",          code:"TUN"},
+    footswitch:  {label:"Footswitch / expression", code:"FSW"}
   }},
 
   di: { label:"DI & splitters", subs:{
@@ -71,7 +85,18 @@ const CATS = {
   amplification: { label:"Amplification & écoute", subs:{
     ampli_inst:  {label:"Ampli guitare / basse",  code:"AMP"},
     monitoring:  {label:"Enceinte de monitoring", code:"MON"},
-    casque:      {label:"Casque",                 code:"CAS"}
+    casque:      {label:"Casque",                 code:"CAS"},
+    ampli_casque:{label:"Ampli casque",       code:"AMC"}
+  }},
+
+  consoles: { label:"Consoles", subs:{
+    console:     {label:"Console de mixage", code:"CON"},
+    extension:   {label:"Extension / rack",  code:"CEX"},
+    carte:       {label:"Carte I/O",         code:"CIO"}
+  }},
+
+  mesure: { label:"Mesure", subs:{
+    outil:       {label:"Outil de mesure",   code:"MES"}
   }},
 
   informatique: { label:"Informatique & interfaces", subs:{
@@ -79,16 +104,25 @@ const CATS = {
     ordinateur:  {label:"Ordinateur",       code:"ORD"},
     convertisseur:{label:"Convertisseur",   code:"CNV"},
     controleur:  {label:"Contrôleur MIDI",  code:"CTL"},
-    stockage:    {label:"Stockage",         code:"STK"}
+    stockage:    {label:"Stockage",         code:"STK"},
+    reseau:      {label:"Réseau",             code:"NET"},
+    midi:        {label:"Interface MIDI",     code:"MDI"}
   }},
 
   cablage: { label:"Câblage & connectique", subs:{
-    xlr:         {label:"Câble XLR",        code:"CAB"},
-    jack:        {label:"Câble jack",       code:"JCK"},
-    instrument:  {label:"Câble instrument", code:"CIN"},
-    secteur:     {label:"Câble secteur",    code:"SEC"},
-    multipaire:  {label:"Multipaire",       code:"MUL"},
-    adaptateur:  {label:"Adaptateur",       code:"ADP"}
+    xlr:         {label:"XLR",             code:"XLR"},
+    trs:         {label:"TRS",             code:"TRS"},
+    mini_trs:    {label:"Mini TRS",        code:"MTR"},
+    ts:          {label:"TS",              code:"TS" },
+    mini_ts:     {label:"Mini TS",         code:"MTS"},
+    rca:         {label:"RCA",             code:"RCA"},
+    xlrf_trs:    {label:"XLR F / TRS",     code:"XFT"},
+    xlrm_trs:    {label:"XLR M / TRS",     code:"XMT"},
+    secteur:     {label:"Câble secteur",   code:"SEC"},
+    midi_cable:  {label:"MIDI",            code:"CMD"},
+    multipaire:  {label:"Multipaire audio",code:"MUL"},
+    adaptateur:  {label:"Adaptateur",      code:"ADP"},
+    patchbay:    {label:"Patchbay",        code:"PBY"}
   }},
 
   supports: { label:"Supports & transport", subs:{
@@ -102,6 +136,7 @@ const CATS = {
     mobilier:    {label:"Mobilier",              code:"MOB"},
     eclairage:   {label:"Éclairage",             code:"LUM"},
     acoustique:  {label:"Traitement acoustique", code:"ACO"},
+    electricite: {label:"Électricité / alimentation", code:"ELE"},
     autre:       {label:"Divers",                code:"DIV"}
   }}
 };
