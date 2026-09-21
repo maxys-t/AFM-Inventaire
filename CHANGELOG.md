@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.5.0] — 2026-09-02
+### Ajouté
+- Familles **Consoles** (console, extension, carte I/O) et **Mesure**.
+- Sous-catégories : Accessoire micro, Châssis 500, Accordeur, Footswitch / expression,
+  Ampli casque, Réseau, Interface MIDI, Patchbay, Électricité / alimentation.
+
+## [1.4.0] — 2026-09-02
+### Ajouté
+- Trois champs sur la fiche : **propriétaire**, **fournisseur**, **prix d'achat**
+  (migration `007`). Cherchables ; réservés aux administrateurs comme le reste de la fiche.
+- Import CSV : nouveau modèle dans l'ordre du tableur du studio
+  (Categorie, Sous Categorie, Manufacturer, Item, Owner, Serial #, Provider, Quantity,
+  Purchase Price) ; **emplacement par défaut** choisi à l'import pour les lignes qui n'en ont pas.
+### Modifié
+- Export CSV aligné sur le nouveau modèle.
+
 ## [1.3.0] — 2026-09-02
 ### Ajouté
 - **Recadrage carré des photos** : cadre, déplacement et zoom au moment de l'ajout ;
