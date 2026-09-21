@@ -44,6 +44,8 @@ const CSV_COLS = {
   owner:     ['owner','proprietaire','propriétaire'],
   provider:  ['provider','fournisseur','vendeur','supplier','magasin'],
   price:     ['purchase price','price','prix','prix d achat','prix dachat','prix achat','cout','coût'],
+  order:     ['sales order #','sales order','order #','order','bon de commande','commande','n commande','numero de commande','po','facture'],
+  pdate:     ['purchase date','date','date achat','date d achat','date dachat','date de achat','bought','acheté le'],
   cond:      ['etat','état','condition'],
   home:      ['emplacement','lieu','rangement','location'],
   qty:       ['quantite','quantité','quantity','qte','qty','nombre'],
@@ -102,10 +104,10 @@ function openCsvImport(){
 
 function downloadCsvTemplate(){
   const lignes = [
-    'Categorie;Sous Categorie;Manufacturer;Item;Owner;Serial #;Provider;Quantity;Purchase Price;Emplacement;Etat;Notes;id',
-    'Instruments;Synthé / clavier;Roland;Juno-106;AFM;JU12345;Occasion;1;900;Studio A;Bon état;Révisé en 2025;',
-    'Câblage & connectique;Câble XLR;;Câble XLR 5m;AFM;;Thomann;12;9,90;Tiroir câbles;;;',
-    'Micros & captation;Micro dynamique;Shure;SM58;AFM;;Thomann;4;99;;;;'
+    'Categorie;Sous Categorie;Manufacturer;Item;Owner;Serial #;Provider;Sales order #;Purchase date;Quantity;Purchase Price;Emplacement;Etat;Notes;id',
+    'Instruments;Synthé / clavier;Roland;Juno-106;AFM;JU12345;Occasion;SO-2024-118;12/03/2024;1;900;Studio A;Bon état;Révisé en 2025;',
+    'Câblage & connectique;XLR;;XLR 5m;AFM;;Thomann;;;12;9,90;Tiroir câbles;;;',
+    'Micros & captation;Micro dynamique;Shure;SM58;AFM;;Thomann;;;4;99;;;;'
   ];
   const blob = new Blob(["﻿" + lignes.join('\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
@@ -118,9 +120,10 @@ function downloadCsvTemplate(){
    puis réimporter : les identifiants font la correspondance) */
 function exportCsv(){
   const esc2 = v => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
-  const head = 'Categorie;Sous Categorie;Manufacturer;Item;Owner;Serial #;Provider;Quantity;Purchase Price;Emplacement;Etat;Notes;id';
+  const head = 'Categorie;Sous Categorie;Manufacturer;Item;Owner;Serial #;Provider;Sales order #;Purchase date;Quantity;Purchase Price;Emplacement;Etat;Notes;id';
   const lines = db.items.map(i=>[
     catLabel(i.cat), subLabel(i.cat,i.subcat), i.brand||'', i.name, i.owner||'', i.serial||'', i.provider||'',
+    i.sales_order||'', i.purchase_date||'',
     1, i.price!=null?String(i.price).replace('.',','):'', i.home, CONDS[i.cond]||i.cond, i.notes||'', i.id
   ].map(esc2).join(';'));
   const blob = new Blob(["﻿" + [head, ...lines].join('\n')], {type:'text/csv;charset=utf-8'});
@@ -173,6 +176,9 @@ function analyseCsv(text){
     L.provider = get(r,'provider');
     L.price  = parsePrice(get(r,'price'));
     if(get(r,'price') && L.price===null) L.errors.push(`prix illisible « ${get(r,'price')} »`);
+    L.sales_order = get(r,'order');
+    L.purchase_date = parseDate(get(r,'pdate'));
+    if(get(r,'pdate') && !L.purchase_date) L.errors.push(`date illisible « ${get(r,'pdate')} »`);
     L.qty    = Math.max(1, Math.min(200, parseInt(get(r,'qty')||'1',10) || 1));
 
     if(!L.name) L.errors.push("nom manquant");
@@ -251,7 +257,8 @@ async function runCsvImport(){
       const i = item(L.id);
       const vals = {name:L.name, cat:L.cat, subcat:L.subcat, brand:L.brand,
                     serial:L.serial, cond:L.cond, home:L.home, notes:L.notes,
-                    owner:L.owner, provider:L.provider, price:L.price};
+                    owner:L.owner, provider:L.provider, price:L.price,
+                    sales_order:L.sales_order, purchase_date:L.purchase_date};
       Object.assign(i, vals);
       if(i.status==='dispo') i.loc = L.home;
       await apiUpdateItem(i.id, {...vals, loc:i.loc});
@@ -268,6 +275,7 @@ async function runCsvImport(){
         const row = {id, name:(L.qty>1?`${base} #${start+k}`:L.name), cat:L.cat, subcat:L.subcat,
                      brand:L.brand, serial:L.serial, cond:L.cond, notes:L.notes, photo:null,
                      owner:L.owner, provider:L.provider, price:L.price,
+                     sales_order:L.sales_order, purchase_date:L.purchase_date,
                      home:L.home, loc:L.home, status:'dispo', out:null};
         db.items.push(row); rows.push(row);
       }
