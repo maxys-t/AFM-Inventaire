@@ -65,6 +65,24 @@ function parsePrice(v){
   const n = parseFloat(t); return isNaN(n) ? null : Math.round(n*100)/100;
 }
 
+/* --- Date d'achat (jour seul, sans heure) --- */
+function fdateOnly(d){ return d ? new Date(d+'T00:00:00').toLocaleDateString('fr-FR') : ''; }
+/* Accepte « 12/03/2024 », « 2024-03-12 », « 12.03.2024 » → « 2024-03-12 » ; sinon null */
+function parseDate(v){
+  const t = String(v==null?'':v).trim();
+  if(!t) return null;
+  let m = t.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/);          // année en premier
+  if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  m = t.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})$/);            // jour/mois/année
+  if(m){
+    let [,d,mo,y] = m;
+    if(y.length===2) y = (+y > 70 ? '19' : '20') + y;
+    if(+d > 31 || +mo > 12) return null;
+    return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+  return null;
+}
+
 /* --- Exemplaires multiples ---
    « Câble XLR 5m #3 » appartient à la famille « Câble XLR 5m ».
    Renvoie null si le nom ne suit pas cette convention. */
