@@ -4,6 +4,7 @@
    ============================================================ */
 
 let sel = new Set();        // items sélectionnés (cases à cocher)
+let sortDir = 1;            // 1 = croissant, -1 = décroissant
 let expanded = new Set();   // groupes d'exemplaires dépliés
 
 /* ---- filtres ---- */
@@ -15,6 +16,23 @@ function fillFilters(){
   const fl = document.getElementById('fLoc'), keepL = fl.value;
   fl.innerHTML = '<option value="">Emplacement : tous</option>' + locOptions();
   fl.value = keepL;
+  fillValueFilter('fOwner', 'Propriétaire', i=>i.owner);
+  fillValueFilter('fProv',  'Fournisseur',  i=>i.provider);
+}
+
+/* Remplit un menu déroulant avec les valeurs présentes dans l'inventaire */
+function fillValueFilter(id, label, get){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const keep = el.value;
+  const vals = [...new Set(db.items.map(i=>(get(i)||'').trim()).filter(Boolean))]
+                 .sort((a,b)=>a.localeCompare(b,'fr'));
+  const vides = db.items.filter(i=>!(get(i)||'').trim()).length;
+  el.innerHTML = `<option value="">${label} : tous</option>`
+    + vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")
+    + (vides ? `<option value="__vide__">— non renseigné (${vides})</option>` : '');
+  el.value = keep;
+  if(el.value !== keep) el.value = "";      // la valeur a disparu
 }
 /* La liste des sous-catégories dépend de la catégorie choisie */
 function fillSubFilter(){
@@ -32,6 +50,9 @@ function invFiltered(){
   const cat = document.getElementById('fCat').value, st = document.getElementById('fStatus').value;
   const sub = (document.getElementById('fSub')||{}).value || "";
   const lo = document.getElementById('fLoc').value, co = document.getElementById('fCond').value;
+  const ow = (document.getElementById('fOwner')||{}).value || "";
+  const pr = (document.getElementById('fProv')||{}).value || "";
+  const match = (v, f)=> f === '__vide__' ? !(v||'').trim() : (v||'').trim() === f;
   return db.items.filter(i=>{
     if(q && !(i.name+" "+i.brand+" "+i.serial+" "+i.id+" "+(i.notes||"")+" "+(i.owner||"")+" "+(i.provider||"")+" "+(i.sales_order||"")+" "+catPath(i)).toLowerCase().includes(q)) return false;
     if(cat && i.cat!==cat) return false;
@@ -39,17 +60,66 @@ function invFiltered(){
     if(st && i.status!==st) return false;
     if(lo && !inLocFilter(lo,i.loc) && !inLocFilter(lo,i.home)) return false;
     if(co && i.cond!==co) return false;
+    if(ow && !match(i.owner, ow)) return false;
+    if(pr && !match(i.provider, pr)) return false;
     return true;
+  });
+}
+
+/* ---- tri ----
+   Les valeurs absentes finissent toujours en bas, quel que soit le sens :
+   un item sans prix n'a rien à faire en tête d'un classement par prix. */
+function toggleSortDir(){
+  sortDir = -sortDir;
+  document.getElementById('sortDir').textContent = sortDir > 0 ? '↑' : '↓';
+  renderInv();
+}
+function sortValue(i, by){
+  switch(by){
+    case 'name':  return itemTitleText(i).toLowerCase();
+    case 'id':    return i.id;
+    case 'cat':   return catPath(i).toLowerCase();
+    case 'loc':   return (i.status==='sorti' ? i.loc : locLabel(i.loc) || '').toLowerCase();
+    case 'cond':  return ['bon','attente','reparation','hs'].indexOf(i.cond);
+    case 'price': return (i.price==null || i.price==='') ? null : Number(i.price);
+    case 'pdate': return i.purchase_date || null;     // « aaaa-mm-jj » se compare tel quel
+    case 'owner': return (i.owner||'').toLowerCase();
+    case 'prov':  return (i.provider||'').toLowerCase();
+  }
+  return null;
+}
+function sortItems(rows, by){
+  if(!by) return rows;
+  const vide = v => v === null || v === undefined || v === '' || (typeof v === 'number' && isNaN(v)) || v === -1;
+  return [...rows].sort((a,b)=>{
+    const x = sortValue(a,by), y = sortValue(b,by);
+    if(vide(x) && vide(y)) return a.id.localeCompare(b.id);
+    if(vide(x)) return 1;
+    if(vide(y)) return -1;
+    if(typeof x === 'number' && typeof y === 'number') return (x-y) * sortDir;
+    return String(x).localeCompare(String(y),'fr') * sortDir;
   });
 }
 
 /* ---- rendu de la liste ---- */
 function renderInv(){
-  const rows = invFiltered();
+  const by = (document.getElementById('fSort')||{}).value || "";
+  const rows = sortItems(invFiltered(), by);
   const searching = !!(document.getElementById('q').value||"").trim();
+  renderInvSummary(rows);
 
   if(!rows.length){
     document.getElementById('invList').innerHTML = '<div class="empty">Aucun item ne correspond.</div>';
+    renderBulkBar(); return;
+  }
+
+  // Un tri explicite affiche une liste à plat : regrouper masquerait le classement.
+  if(by){
+    const allSelF = rows.length && rows.every(i=>sel.has(i.id));
+    document.getElementById('invList').innerHTML = `<table><thead><tr>
+      <th style="width:34px"><input type="checkbox" ${allSelF?'checked':''} onchange="selectAllVisible(this.checked)" title="Tout sélectionner"></th>
+      <th></th><th>Item</th><th>Catégorie</th><th>Statut</th><th>Emplacement</th><th>État</th><th></th>
+    </tr></thead><tbody>${rows.map(i=>itemRow(i,false)).join("")}</tbody></table>`;
     renderBulkBar(); return;
   }
 
@@ -86,10 +156,24 @@ function renderInv(){
   renderBulkBar();
 }
 
+/* Résumé de ce qui est affiché : nombre d'items et valeur d'achat cumulée */
+function renderInvSummary(rows){
+  const el = document.getElementById('invSummary');
+  if(!el) return;
+  const avecPrix = rows.filter(i=>i.price!=null && i.price!=='');
+  const total = avecPrix.reduce((s,i)=>s + Number(i.price), 0);
+  const sortis = rows.filter(i=>i.status==='sorti').length;
+  el.innerHTML = `<b>${rows.length}</b> item${rows.length>1?'s':''} affiché${rows.length>1?'s':''}`
+    + (rows.length !== db.items.length ? ` <span class="muted">sur ${db.items.length}</span>` : '')
+    + (sortis ? ` · ${sortis} sorti${sortis>1?'s':''}` : '')
+    + (avecPrix.length ? ` · valeur d'achat <b>${fprice(total)}</b>`
+        + (avecPrix.length !== rows.length ? ` <span class="muted">(${avecPrix.length} item(s) avec prix)</span>` : '') : '');
+}
+
 function itemRow(i, isChild){
   return `<tr class="rowlink ${isChild?'childrow':''} ${sel.has(i.id)?'selrow':''}" onclick="openDetail('${i.id}')">
     <td onclick="event.stopPropagation()"><input type="checkbox" ${sel.has(i.id)?'checked':''} onchange="toggleSel('${i.id}',this.checked)"></td>
-    <td>${i.photo?`<img class="thumb" src="${i.photo}">`:""}</td>
+    <td>${i.photo?`<img class="thumb" loading="lazy" src="${i.photo}">`:""}</td>
     <td data-l="Item">${itemTitle(i)}<br><span class="mono">${i.id}</span></td>
     <td data-l="Catégorie"><span class="tag cat">${esc(subLabel(i.cat,i.subcat))}</span><br><span class="muted">${esc(catLabel(i.cat))}</span></td>
     <td data-l="Statut">${statusTag(i)}</td>
@@ -107,10 +191,11 @@ function groupRow(key, items, open){
   const locs = [...new Set(items.map(i=>i.status==='sorti'?i.loc:locLabel(i.loc)))];
   const cats = [...new Set(items.map(i=>i.cat+'/'+i.subcat))];
   const brands = [...new Set(items.map(i=>(i.brand||'').trim()))];
+  const photos = [...new Set(items.map(i=>i.photo||''))];
   return `<tr class="grouprow ${allSel?'selrow':''}" onclick="toggleGroup(${JSON.stringify(key).replace(/"/g,'&quot;')})">
     <td onclick="event.stopPropagation()"><input type="checkbox" ${allSel?'checked':''} onchange="selectGroup(${JSON.stringify(key).replace(/"/g,'&quot;')},this.checked)"></td>
-    <td><span class="chev">${open?'▾':'▸'}</span></td>
-    <td data-l="Item">${brands.length===1&&brands[0]?`<b>${esc(brands[0])}</b> `:''}${esc(key)}<br><span class="muted">${items.length} exemplaires</span></td>
+    <td>${photos.length===1&&photos[0]?`<img class="thumb" loading="lazy" src="${photos[0]}">`:''}</td>
+    <td data-l="Item"><span class="chev">${open?'▾':'▸'}</span> ${brands.length===1&&brands[0]?`<b>${esc(brands[0])}</b> `:''}${esc(key)}<br><span class="muted">${items.length} exemplaires</span></td>
     <td data-l="Catégorie">${cats.length===1?`<span class="tag cat">${esc(subLabel(items[0].cat,items[0].subcat))}</span>`:'<span class="muted">mixte</span>'}</td>
     <td data-l="Statut">${dispo?`<span class="tag dispo">${dispo} dispo</span> `:''}${sortis?`<span class="tag sorti">${sortis} sorti(s)</span>`:''}</td>
     <td data-l="Emplacement">${locs.length===1?esc(locs[0]):'<span class="muted">plusieurs</span>'}</td>
@@ -336,12 +421,17 @@ function saveItem(){
     purchase_date:document.getElementById('i-date').value || null
   };
   const finish = async (photo)=>{
+    // Une photo fraîchement recadrée part dans le stockage ; on ne garde que son lien.
+    const uploadIfNeeded = async (dataUrl, id)=>{
+      if(!dataUrl || !dataUrl.startsWith('data:')) return dataUrl;
+      return await apiUploadPhoto(dataUrl, `items/${id}.jpg`);
+    };
     if(editingId){
       const i = item(editingId);
       const movedHome = i.home!==vals.home;
       const condChanged = i.cond!==vals.cond;
       Object.assign(i,vals);
-      if(photo !== null) i.photo = photo || null;
+      if(photo !== null) i.photo = photo ? await uploadIfNeeded(photo, editingId) : null;
       if(i.status==='dispo' && movedHome) i.loc = vals.home;
       await apiUpdateItem(i.id, {...vals, photo:i.photo, loc:i.loc});
       if(movedHome && i.status==='dispo') await hist(i.id,'move',`nouvel emplacement de référence : ${locLabel(vals.home)}`);
@@ -352,10 +442,11 @@ function saveItem(){
       const base = groupKeyOf(name) || name;   // « Câble #4 » saisi → famille « Câble »
       const start = 1 + db.items.filter(x=>x.name===base || groupKeyOf(x.name)===base).length;
       const rows = [];
+      const shared = photo ? await uploadIfNeeded(photo, uid(vals.cat, vals.subcat)) : null;
       for(let k=0;k<qty;k++){
         const id = uid(vals.cat, vals.subcat);
         const nm = qty>1 ? `${base} #${start+k}` : name;
-        const row = {id,...vals,name:nm,photo:photo||null,loc:vals.home,status:"dispo",out:null};
+        const row = {id,...vals,name:nm,photo:shared,loc:vals.home,status:"dispo",out:null};
         db.items.push(row); rows.push(row);
       }
       await apiInsertItems(rows);
@@ -474,7 +565,7 @@ function openDetail(id){
     : `<button class="btn small ok" onclick="openRepair('${i.id}','bon')">Marquer réparé</button>`;
   document.getElementById('detailBody').innerHTML = `
     <h3>${itemTitle(i)} <span class="mono">${i.id}</span></h3>
-    ${i.photo?`<img class="itemphoto" src="${i.photo}">`:""}
+    ${i.photo?`<img class="itemphoto" loading="lazy" src="${i.photo}">`:""}
     <p style="margin-bottom:10px">
       <span class="tag cat">${esc(catPath(i))}</span> ${statusTag(i)} <span class="tag ${i.cond}">${CONDS[i.cond]||i.cond}</span>
     </p>
