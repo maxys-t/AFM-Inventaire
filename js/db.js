@@ -250,6 +250,32 @@ async function apiPurgeItem(id){
 }
 
 /* --- opérations groupées (une requête pour tout un lot) --- */
+/* ---- photos : fichiers dans le stockage Supabase ----
+   La fiche ne garde qu'un lien, pas l'image elle-même : la liste
+   reste légère même avec des centaines de photos. */
+const PHOTO_BUCKET = 'item-photos';
+
+function dataUrlToBlob(d){
+  const [head, b64] = d.split(',');
+  const mime = (head.match(/:(.*?);/) || [,'image/jpeg'])[1];
+  const bin = atob(b64), arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], {type:mime});
+}
+
+/* Envoie une image (data URL) et renvoie son adresse publique. */
+async function apiUploadPhoto(dataUrl, path){
+  const blob = dataUrlToBlob(dataUrl);
+  const { error } = await sb.storage.from(PHOTO_BUCKET)
+    .upload(path, blob, {upsert:true, contentType:blob.type, cacheControl:'3600'});
+  if(error){
+    toast("Envoi de la photo impossible : " + (error.message||error), 'error');
+    throw error;
+  }
+  const { data } = sb.storage.from(PHOTO_BUCKET).getPublicUrl(path);
+  return data.publicUrl + '?v=' + Date.now();      // évite l'image en cache après remplacement
+}
+
 async function apiUpdateItemsIn(ids, fields){
   if(!ids.length) return;
   await run(sb.from('items').update(fields).in('id', ids));
