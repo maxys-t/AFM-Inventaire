@@ -327,6 +327,27 @@ tr.csv-err td{ background:rgba(255,59,48,.07) }
   .itemphoto{ width:100%; height:auto }
   .csv-table{ max-height:260px }
 }
+/* ============================================================
+   Complément CSS v1.5 → v1.7
+   À COLLER À LA FIN de css/styles.css (ne rien remplacer).
+   Si tu as déjà collé le CSS de la v1.5, c'est tout ce qu'il manque.
+   ============================================================ */
+
+/* v1.6 — import groupé de photos */
+.grouprow .thumb{ opacity:.9 }
+.grouprow .chev{ margin-right:2px }
+#ph-preview .csv-table{ max-height:300px }
+#ph-file{ max-width:100% }
+
+/* v1.7 — tri et filtres de l'inventaire */
+.sortbox{ display:inline-flex; align-items:center; gap:4px }
+.sortbox #sortDir{ min-width:34px; font-size:15px; line-height:1 }
+#invSummary{ font-size:13px }
+#invSummary b{ color:var(--text) }
+@media(max-width:700px){
+  .sortbox{ width:100% }
+  .sortbox select{ flex:1 }
+}
 
 
 
