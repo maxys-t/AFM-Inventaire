@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.5.0] — 2026-09-21
+### Ajouté
+- Familles **Consoles** (console, extension, carte I/O), **Mesure**, et sous-catégories
+  Accessoire micro, Micro de mesure, Trigger, Châssis 500, Accordeur,
+  Footswitch / expression, Ampli casque, Réseau, Interface MIDI, Patchbay,
+  Électricité / alimentation, peaux de batterie par taille (10" à 22").
+- Champs **n° de commande** et **date d'achat** sur la fiche (migration `008`),
+  cherchables et exportables, réservés aux administrateurs.
+- Import CSV : colonnes `Sales order #` et `Purchase date`, dates acceptées en
+  jj/mm/aaaa, aaaa-mm-jj ou jj.mm.aaaa ; une date illisible est signalée, pas devinée.
+### Modifié
+- **Câblage & connectique** détaillé par connecteur : XLR, TRS, Mini TRS, TS, Mini TS,
+  RCA, XLR F / TRS, XLR M / TRS, Câble secteur, MIDI, Multipaire audio, Adaptateur,
+  Patchbay. « Câble jack » et « Câble instrument » disparaissent.
+- Identifiants des câbles XLR en `XLR-001` (au lieu de `CAB-001`).
+- Modèle et export CSV alignés sur ce format.
+
 ## [1.4.0] — 2026-09-02
 ### Ajouté
 - Trois champs sur la fiche : **propriétaire**, **fournisseur**, **prix d'achat**
