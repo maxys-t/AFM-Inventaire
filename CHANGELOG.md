@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.7.0] — 2026-09-21
+### Ajouté
+- **Tri de l'inventaire** croissant/décroissant par nom, identifiant, catégorie,
+  emplacement, état, prix d'achat, date d'achat, propriétaire ou fournisseur.
+  Les valeurs non renseignées restent en fin de liste.
+- **Filtres propriétaire et fournisseur**, alimentés par les valeurs présentes,
+  avec une entrée « non renseigné ».
+- Ligne de résumé : nombre d'items affichés, sorties en cours et **valeur d'achat
+  cumulée** de la sélection en cours.
+
+## [1.6.0] — 2026-09-21
+### Ajouté
+- **Import groupé de photos** : association par nom de fichier (modèle, marque + modèle
+  ou identifiant), recadrage carré automatique, aperçu avant envoi, doublons signalés.
+  Export de la liste des noms de fichiers attendus.
+- Les photos sont désormais stockées comme fichiers dans Supabase Storage
+  (migration `009`) : la fiche ne contient qu'un lien, l'inventaire reste rapide
+  avec des centaines d'images. Outil de reprise des photos enregistrées auparavant.
+### Modifié
+- Les lignes de groupe affichent la photo commune ; toutes les images se chargent
+  en différé.
+
 ## [1.5.0] — 2026-09-21
 ### Ajouté
 - Familles **Consoles** (console, extension, carte I/O), **Mesure**, et sous-catégories
