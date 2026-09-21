@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.5.0">
+<link rel="stylesheet" href="css/styles.css?v=1.7.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -97,6 +97,8 @@
         <option value="sorti">Sorti</option>
       </select>
       <select id="fLoc" onchange="renderInv()"></select>
+      <select id="fOwner" onchange="renderInv()"></select>
+      <select id="fProv" onchange="renderInv()"></select>
       <select id="fCond" onchange="renderInv()">
         <option value="">État : tous</option>
         <option value="bon">Bon état</option>
@@ -104,9 +106,26 @@
         <option value="reparation">En réparation</option>
         <option value="hs">Hors service</option>
       </select>
+      <span class="sortbox">
+        <select id="fSort" onchange="renderInv()">
+          <option value="">Tri : par défaut</option>
+          <option value="name">Nom</option>
+          <option value="id">Identifiant</option>
+          <option value="cat">Catégorie</option>
+          <option value="loc">Emplacement</option>
+          <option value="cond">État</option>
+          <option value="price">Prix d'achat</option>
+          <option value="pdate">Date d'achat</option>
+          <option value="owner">Propriétaire</option>
+          <option value="prov">Fournisseur</option>
+        </select>
+        <button class="btn sec small" id="sortDir" onclick="toggleSortDir()" title="Sens du tri">↑</button>
+      </span>
       <button class="btn" data-req="edit" onclick="openItemForm()">+ Ajouter</button>
       <button class="btn sec" data-req="edit" onclick="openCsvImport()">Importer CSV</button>
+      <button class="btn sec" data-req="edit" onclick="openPhotoImport()">Importer photos</button>
     </div>
+    <div id="invSummary" class="muted" style="margin:-4px 0 10px"></div>
     <div class="panel"><div id="invList"></div></div>
   </section>
 
@@ -254,6 +273,26 @@
   </div>
 </div></div>
 
+<div class="overlay" id="ovPhotos"><div class="modal" style="max-width:760px">
+  <h3>Importer des photos</h3>
+  <p class="muted" style="margin-bottom:12px">
+    Nomme chaque image d'après le modèle de l'item — <b>Juno-106.jpg</b>, <b>XLR 3m.jpg</b>,
+    <b>Shure SM57.jpg</b> — ou d'après son identifiant (<b>SYN-001.jpg</b>).
+    Une photo de modèle habille tous ses exemplaires. Les images sont recadrées
+    au carré et réduites automatiquement.
+  </p>
+  <div class="toolbar">
+    <button class="btn sec small" onclick="listeNomsPhotos()">⬇ Liste des noms attendus</button>
+    <input type="file" id="ph-file" accept="image/*" multiple onchange="onPhotosChosen(this)">
+    <button class="btn sec small" data-req="admin" onclick="migrerPhotos()">Déplacer les anciennes photos</button>
+  </div>
+  <div id="ph-preview"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovPhotos')">Fermer</button>
+    <button class="btn" id="ph-go" style="display:none" onclick="runPhotoImport()">Envoyer</button>
+  </div>
+</div></div>
+
 <div class="overlay" id="ovCrop"><div class="modal" style="max-width:380px">
   <h3>Recadrer la photo</h3>
   <p class="muted" style="margin-bottom:10px">Déplace l'image et ajuste le zoom : le carré visible sera enregistré.</p>
@@ -295,20 +334,21 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.5.0"></script>
-<script src="js/auth.js?v=1.5.0"></script>
-<script src="js/helpers.js?v=1.5.0"></script>
-<script src="js/crop.js?v=1.5.0"></script>
-<script src="js/db.js?v=1.5.0"></script>
-<script src="js/views-dashboard.js?v=1.5.0"></script>
-<script src="js/views-inventory.js?v=1.5.0"></script>
-<script src="js/views-projects.js?v=1.5.0"></script>
-<script src="js/views-out.js?v=1.5.0"></script>
-<script src="js/views-repairs.js?v=1.5.0"></script>
-<script src="js/views-people-loc.js?v=1.5.0"></script>
-<script src="js/views-trash.js?v=1.5.0"></script>
-<script src="js/views-users.js?v=1.5.0"></script>
-<script src="js/import-csv.js?v=1.5.0"></script>
-<script src="js/app.js?v=1.5.0"></script>
+<script src="js/config.js?v=1.7.0"></script>
+<script src="js/auth.js?v=1.7.0"></script>
+<script src="js/helpers.js?v=1.7.0"></script>
+<script src="js/crop.js?v=1.7.0"></script>
+<script src="js/db.js?v=1.7.0"></script>
+<script src="js/views-dashboard.js?v=1.7.0"></script>
+<script src="js/views-inventory.js?v=1.7.0"></script>
+<script src="js/views-projects.js?v=1.7.0"></script>
+<script src="js/views-out.js?v=1.7.0"></script>
+<script src="js/views-repairs.js?v=1.7.0"></script>
+<script src="js/views-people-loc.js?v=1.7.0"></script>
+<script src="js/views-trash.js?v=1.7.0"></script>
+<script src="js/views-users.js?v=1.7.0"></script>
+<script src="js/import-csv.js?v=1.7.0"></script>
+<script src="js/photos-bulk.js?v=1.7.0"></script>
+<script src="js/app.js?v=1.7.0"></script>
 </body>
 </html>
