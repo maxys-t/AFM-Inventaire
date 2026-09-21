@@ -1,11 +1,5 @@
 # Changelog
 
-## [1.5.0] — 2026-09-02
-### Ajouté
-- Familles **Consoles** (console, extension, carte I/O) et **Mesure**.
-- Sous-catégories : Accessoire micro, Châssis 500, Accordeur, Footswitch / expression,
-  Ampli casque, Réseau, Interface MIDI, Patchbay, Électricité / alimentation.
-
 ## [1.4.0] — 2026-09-02
 ### Ajouté
 - Trois champs sur la fiche : **propriétaire**, **fournisseur**, **prix d'achat**
