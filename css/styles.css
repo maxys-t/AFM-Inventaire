@@ -349,8 +349,10 @@ tr.csv-err td{ background:rgba(255,59,48,.07) }
   .sortbox select{ flex:1 }
 }
 /* ============================================================
-   Complément CSS v1.7 → v1.8
-   À COLLER À LA FIN de css/styles.css (ne rien remplacer).
+   Complément CSS v1.7 → v1.8.1
+   À COLLER À LA FIN de css/styles.css.
+   Si tu avais déjà collé le bloc v1.8, remplace-le par celui-ci
+   (il le contient, plus les corrections de la 1.8.1).
    ============================================================ */
 
 /* v1.8 — sélecteur de matériel façon Finder + checklist groupée */
@@ -400,6 +402,16 @@ tr.csv-err td{ background:rgba(255,59,48,.07) }
   .pnav{ grid-template-columns:1fr; height:auto }
   .pcol{ max-height:150px }
   .pcol.wide{ max-height:260px }
+}
+
+/* v1.8.1 — numéro de version dans l'en-tête + robustesse du sélecteur */
+.vtag{ font-size:11px; color:var(--muted); border:1px solid var(--border);
+       padding:1px 7px; border-radius:20px; margin-left:2px; white-space:nowrap }
+/* Empêche une règle générique sur "input" de transformer les cases
+   à cocher du sélecteur en champs de saisie. */
+#p-picker input[type=checkbox], .clist input[type=checkbox]{
+  width:auto; min-width:0; height:auto; padding:0; margin:0;
+  border:0; background:none; box-shadow:none; flex:none;
 }
 
 
