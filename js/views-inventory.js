@@ -28,7 +28,7 @@ function fillValueFilter(id, label, get){
   const vals = [...new Set(db.items.map(i=>(get(i)||'').trim()).filter(Boolean))]
                  .sort((a,b)=>a.localeCompare(b,'fr'));
   const vides = db.items.filter(i=>!(get(i)||'').trim()).length;
-  el.innerHTML = `<option value="">${label} : tous</option>`
+  el.innerHTML = `<option value="">${label}: all</option>`
     + vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")
     + (vides ? `<option value="__vide__">— not set (${vides})</option>` : '');
   el.value = keep;
