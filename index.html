@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.8.1">
+<link rel="stylesheet" href="css/styles.css?v=1.9.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -13,118 +13,116 @@
 <header>
   <h1>AFM Inventory Tracker</h1>
   <span id="appVersion" class="vtag"></span>
-  <span id="syncdot" title="Connexion Supabase"></span>
+  <span id="syncdot" title="Supabase connection"></span>
   <span class="spacer"></span>
   <span id="userChip" style="display:none"></span>
-  <button class="btn sec small" id="trashBtn" data-req="delete" onclick="openTrash()" title="Corbeille" style="display:none">🗑<span id="trashCount"></span></button>
-  <button class="btn sec small" onclick="refresh()">↻ Actualiser</button>
+  <button class="btn sec small" id="trashBtn" data-req="delete" onclick="openTrash()" title="Trash" style="display:none">🗑<span id="trashCount"></span></button>
+  <button class="btn sec small" onclick="refresh()">↻ Refresh</button>
   <button class="btn sec small" data-req="admin" onclick="exportJSON()">Exporter</button>
-  <button class="btn sec small" data-req="admin" onclick="document.getElementById('importFile').click()">Importer</button>
+  <button class="btn sec small" data-req="admin" onclick="document.getElementById('importFile').click()">Import</button>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this)">
 </header>
 
 <nav style="display:none">
-  <button data-v="dash" class="active" onclick="show('dash')">Tableau de bord</button>
-  <button data-v="inv" onclick="show('inv')">Inventaire</button>
-  <button data-v="proj" onclick="show('proj')">Projets</button>
-  <button data-v="out" onclick="show('out')">Sortis</button>
-  <button data-v="rep" onclick="show('rep')">Réparations</button>
-  <button data-v="people" onclick="show('people')">Personnes</button>
-  <button data-v="loc" onclick="show('loc')">Emplacements</button>
-  <button data-v="users" data-req="admin" onclick="show('users')">Utilisateurs</button>
+  <button data-v="dash" class="active" onclick="show('dash')">Dashboard</button>
+  <button data-v="inv" onclick="show('inv')">Inventory</button>
+  <button data-v="people" onclick="show('people')">Borrowers</button>
+  <button data-v="proj" onclick="show('proj')">Projects</button>
+  <button data-v="out" onclick="show('out')">Checked out</button>
+  <button data-v="rep" onclick="show('rep')">Repairs</button>
+  <span class="navspace"></span>
+  <button data-v="settings" onclick="show('settings')" class="navgear" title="Settings">⚙ Settings</button>
 </nav>
 
 <div id="login" style="display:none">
   <div class="panel">
-    <h2>Connexion</h2>
+    <h2>Sign in</h2>
     <div id="login-form">
       <p class="muted" style="margin-bottom:12px">
-        Application réservée au personnel du studio. Entre ton adresse email :
-        tu recevras un lien pour te connecter, sans mot de passe.
+        Studio staff only. Enter your email address and you will receive a sign-in link — no password needed.
       </p>
       <div class="field" style="margin-bottom:12px">
-        <label>Adresse email</label>
-        <input type="email" id="login-email" style="width:100%" placeholder="prenom@studio.fr"
+        <label>Email address</label>
+        <input type="email" id="login-email" style="width:100%" placeholder="name@studio.com"
                onkeydown="if(event.key==='Enter')sendMagicLink()">
       </div>
-      <button class="btn" id="login-btn" onclick="sendMagicLink()">Recevoir mon lien de connexion</button>
+      <button class="btn" id="login-btn" onclick="sendMagicLink()">Send me a sign-in link</button>
       <p class="muted" id="login-msg" style="margin-top:10px"></p>
     </div>
     <div id="login-sent" style="display:none">
-      <p style="margin-bottom:8px">📧 Lien envoyé à <b id="login-sent-mail"></b></p>
-      <p class="muted">Ouvre ta boîte mail et clique sur le lien pour accéder à l'inventaire.
-      Pense à vérifier les indésirables. Le lien est valable une heure.</p>
+      <p style="margin-bottom:8px">📧 Link sent to <b id="login-sent-mail"></b></p>
+      <p class="muted">Open your inbox and click the link to reach the inventory.
+      Check your spam folder if needed — the link is valid for one hour.</p>
     </div>
   </div>
 </div>
 
 <div id="denied" style="display:none">
   <div class="panel">
-    <h2>Accès non autorisé</h2>
+    <h2>Access denied</h2>
     <p class="muted" style="margin-bottom:12px">
-      L'adresse <b id="denied-mail"></b> n'est pas autorisée à accéder à l'inventaire du studio.
-      Demande à un administrateur de t'ajouter, puis reconnecte-toi.
+      <b id="denied-mail"></b> is not allowed to access the studio inventory.
+      Ask an administrator to add you, then sign in again.
     </p>
-    <button class="btn sec" onclick="signOut()">Utiliser une autre adresse</button>
+    <button class="btn sec" onclick="signOut()">Use another address</button>
   </div>
 </div>
 
 <div id="setup" style="display:none">
   <div class="panel">
-    <h2>Connexion à Supabase</h2>
+    <h2>Supabase connection</h2>
     <p class="muted" id="setupMsg" style="margin-bottom:10px">
-      Colle ici les infos de ton projet Supabase (Project Settings → API).
-      À faire une seule fois par appareil.
+      Paste your Supabase project details here (Project Settings → API).
+      Only needed once per device.
     </p>
     <div class="field" style="margin-bottom:8px"><label>Project URL</label>
       <input id="cfg-url" style="width:100%" placeholder="https://xxxx.supabase.co"></div>
-    <div class="field" style="margin-bottom:12px"><label>Clé anon (public)</label>
+    <div class="field" style="margin-bottom:12px"><label>Anon key (public)</label>
       <input id="cfg-key" style="width:100%" placeholder="eyJhbGciOi…"></div>
-    <button class="btn" onclick="saveCfg()">Se connecter</button>
+    <button class="btn" onclick="saveCfg()">Connect</button>
   </div>
 </div>
 
 <main style="display:none">
+  <p id="viewIntro" class="viewintro"></p>
   <section id="v-dash"></section>
 
   <section id="v-inv" style="display:none">
     <div class="toolbar">
-      <input type="search" id="q" placeholder="Rechercher (nom, marque, n° série, ID…)" oninput="renderInv()">
+      <input type="search" id="q" placeholder="Search name, manufacturer, serial, ID…" oninput="renderInv()">
       <select id="fCat" onchange="onCatFilterChange()"></select>
       <select id="fSub" onchange="renderInv()" disabled></select>
       <select id="fStatus" onchange="renderInv()">
-        <option value="">Statut : tous</option>
-        <option value="dispo">Disponible</option>
-        <option value="sorti">Sorti</option>
+        <option value="">Status: all</option>
+        <option value="dispo">Available</option>
+        <option value="sorti">Checked out</option>
       </select>
       <select id="fLoc" onchange="renderInv()"></select>
       <select id="fOwner" onchange="renderInv()"></select>
       <select id="fProv" onchange="renderInv()"></select>
       <select id="fCond" onchange="renderInv()">
-        <option value="">État : tous</option>
-        <option value="bon">Bon état</option>
-        <option value="attente">En attente de réparation</option>
-        <option value="reparation">En réparation</option>
-        <option value="hs">Hors service</option>
+        <option value="">Condition: all</option>
+        <option value="bon">Good</option>
+        <option value="attente">Needs repair</option>
+        <option value="reparation">In repair</option>
+        <option value="hs">Out of service</option>
       </select>
       <span class="sortbox">
         <select id="fSort" onchange="renderInv()">
-          <option value="">Tri : par défaut</option>
-          <option value="name">Nom</option>
-          <option value="id">Identifiant</option>
-          <option value="cat">Catégorie</option>
-          <option value="loc">Emplacement</option>
-          <option value="cond">État</option>
-          <option value="price">Prix d'achat</option>
-          <option value="pdate">Date d'achat</option>
-          <option value="owner">Propriétaire</option>
-          <option value="prov">Fournisseur</option>
+          <option value="">Sort: default</option>
+          <option value="name">Name</option>
+          <option value="id">ID</option>
+          <option value="cat">Category</option>
+          <option value="loc">Location</option>
+          <option value="cond">Condition</option>
+          <option value="price">Purchase price</option>
+          <option value="pdate">Purchase date</option>
+          <option value="owner">Owner</option>
+          <option value="prov">Provider</option>
         </select>
-        <button class="btn sec small" id="sortDir" onclick="toggleSortDir()" title="Sens du tri">↑</button>
+        <button class="btn sec small" id="sortDir" onclick="toggleSortDir()" title="Sort direction">↑</button>
       </span>
-      <button class="btn" data-req="edit" onclick="openItemForm()">+ Ajouter</button>
-      <button class="btn sec" data-req="edit" onclick="openCsvImport()">Importer CSV</button>
-      <button class="btn sec" data-req="edit" onclick="openPhotoImport()">Importer photos</button>
+      <button class="btn" data-req="edit" onclick="openItemForm()">+ Add item</button>
     </div>
     <div id="invSummary" class="muted" style="margin:-4px 0 10px"></div>
     <div class="panel"><div id="invList"></div></div>
@@ -134,12 +132,12 @@
 
   <section id="v-out" style="display:none">
     <div class="toolbar">
-      <input type="search" id="oq" placeholder="Rechercher (nom, ID, raison…)" oninput="renderOutList()">
+      <input type="search" id="oq" placeholder="Search name, ID, reason…" oninput="renderOutList()">
       <select id="oCat" onchange="renderOutList()"></select>
       <select id="oUser" onchange="renderOutList()"></select>
-      <label class="muted">depuis plus de</label>
+      <label class="muted">out for more than</label>
       <input type="number" id="oDays" min="0" value="0" style="width:70px" onchange="renderOutList()">
-      <span class="muted">jours</span>
+      <span class="muted">days</span>
     </div>
     <div class="panel"><div id="outList"></div></div>
   </section>
@@ -148,113 +146,108 @@
 
   <section id="v-people" style="display:none">
     <div class="toolbar" data-req="edit">
-      <input id="newUser" placeholder="Nom de la personne" onkeydown="if(event.key==='Enter')addUser()">
-      <button class="btn" onclick="addUser()">+ Ajouter</button>
+      <input id="newUser" placeholder="Borrower name" onkeydown="if(event.key==='Enter')addUser()">
+      <button class="btn" onclick="addUser()">+ Add borrower</button>
     </div>
     <div class="panel"><div id="peopleList"></div></div>
   </section>
 
-  <section id="v-users" style="display:none"></section>
+  <section id="v-settings" style="display:none"></section>
 
-  <section id="v-loc" style="display:none">
-    <div class="toolbar" data-req="edit">
-      <input id="newLoc" placeholder="ex : Studio A, Rack synthés…" onkeydown="if(event.key==='Enter')addLoc()">
-      <select id="newLocParent"></select>
-      <button class="btn" onclick="addLoc()">+ Ajouter</button>
-    </div>
-    <p class="muted" style="margin-bottom:10px">Un emplacement principal = un lieu (Studio A, Régie…). Choisis "dans : …" pour créer un sous-emplacement (ex : Rack synthés dans Studio A).</p>
-    <div class="panel"><div id="locList"></div></div>
-  </section>
+
 </main>
 
 <!-- Modales -->
 <div class="overlay" id="ovItem"><div class="modal">
-  <h3 id="itemFormTitle">Ajouter un item</h3>
+  <h3 id="itemFormTitle">Add item</h3>
   <div class="form-grid">
-    <div class="field full"><label>Modèle *</label><input id="i-name" placeholder="ex : Juno-106, SM58, Câble XLR 5m"></div>
-    <div class="field"><label>Catégorie *</label><select id="i-cat" onchange="fillSubForm()"></select></div>
-    <div class="field"><label>Sous-catégorie *</label><select id="i-subcat"></select></div>
-    <div class="field"><label>Manufacturer</label><input id="i-brand" placeholder="ex : Roland, Shure…"></div>
-    <div class="field"><label>N° de série</label><input id="i-serial"></div>
-    <div class="field"><label>Propriétaire</label><input id="i-owner" placeholder="ex : AFM, Maxys…"></div>
-    <div class="field"><label>Fournisseur</label><input id="i-provider" placeholder="ex : Thomann"></div>
-    <div class="field"><label>Prix d'achat (€)</label><input id="i-price" inputmode="decimal" placeholder="ex : 1200"></div>
-    <div class="field"><label>N° de commande</label><input id="i-order" placeholder="ex : SO-2024-118"></div>
-    <div class="field"><label>Date d'achat</label><input type="date" id="i-date"></div>
-    <div class="field" id="qtyField"><label>Quantité</label><input type="number" id="i-qty" min="1" value="1"></div>
-    <div class="field"><label>État</label><select id="i-cond">
-      <option value="bon">Bon état</option><option value="attente">En attente de réparation</option>
-      <option value="reparation">En réparation</option><option value="hs">Hors service</option>
+    <div class="field full"><label>Model *</label><input id="i-name" placeholder="e.g. Juno-106, SM58, XLR 5m"></div>
+    <div class="field"><label>Category *</label><select id="i-cat" onchange="fillSubForm()"></select></div>
+    <div class="field"><label>Sub-category *</label><select id="i-subcat"></select></div>
+    <div class="field"><label>Manufacturer</label><input id="i-brand" placeholder="e.g. Roland, Shure…"></div>
+    <div class="field"><label>Serial number</label><input id="i-serial"></div>
+    <div class="field"><label>Owner</label><input id="i-owner" placeholder="e.g. AFM, Maxys…"></div>
+    <div class="field"><label>Provider</label><input id="i-provider" placeholder="e.g. Thomann"></div>
+    <div class="field"><label>Purchase price (€)</label><input id="i-price" inputmode="decimal" placeholder="e.g. 1200"></div>
+    <div class="field"><label>Sales order #</label><input id="i-order" placeholder="e.g. SO-2024-118"></div>
+    <div class="field"><label>Purchase date</label><input type="date" id="i-date"></div>
+    <div class="field" id="qtyField"><label>Quantity</label><input type="number" id="i-qty" min="1" value="1"></div>
+    <div class="field"><label>Condition</label><select id="i-cond">
+      <option value="bon">Good</option><option value="attente">Needs repair</option>
+      <option value="reparation">In repair</option><option value="hs">Out of service</option>
     </select></div>
-    <div class="field full"><label>Emplacement de référence *</label><select id="i-home"></select></div>
-    <div class="field full"><label>Photo (optionnel) — recadrée en carré</label>
+    <div class="field full"><label>Home location *</label><select id="i-home"></select></div>
+    <div class="field full"><label>Photo (optional) — cropped to a square</label>
       <div id="i-photo-zone" class="photozone"></div>
       <input type="file" id="i-photo" accept="image/*" onchange="onPhotoChosen(this)" style="margin-top:8px">
     </div>
     <div class="field full"><label>Notes</label><textarea id="i-notes" rows="2"></textarea></div>
   </div>
   <div class="modal-actions">
-    <button class="btn sec" onclick="close_('ovItem')">Annuler</button>
-    <button class="btn" onclick="saveItem()">Enregistrer</button>
+    <button class="btn sec" onclick="close_('ovItem')">Cancel</button>
+    <button class="btn" onclick="saveItem()">Save</button>
   </div>
 </div></div>
 
 <div class="overlay" id="ovOut"><div class="modal">
-  <h3>Check-out — <span id="out-item"></span></h3>
+  <h3>Check out — <span id="out-item"></span></h3>
   <div class="form-grid">
-    <div class="field full"><label>Qui prend l'item ? *</label><select id="out-user"></select></div>
-    <div class="field full"><label>Destination / raison *</label><input id="out-reason" placeholder="ex : session mobile, prêté à…, en réparation"></div>
-    <div class="field"><label>Date de retour prévue (optionnel)</label><input type="date" id="out-due"></div>
+    <div class="field full"><label>Who is taking it? *</label>
+      <input id="out-user" list="borrowerList" autocomplete="off" placeholder="Type a name — new names are added automatically">
+      <datalist id="borrowerList"></datalist>
+    </div>
+    <div class="field full"><label>Destination / reason *</label><input id="out-reason" placeholder="e.g. location session, lent to…, workshop"></div>
+    <div class="field"><label>Expected return date (optional)</label><input type="date" id="out-due"></div>
     <div class="field"><label>&nbsp;</label>
-      <label class="checkline"><input type="checkbox" id="out-alert" checked> M'alerter si non rendu à cette date</label>
+      <label class="checkline"><input type="checkbox" id="out-alert" checked> Alert me if not returned by then</label>
     </div>
   </div>
   <div class="modal-actions">
-    <button class="btn sec" onclick="close_('ovOut')">Annuler</button>
-    <button class="btn" onclick="doCheckout()">Valider la sortie</button>
+    <button class="btn sec" onclick="close_('ovOut')">Cancel</button>
+    <button class="btn" onclick="doCheckout()">Check out</button>
   </div>
 </div></div>
 
 <div class="overlay" id="ovIn"><div class="modal">
-  <h3>Check-in — <span id="in-item"></span></h3>
+  <h3>Check in — <span id="in-item"></span></h3>
   <div class="form-grid">
-    <div class="field"><label>État au retour</label><select id="in-cond">
-      <option value="bon">Bon état</option><option value="attente">En attente de réparation</option>
-      <option value="reparation">En réparation</option><option value="hs">Hors service</option>
+    <div class="field"><label>Condition on return</label><select id="in-cond">
+      <option value="bon">Good</option><option value="attente">Needs repair</option>
+      <option value="reparation">In repair</option><option value="hs">Out of service</option>
     </select></div>
-    <div class="field full"><label>Note (optionnel)</label><input id="in-note" placeholder="ex : jack abîmé"></div>
+    <div class="field full"><label>Note (optional)</label><input id="in-note" placeholder="e.g. damaged jack"></div>
   </div>
   <div class="modal-actions">
-    <button class="btn sec" onclick="close_('ovIn')">Annuler</button>
-    <button class="btn ok" onclick="doCheckin()">Valider le retour</button>
+    <button class="btn sec" onclick="close_('ovIn')">Cancel</button>
+    <button class="btn ok" onclick="doCheckin()">Check in</button>
   </div>
 </div></div>
 
 <div class="overlay" id="ovRep"><div class="modal">
   <h3 id="rep-title"></h3>
   <div class="form-grid">
-    <div class="field full"><label id="rep-notelbl">Note (optionnel)</label><input id="rep-note"></div>
+    <div class="field full"><label id="rep-notelbl">Note (optional)</label><input id="rep-note"></div>
   </div>
   <div class="modal-actions">
-    <button class="btn sec" onclick="close_('ovRep')">Annuler</button>
-    <button class="btn" onclick="doRepair()">Valider</button>
+    <button class="btn sec" onclick="close_('ovRep')">Cancel</button>
+    <button class="btn" onclick="doRepair()">Apply</button>
   </div>
 </div></div>
 
 <div class="overlay" id="ovProj"><div class="modal" style="max-width:820px">
-  <h3 id="projFormTitle">Nouveau projet</h3>
+  <h3 id="projFormTitle">New project</h3>
   <div class="form-grid">
-    <div class="field full"><label>Nom *</label><input id="p-name" placeholder="ex : Tournée Groupe X 2026"></div>
+    <div class="field full"><label>Name *</label><input id="p-name" placeholder="e.g. Band X Tour 2026"></div>
     <div class="field full"><label>Description</label><textarea id="p-desc" rows="2"></textarea></div>
-    <div class="field full"><label>Matériel du projet *</label>
-      <input type="search" id="p-search" placeholder="Rechercher dans tout l'inventaire (nom, identifiant, n° de série…)" oninput="renderPicker()" style="width:100%;margin-bottom:8px">
+    <div class="field full"><label>Project gear *</label>
+      <input type="search" id="p-search" placeholder="Search the whole inventory (name, ID, serial…)" oninput="renderPicker()" style="width:100%;margin-bottom:8px">
       <div id="p-picker"></div>
       <div id="p-count" style="margin-top:8px;font-size:13px"></div>
     </div>
   </div>
   <div class="modal-actions">
-    <button class="btn sec" onclick="close_('ovProj')">Annuler</button>
-    <button class="btn" onclick="saveProj()">Enregistrer</button>
+    <button class="btn sec" onclick="close_('ovProj')">Cancel</button>
+    <button class="btn" onclick="saveProj()">Save</button>
   </div>
 </div></div>
 
@@ -269,34 +262,34 @@
   <div class="field"><label id="bulk-label"></label><select id="bulk-select" style="width:100%"></select></div>
   <div class="field" id="bulk-row2" style="display:none;margin-top:10px"><label id="bulk-label2"></label><select id="bulk-select2" style="width:100%"></select></div>
   <div class="modal-actions">
-    <button class="btn sec" onclick="close_('ovBulk')">Annuler</button>
-    <button class="btn" onclick="doBulk()">Valider</button>
+    <button class="btn sec" onclick="close_('ovBulk')">Cancel</button>
+    <button class="btn" onclick="doBulk()">Apply</button>
   </div>
 </div></div>
 
 <div class="overlay" id="ovPhotos"><div class="modal" style="max-width:760px">
-  <h3>Importer des photos</h3>
+  <h3>Import photos</h3>
   <p class="muted" style="margin-bottom:12px">
-    Nomme chaque image d'après le modèle de l'item — <b>Juno-106.jpg</b>, <b>XLR 3m.jpg</b>,
-    <b>Shure SM57.jpg</b> — ou d'après son identifiant (<b>SYN-001.jpg</b>).
-    Une photo de modèle habille tous ses exemplaires. Les images sont recadrées
-    au carré et réduites automatiquement.
+    Name each image after the item model — <b>Juno-106.jpg</b>, <b>XLR 3m.jpg</b>,
+    <b>Shure SM57.jpg</b> — or after its ID (<b>SYN-001.jpg</b>).
+    One photo per model covers all its copies. Images are cropped to a square
+    and resized automatically.
   </p>
   <div class="toolbar">
-    <button class="btn sec small" onclick="listeNomsPhotos()">⬇ Liste des noms attendus</button>
+    <button class="btn sec small" onclick="listeNomsPhotos()">⬇ Expected file names</button>
     <input type="file" id="ph-file" accept="image/*" multiple onchange="onPhotosChosen(this)">
-    <button class="btn sec small" data-req="admin" onclick="migrerPhotos()">Déplacer les anciennes photos</button>
+    <button class="btn sec small" data-req="admin" onclick="migrerPhotos()">Move legacy photos to storage</button>
   </div>
   <div id="ph-preview"></div>
   <div class="modal-actions">
-    <button class="btn sec" onclick="close_('ovPhotos')">Fermer</button>
-    <button class="btn" id="ph-go" style="display:none" onclick="runPhotoImport()">Envoyer</button>
+    <button class="btn sec" onclick="close_('ovPhotos')">Close</button>
+    <button class="btn" id="ph-go" style="display:none" onclick="runPhotoImport()">Upload</button>
   </div>
 </div></div>
 
 <div class="overlay" id="ovCrop"><div class="modal" style="max-width:380px">
-  <h3>Recadrer la photo</h3>
-  <p class="muted" style="margin-bottom:10px">Déplace l'image et ajuste le zoom : le carré visible sera enregistré.</p>
+  <h3>Crop photo</h3>
+  <p class="muted" style="margin-bottom:10px">Drag the image and adjust the zoom — the visible square is what gets saved.</p>
   <div class="cropwrap"><canvas id="crop-canvas"
        onmousedown="cropDragStart(event)" onmousemove="cropDragMove(event)"
        onmouseup="cropDragEnd()" onmouseleave="cropDragEnd()"
@@ -305,28 +298,28 @@
   <div class="field" style="margin-top:12px"><label>Zoom</label>
     <input type="range" id="crop-zoom" oninput="cropZoom(this.value)" style="width:100%"></div>
   <div class="modal-actions">
-    <button class="btn sec" onclick="cancelCrop()">Annuler</button>
-    <button class="btn" onclick="applyCrop()">Valider</button>
+    <button class="btn sec" onclick="cancelCrop()">Cancel</button>
+    <button class="btn" onclick="applyCrop()">Apply</button>
   </div>
 </div></div>
 
 <div class="overlay" id="ovCsv"><div class="modal" style="max-width:760px">
-  <h3>Importer un fichier CSV</h3>
+  <h3>Import a CSV file</h3>
   <p class="muted" style="margin-bottom:12px">
-    Remplis le modèle dans ton tableur, enregistre-le au format CSV, puis dépose-le ici.
-    Rien n'est enregistré avant ta confirmation.
+    Fill in the template in your spreadsheet, save it as CSV, then drop it here.
+    Nothing is written until you confirm.
   </p>
   <div class="toolbar">
-    <button class="btn sec small" onclick="downloadCsvTemplate()">⬇ Télécharger le modèle</button>
-    <button class="btn sec small" onclick="exportCsv()">⬇ Exporter l'inventaire actuel</button>
+    <button class="btn sec small" onclick="downloadCsvTemplate()">⬇ Download template</button>
+    <button class="btn sec small" onclick="exportCsv()">⬇ Export current inventory</button>
     <input type="file" id="csv-file" accept=".csv,text/csv" onchange="onCsvChosen(this)">
   </div>
-  <div class="field" style="margin:10px 0"><label>Emplacement par défaut (lignes sans emplacement)</label>
+  <div class="field" style="margin:10px 0"><label>Default location (for rows with no location)</label>
     <select id="csv-defloc" onchange="reanalyseCsv()"></select></div>
   <div id="csv-preview"></div>
   <div class="modal-actions">
-    <button class="btn sec" onclick="close_('ovCsv')">Fermer</button>
-    <button class="btn" id="csv-go" style="display:none" onclick="runCsvImport()">Importer</button>
+    <button class="btn sec" onclick="close_('ovCsv')">Close</button>
+    <button class="btn" id="csv-go" style="display:none" onclick="runCsvImport()">Import</button>
   </div>
 </div></div>
 
@@ -335,21 +328,22 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.8.1"></script>
-<script src="js/auth.js?v=1.8.1"></script>
-<script src="js/helpers.js?v=1.8.1"></script>
-<script src="js/crop.js?v=1.8.1"></script>
-<script src="js/db.js?v=1.8.1"></script>
-<script src="js/views-dashboard.js?v=1.8.1"></script>
-<script src="js/views-inventory.js?v=1.8.1"></script>
-<script src="js/views-projects.js?v=1.8.1"></script>
-<script src="js/views-out.js?v=1.8.1"></script>
-<script src="js/views-repairs.js?v=1.8.1"></script>
-<script src="js/views-people-loc.js?v=1.8.1"></script>
-<script src="js/views-trash.js?v=1.8.1"></script>
-<script src="js/views-users.js?v=1.8.1"></script>
-<script src="js/import-csv.js?v=1.8.1"></script>
-<script src="js/photos-bulk.js?v=1.8.1"></script>
-<script src="js/app.js?v=1.8.1"></script>
+<script src="js/config.js?v=1.9.0"></script>
+<script src="js/auth.js?v=1.9.0"></script>
+<script src="js/helpers.js?v=1.9.0"></script>
+<script src="js/crop.js?v=1.9.0"></script>
+<script src="js/db.js?v=1.9.0"></script>
+<script src="js/views-dashboard.js?v=1.9.0"></script>
+<script src="js/views-inventory.js?v=1.9.0"></script>
+<script src="js/views-projects.js?v=1.9.0"></script>
+<script src="js/views-out.js?v=1.9.0"></script>
+<script src="js/views-repairs.js?v=1.9.0"></script>
+<script src="js/views-people-loc.js?v=1.9.0"></script>
+<script src="js/views-trash.js?v=1.9.0"></script>
+<script src="js/views-users.js?v=1.9.0"></script>
+<script src="js/views-settings.js?v=1.9.0"></script>
+<script src="js/import-csv.js?v=1.9.0"></script>
+<script src="js/photos-bulk.js?v=1.9.0"></script>
+<script src="js/app.js?v=1.9.0"></script>
 </body>
 </html>
