@@ -123,13 +123,13 @@ function inLocFilter(sel,name){
 
 /* --- Formatage des lignes d'historique --- */
 function histIcon(t){ return {create:"➕",out:"📤",in:"📥",move:"📍",edit:"✏️",repair:"🔧"}[t]||"•"; }
-function histBy(h){ return h.actorName ? ` <span class="muted">· par ${esc(h.actorName)}</span>` : ""; }
+function histBy(h){ return h.actorName ? ` <span class="muted">· by ${esc(h.actorName)}</span>` : ""; }
 function histText(h){
   const u = h.userId ? " — " + esc(userName(h.userId)) : "";
-  if(h.type==='out') return `sortie${u} (${esc(h.detail)})`;
-  if(h.type==='in') return `retour${u}${h.cond?` — état : ${CONDS[h.cond]||h.cond}`:""}${h.detail?` (${esc(h.detail)})`:""}`;
-  if(h.type==='move') return `déplacé : ${esc(h.detail)}`;
-  if(h.type==='edit') return `modifié${h.detail?` (${esc(h.detail)})`:""}`;
+  if(h.type==='out') return `checked out${u} (${esc(h.detail)})`;
+  if(h.type==='in') return `returned${u}${h.cond?` — condition: ${CONDS[h.cond]||h.cond}`:""}${h.detail?` (${esc(h.detail)})`:""}`;
+  if(h.type==='move') return `moved: ${esc(h.detail)}`;
+  if(h.type==='edit') return `edited${h.detail?` (${esc(h.detail)})`:""}`;
   if(h.type==='repair') return esc(h.detail);
-  return esc(h.detail)||"créé";
+  return esc(h.detail)||"created";
 }
