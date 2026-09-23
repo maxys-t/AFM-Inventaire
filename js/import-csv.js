@@ -62,15 +62,49 @@ function colIndexes(header){
   return idx;
 }
 
-/* Résolution des libellés vers les clés internes */
+/* Anciens libellés français : l'import CSV les accepte toujours. */
+const CAT_FR = {
+  instruments: "Instruments",
+  captation: "Micros & captation",
+  peripheriques: "Périphs",
+  pedales: "Pédales",
+  di: "DI & splitters",
+  amplification: "Amplification & écoute",
+  consoles: "Consoles",
+  mesure: "Mesure",
+  informatique: "Informatique & interfaces",
+  cablage: "Câblage & connectique",
+  supports: "Supports & transport",
+  divers: "Infrastructure & divers"
+};
+const SUB_FR = {
+  instruments: {synthe: "Synthé / clavier", boite: "Boîte à rythmes / groovebox", guitare: "Guitare / basse", batterie: "Batterie", percussion: "Percussion", peau10: "Peau 10\"", peau12: "Peau 12\"", peau13: "Peau 13\"", peau14: "Peau 14\"", peau16: "Peau 16\"", peau18: "Peau 18\"", peau22: "Peau 22\"", peau_autre: "Peau — autre taille", autre_inst: "Autre instrument"},
+  captation: {condensateur: "Micro condensateur", dynamique: "Micro dynamique", ruban: "Micro ruban", mesure_mic: "Micro de mesure", trigger: "Trigger", accessoire: "Accessoire micro"},
+  peripheriques: {compresseur: "Compresseur", eq: "EQ", preampli: "Préampli", effets: "Effets", chassis: "Châssis 500"},
+  pedales: {drive: "Drive / Distorsion", modulation: "Modulation", delay: "Delay", reverb: "Reverb", filtre: "Filtre / Wah", pitch: "Pitch / Octave", dynamique_p: "Dynamique", multi: "Multi-effets / Looper", alim: "Alimentation", accordeur: "Accordeur", footswitch: "Footswitch / expression"},
+  di: {boite_di: "Boîte de direct", splitter: "Splitter", reamp: "Ré-amp"},
+  amplification: {ampli_inst: "Ampli guitare / basse", monitoring: "Enceinte de monitoring", casque: "Casque", ampli_casque: "Ampli casque"},
+  consoles: {console: "Console de mixage", extension: "Extension / rack", carte: "Carte I/O"},
+  mesure: {outil: "Outil de mesure"},
+  informatique: {interface: "Interface audio", ordinateur: "Ordinateur", convertisseur: "Convertisseur", controleur: "Contrôleur MIDI", stockage: "Stockage", reseau: "Réseau", midi: "Interface MIDI"},
+  cablage: {xlr: "XLR", trs: "TRS", mini_trs: "Mini TRS", ts: "TS", mini_ts: "Mini TS", rca: "RCA", xlrf_trs: "XLR F / TRS", xlrm_trs: "XLR M / TRS", secteur: "Câble secteur", midi_cable: "MIDI", multipaire: "Multipaire audio", adaptateur: "Adaptateur", patchbay: "Patchbay"},
+  supports: {pied: "Pied de micro", stand: "Stand", flightcase: "Flight case", housse: "Housse"},
+  divers: {mobilier: "Mobilier", eclairage: "Éclairage", acoustique: "Traitement acoustique", electricite: "Électricité / alimentation", autre: "Divers"}
+};
+
+/* Résolution des libellés vers les clés internes.
+   Accepte la clé, le libellé anglais actuel, ou l'ancien libellé français. */
 function resolveCat(v){
   const n = norm(v); if(!n) return null;
   for(const [k,c] of Object.entries(CATS)) if(k===n || norm(c.label)===n) return k;
+  for(const [k,lab] of Object.entries(CAT_FR)) if(norm(lab)===n && CATS[k]) return k;
   return null;
 }
 function resolveSub(cat, v){
   const n = norm(v); if(!cat || !n) return null;
   for(const [k,s] of Object.entries(subsOf(cat))) if(k===n || norm(s.label)===n) return k;
+  const fr = SUB_FR[cat] || {};
+  for(const [k,lab] of Object.entries(fr)) if(norm(lab)===n && subsOf(cat)[k]) return k;
   return null;
 }
 function resolveCond(v){
@@ -94,10 +128,10 @@ let csvText = null;   // dernier fichier analysé (pour ré-analyser si l'emplac
 function openCsvImport(){
   csvPlan = null; csvText = null;
   const dl = document.getElementById('csv-defloc');
-  if(dl) dl.innerHTML = '<option value="">— aucun (l\'emplacement devient obligatoire) —</option>' + locOptions();
+  if(dl) dl.innerHTML = '<option value="">— none (location becomes required) —</option>' + locOptions();
   document.getElementById('csv-file').value = "";
   document.getElementById('csv-preview').innerHTML =
-    '<div class="muted">Choisis un fichier CSV pour voir l\'aperçu.</div>';
+    '<div class="muted">Pick a CSV file to see the preview.</div>';
   document.getElementById('csv-go').style.display = 'none';
   open_('ovCsv');
 }
@@ -105,14 +139,14 @@ function openCsvImport(){
 function downloadCsvTemplate(){
   const lignes = [
     'Categorie;Sous Categorie;Manufacturer;Item;Owner;Serial #;Provider;Sales order #;Purchase date;Quantity;Purchase Price;Emplacement;Etat;Notes;id',
-    'Instruments;Synthé / clavier;Roland;Juno-106;AFM;JU12345;Occasion;SO-2024-118;12/03/2024;1;900;Studio A;Bon état;Révisé en 2025;',
-    'Câblage & connectique;XLR;;XLR 5m;AFM;;Thomann;;;12;9,90;Tiroir câbles;;;',
-    'Micros & captation;Micro dynamique;Shure;SM58;AFM;;Thomann;;;4;99;;;;'
+    'Instruments;Synth / keyboard;Roland;Juno-106;AFM;JU12345;Second hand;SO-2024-118;12/03/2024;1;900;Studio A;Good;Serviced in 2025;',
+    'Cables & connectors;XLR;;XLR 5m;AFM;;Thomann;;;12;9.90;Cable drawer;;;',
+    'Microphones;Dynamic mic;Shure;SM58;AFM;;Thomann;;;4;99;;;;'
   ];
   const blob = new Blob(["﻿" + lignes.join('\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'modele-inventaire.csv';
+  a.download = 'inventory-template.csv';
   a.click();
 }
 
@@ -129,7 +163,7 @@ function exportCsv(){
   const blob = new Blob(["﻿" + [head, ...lines].join('\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'inventaire-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.download = 'inventory-' + new Date().toISOString().slice(0,10) + '.csv';
   a.click();
 }
 
@@ -148,16 +182,16 @@ function analyseCsv(text){
   const box = document.getElementById('csv-preview');
   const go = document.getElementById('csv-go');
   if(rows.length < 2){
-    box.innerHTML = '<div class="alert bad">Fichier vide ou sans ligne de données.</div>';
+    box.innerHTML = '<div class="alert bad">Empty file, or no data rows.</div>';
     go.style.display = 'none'; return;
   }
   const idx = colIndexes(rows[0]);
   const missing = ['name','cat','subcat'].filter(k=>idx[k]===undefined);
   if(idx.home===undefined && !csvDefaultLoc()) missing.push('home');
   if(missing.length){
-    const noms = {name:'Item', cat:'Categorie', subcat:'Sous Categorie', home:'Emplacement (ou choisis un emplacement par défaut ci-dessus)'};
-    box.innerHTML = `<div class="alert bad">Colonnes obligatoires absentes : <b>${missing.map(m=>noms[m]).join(', ')}</b>.<br>
-      Utilise le modèle pour repartir sur de bonnes bases.</div>`;
+    const noms = {name:'Item', cat:'Category', subcat:'Sub Category', home:'Location (or pick a default location above)'};
+    box.innerHTML = `<div class="alert bad">Missing required columns: <b>${missing.map(m=>noms[m]).join(', ')}</b>.<br>
+      Use the template to start from a clean base.</div>`;
     go.style.display = 'none'; return;
   }
 
@@ -175,32 +209,32 @@ function analyseCsv(text){
     L.owner  = get(r,'owner');
     L.provider = get(r,'provider');
     L.price  = parsePrice(get(r,'price'));
-    if(get(r,'price') && L.price===null) L.errors.push(`prix illisible « ${get(r,'price')} »`);
+    if(get(r,'price') && L.price===null) L.errors.push(`unreadable price "${get(r,'price')}"`);
     L.sales_order = get(r,'order');
     L.purchase_date = parseDate(get(r,'pdate'));
-    if(get(r,'pdate') && !L.purchase_date) L.errors.push(`date illisible « ${get(r,'pdate')} »`);
+    if(get(r,'pdate') && !L.purchase_date) L.errors.push(`unreadable date "${get(r,'pdate')}"`);
     L.qty    = Math.max(1, Math.min(200, parseInt(get(r,'qty')||'1',10) || 1));
 
-    if(!L.name) L.errors.push("nom manquant");
+    if(!L.name) L.errors.push("missing name");
 
     L.cat = resolveCat(get(r,'cat'));
-    if(!L.cat) L.errors.push(`catégorie inconnue « ${get(r,'cat')} »`);
+    if(!L.cat) L.errors.push(`unknown category "${get(r,'cat')}"`);
     L.subcat = L.cat ? resolveSub(L.cat, get(r,'subcat')) : null;
-    if(L.cat && !L.subcat) L.errors.push(`sous-catégorie inconnue « ${get(r,'subcat')} »`);
+    if(L.cat && !L.subcat) L.errors.push(`unknown sub-category "${get(r,'subcat')}"`);
 
     L.cond = resolveCond(get(r,'cond'));
-    if(!L.cond){ L.errors.push(`état inconnu « ${get(r,'cond')} »`); L.cond = 'bon'; }
+    if(!L.cond){ L.errors.push(`unknown condition "${get(r,'cond')}"`); L.cond = 'bon'; }
 
     const rawLoc = get(r,'home') || csvDefaultLoc();
     L.home = resolveLoc(rawLoc);
     if(!L.home){
       if(rawLoc){ L.home = rawLoc; L.newLoc = true; newLocs.add(rawLoc); }
-      else L.errors.push("emplacement manquant");
+      else L.errors.push("missing location");
     }
 
     if(L.id){
       if(item(L.id)) L.mode = 'update';
-      else { L.errors.push(`identifiant inconnu « ${L.id} »`); L.mode = 'error'; }
+      else { L.errors.push(`unknown ID "${L.id}"`); L.mode = 'error'; }
     }else L.mode = 'create';
 
     if(L.errors.length){ L.mode = 'error'; nError++; }
@@ -216,32 +250,32 @@ function analyseCsv(text){
       <td>${L.line}</td>
       <td>${esc(L.name)}${L.qty>1?` <span class="muted">×${L.qty}</span>`:''}</td>
       <td>${L.cat?esc(subLabel(L.cat,L.subcat)||'—'):'—'}</td>
-      <td>${esc(L.home||'—')}${L.newLoc?' <span class="tag attente">nouveau</span>':''}</td>
+      <td>${esc(L.home||'—')}${L.newLoc?' <span class="tag attente">new</span>':''}</td>
       <td>${L.mode==='error' ? `<span class="tag hs">${esc(L.errors.join(' · '))}</span>`
-            : L.mode==='update' ? '<span class="tag cat">mise à jour</span>'
-            : '<span class="tag dispo">création</span>'}</td>
+            : L.mode==='update' ? '<span class="tag cat">update</span>'
+            : '<span class="tag dispo">create</span>'}</td>
     </tr>`).join("");
 
   box.innerHTML = `
     <div class="csv-sum">
-      <span class="tag dispo">${nCreate} à créer</span>
-      <span class="tag cat">${nUpdate} à mettre à jour</span>
-      ${nError?`<span class="tag hs">${nError} en erreur</span>`:''}
+      <span class="tag dispo">${nCreate} to create</span>
+      <span class="tag cat">${nUpdate} to update</span>
+      ${nError?`<span class="tag hs">${nError} with errors</span>`:''}
     </div>
-    ${csvPlan.newLocs.length ? `<div class="alert">📍 ${csvPlan.newLocs.length} emplacement(s) seront créés :
-       <b>${csvPlan.newLocs.map(esc).join(', ')}</b>. Corrige le fichier si ce sont des fautes de frappe.</div>`:''}
-    ${nError?`<div class="alert bad">Les lignes en erreur seront ignorées.</div>`:''}
-    <div class="csv-table"><table><thead><tr><th>Ligne</th><th>Nom</th><th>Sous-catégorie</th><th>Emplacement</th><th>Résultat</th></tr></thead>
-    <tbody>${apercu}</tbody></table>${lignes.length>60?`<div class="muted" style="padding:8px">… et ${lignes.length-60} autres lignes</div>`:''}</div>`;
+    ${csvPlan.newLocs.length ? `<div class="alert">📍 ${csvPlan.newLocs.length} location(s) will be created:
+       <b>${csvPlan.newLocs.map(esc).join(', ')}</b>. Fix the file if these are typos.</div>`:''}
+    ${nError?`<div class="alert bad">Rows with errors will be skipped.</div>`:''}
+    <div class="csv-table"><table><thead><tr><th>Row</th><th>Name</th><th>Sub-category</th><th>Location</th><th>Result</th></tr></thead>
+    <tbody>${apercu}</tbody></table>${lignes.length>60?`<div class="muted" style="padding:8px">… and ${lignes.length-60} more rows</div>`:''}</div>`;
 
   go.style.display = (nCreate + nUpdate) ? '' : 'none';
-  go.textContent = `Importer (${nCreate + nUpdate})`;
+  go.textContent = `Import (${nCreate + nUpdate})`;
 }
 
 async function runCsvImport(){
   if(!csvPlan) return;
   const {lignes, newLocs, nCreate, nUpdate} = csvPlan;
-  if(!confirm(`Confirmer l'import ?\n\n• ${nCreate} item(s) créé(s)\n• ${nUpdate} item(s) mis à jour\n• ${newLocs.length} emplacement(s) créé(s)`)) return;
+  if(!confirm(`Confirm the import?\n\n• ${nCreate} item(s) created\n• ${nUpdate} item(s) updated\n• ${newLocs.length} location(s) created`)) return;
 
   close_('ovCsv');
   try{
@@ -263,7 +297,7 @@ async function runCsvImport(){
       if(i.status==='dispo') i.loc = L.home;
       await apiUpdateItem(i.id, {...vals, loc:i.loc});
     }
-    if(updates.length) await histMany(updates.map(L=>({itemId:L.id, type:'edit', detail:"mis à jour par import CSV"})));
+    if(updates.length) await histMany(updates.map(L=>({itemId:L.id, type:'edit', detail:"updated by CSV import"})));
 
     // 3. créations
     const rows = [];
@@ -282,10 +316,10 @@ async function runCsvImport(){
     });
     for(let i=0;i<rows.length;i+=200) await apiInsertItems(rows.slice(i,i+200));
     for(let i=0;i<rows.length;i+=200)
-      await histMany(rows.slice(i,i+200).map(r=>({itemId:r.id, type:'create', detail:"Ajout par import CSV"})));
+      await histMany(rows.slice(i,i+200).map(r=>({itemId:r.id, type:'create', detail:"Added by CSV import"})));
 
     await refresh();
-    toast(`Import terminé : ${rows.length} créé(s), ${updates.length} mis à jour.`, 'ok', null, null, 6000);
+    toast(`Import complete — ${rows.length} created, ${updates.length} updated.`, 'ok', null, null, 6000);
   }catch(e){ /* l'erreur est déjà signalée par run() */ }
   csvPlan = null;
 }
