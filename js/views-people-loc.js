@@ -2,18 +2,51 @@
    VUES — Personnes & Emplacements
    ============================================================ */
 
-/* ---- Personnes ---- */
+/* ---- Emprunteurs ----
+   Chaque emprunteur se déplie : on ne montre que le nombre d'items
+   tant qu'on ne l'ouvre pas, pour garder la liste lisible. */
+let openBorrowers = new Set();
+
+function toggleBorrower(id){
+  if(openBorrowers.has(id)) openBorrowers.delete(id); else openBorrowers.add(id);
+  renderPeople();
+}
+
 function renderPeople(){
   const list = db.users.map(u=>{
-    const holding = db.items.filter(i=>i.status==='sorti' && i.out.userId===u.id);
+    const using = db.items.filter(i=>i.status==='sorti' && i.out.userId===u.id)
+                          .sort((a,b)=>new Date(a.out.date)-new Date(b.out.date));
+    const open = openBorrowers.has(u.id);
+    const late = using.filter(i=>overdue(i)).length;
+
+    const summary = using.length
+      ? `<button class="bsum${open?' on':''}" onclick="toggleBorrower('${u.id}')">
+           <span class="chev">${open?'▾':'▸'}</span>
+           ${using.length} item${using.length>1?'s':''}
+           ${late?`<span class="tag hs">${late} overdue</span>`:''}
+         </button>`
+      : '<span class="muted">nothing</span>';
+
+    const detail = open && using.length
+      ? `<tr class="bdetail"><td></td><td colspan="2">
+           <div class="bchips">${using.map(i=>`
+             <span class="chip${overdue(i)?' late':''}" onclick="openDetail('${i.id}')">
+               ${esc(itemTitleText(i))} <span class="mono">${i.id}</span>
+               · ${daysSince(i.out.date)}d${overdue(i)?' ⚠️':''}
+             </span>`).join("")}</div>
+         </td></tr>`
+      : '';
+
     return `<tr><td data-l="Name"><b>${esc(u.name)}</b></td>
-      <td data-l="Currently holding">${holding.length?holding.map(i=>`<span class="chip" style="cursor:pointer" onclick="openDetail('${i.id}')">${itemTitleText(i)} · ${daysSince(i.out.date)} j</span>`).join(""):'<span class="muted">nothing</span>'}</td>
-      <td>${can('edit')?`<button class="btn danger small" data-id="${u.id}" onclick="delUser(this.dataset.id)">✕</button>`:''}</td></tr>`;
+      <td data-l="Currently using">${summary}</td>
+      <td>${can('edit')?`<button class="btn danger small" data-id="${u.id}" onclick="delUser(this.dataset.id)">✕</button>`:''}</td></tr>${detail}`;
   }).join("");
+
   document.getElementById('peopleList').innerHTML = db.users.length
-    ? `<table><thead><tr><th>Name</th><th>Currently holding</th><th></th></tr></thead><tbody>${list}</tbody></table>`
+    ? `<table><thead><tr><th>Name</th><th>Currently using</th><th></th></tr></thead><tbody>${list}</tbody></table>`
     : '<div class="empty">No borrower yet.</div>';
 }
+
 /* Renvoie l'identifiant d'un emprunteur, en le créant si le nom est nouveau.
    La comparaison ignore la casse et les accents pour éviter les doublons. */
 async function borrowerId(name){
