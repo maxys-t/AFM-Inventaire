@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.9.0] — 2026-09-23
+### Modifié
+- **Interface entièrement en anglais**, y compris les catégories, les états et les
+  statuts de projet. L'import CSV accepte toujours les anciens libellés français.
+- **Navigation resserrée** : Dashboard · Inventory · Borrowers · Projects ·
+  Checked out · Repairs · Settings. Emplacements, comptes, import/export,
+  corbeille et journal d'activité regroupés dans Settings.
+- **Tableau de bord refait** : présentation de l'app, actions rapides, bloc
+  « Needs attention » conditionnel, chiffres cliquables vers l'inventaire filtré.
+  La valeur d'achat cumulée n'est visible que des administrateurs.
+- Une phrase d'explication sous le titre de chaque écran.
+- Au check-out, l'emprunteur se saisit librement avec suggestions et création
+  automatique ; l'onglet Personnes devient **Borrowers**.
+- « Import CSV » et « Import photos » quittent la barre de l'inventaire pour
+  Settings › Data ; l'en-tête ne garde que le rafraîchissement.
+
 ## [1.8.0] — 2026-09-23
 ### Modifié
 - **Sélecteur de matériel des projets** refait en navigation par dossiers
