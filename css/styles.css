@@ -413,6 +413,52 @@ tr.csv-err td{ background:rgba(255,59,48,.07) }
   width:auto; min-width:0; height:auto; padding:0; margin:0;
   border:0; background:none; box-shadow:none; flex:none;
 }
+/* ============================================================
+   v1.9 — Dashboard, Settings, navigation
+   À COLLER À LA FIN de css/styles.css (ne rien remplacer).
+   ============================================================ */
+
+/* --- navigation : l'engrenage est poussé à droite --- */
+nav .navspace{ flex:1 }
+nav .navgear{ padding:6px 14px }
+
+/* --- une phrase sous le titre de chaque écran --- */
+.viewintro{
+  color:var(--muted); font-size:13px; margin:0 0 14px;
+  max-width:70ch; line-height:1.45;
+}
+
+/* --- bandeau d'accueil du tableau de bord --- */
+.hero{
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:16px; padding:22px 24px; margin-bottom:14px;
+}
+.hero h1{ font-size:26px; margin:0 0 6px; letter-spacing:-.02em }
+.hero p{ color:var(--muted); margin:0 0 14px; max-width:62ch; line-height:1.5 }
+.heroacts{ display:flex; gap:8px; flex-wrap:wrap }
+
+/* --- chiffres cliquables --- */
+.stat[role="button"]{ cursor:pointer; transition:transform .08s, border-color .12s }
+.stat[role="button"]:hover{ transform:translateY(-1px); border-color:var(--accent) }
+.stat.value .num{ font-size:22px; letter-spacing:-.02em }
+
+/* --- Settings --- */
+#v-settings .panel{ margin-bottom:14px }
+#v-settings h2{ margin-bottom:4px }
+.setgrid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px }
+.setgrid h4{ margin:0 0 6px; font-size:13px; text-transform:uppercase;
+             letter-spacing:.06em; color:var(--muted) }
+.setgrid .btn{ margin:0 6px 6px 0 }
+.setgrid p{ margin:4px 0 0; font-size:12px; line-height:1.45 }
+
+/* --- champ emprunteur avec suggestions --- */
+#out-user{ width:100% }
+
+@media(max-width:700px){
+  .hero{ padding:18px }
+  .hero h1{ font-size:21px }
+  nav .navspace{ display:none }
+}
 
 
 
