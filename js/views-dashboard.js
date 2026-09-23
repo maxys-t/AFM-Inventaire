@@ -56,9 +56,9 @@ function renderDash(){
 
     <div class="cards">
       ${stat(total, 'Items total', '', "goInventory({})")}
-      ${stat(dispo, 'Available', 'ok', "goInventory({status:'dispo'})")}
-      ${stat(out.length, 'Checked out', 'warn', "goInventory({status:'sorti'})")}
-      ${stat(rep.length, 'Needs repair', 'bad', "show('rep')")}
+      ${stat(dispo, 'Items available', 'ok', "goInventory({status:'dispo'})")}
+      ${stat(out.length, 'Items checked out', 'warn', "goInventory({status:'sorti'})")}
+      ${stat(rep.length, 'Items needing repair', 'bad', "show('rep')")}
       ${canSeeValue() && withPrice.length
         ? `<div class="stat value"><div class="num">${fprice(value)}</div>
              <div class="lbl">Purchase value${withPrice.length!==total?` <span class="muted">(${withPrice.length} priced)</span>`:''}</div></div>`
