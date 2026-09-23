@@ -4,26 +4,26 @@
    ============================================================ */
 
 function renderProj(){
-  let html = can('edit') ? `<div class="toolbar"><button class="btn" onclick="openProjForm()">+ Nouveau projet</button></div>` : '';
+  let html = can('edit') ? `<div class="toolbar"><button class="btn" onclick="openProjForm()">+ New project</button></div>` : '';
   if(db.projectsError){
-    html += `<div class="alert bad">La table des projets n'existe pas encore : exécute <b>sql/003-projets.sql</b> dans Supabase (SQL Editor), puis clique sur ↻ Actualiser.</div>`;
+    html += `<div class="alert bad">The projects table does not exist yet — run <b>sql/003-projets.sql</b> in Supabase (SQL Editor), then click ↻ Refresh.</div>`;
     document.getElementById('v-proj').innerHTML = html; return;
   }
   if(!db.projects.length){
-    html += '<div class="panel"><div class="empty">Aucun projet. Crée un template de tournée avec sa liste fixe de matériel — il sera réutilisable à chaque fois.</div></div>';
+    html += '<div class="panel"><div class="empty">No project yet. Create a tour template with its fixed gear list — it can be reused every time.</div></div>';
   }else{
-    html += `<div class="panel"><table><thead><tr><th>Projet</th><th>Statut</th><th>Matériel</th><th>Préparation</th><th>Dernière utilisation</th></tr></thead><tbody>` +
+    html += `<div class="panel"><table><thead><tr><th>Project</th><th>Status</th><th>Gear</th><th>Packing</th><th>Last used</th></tr></thead><tbody>` +
     db.projects.map(p=>{
       const pr = projProgress(p);
       const prog = p.status==='preparation'
         ? `<div class="pline" style="margin:0"><div class="pbar"><div style="width:${pr.total?Math.round(pr.done/pr.total*100):0}%"></div></div><span class="muted">${pr.done}/${pr.total}</span></div>`
-        : (p.status==='show' ? '<span class="muted">en tournée</span>' : '<span class="muted">—</span>');
+        : (p.status==='show' ? '<span class="muted">on show</span>' : '<span class="muted">—</span>');
       return `<tr class="rowlink" onclick="openProject('${p.id}')">
-        <td data-l="Projet"><b>${esc(p.name)}</b>${p.description?`<br><span class="muted">${esc(p.description)}</span>`:""}</td>
-        <td data-l="Statut"><span class="tag ${PTAG[p.status]}">${PSTAT[p.status]||p.status}</span></td>
-        <td data-l="Matériel">${(p.item_ids||[]).length} item(s)</td>
-        <td data-l="Préparation">${prog}</td>
-        <td data-l="Dernière utilisation">${p.last_used?fdate(p.last_used):'<span class="muted">jamais</span>'}</td>
+        <td data-l="Project"><b>${esc(p.name)}</b>${p.description?`<br><span class="muted">${esc(p.description)}</span>`:""}</td>
+        <td data-l="Status"><span class="tag ${PTAG[p.status]}">${PSTAT[p.status]||p.status}</span></td>
+        <td data-l="Gear">${(p.item_ids||[]).length} item(s)</td>
+        <td data-l="Packing">${prog}</td>
+        <td data-l="Last used">${p.last_used?fdate(p.last_used):'<span class="muted">never</span>'}</td>
       </tr>`;
     }).join("") + "</tbody></table></div>";
   }
@@ -82,9 +82,9 @@ function renderPicker(){
     const rows = db.items.filter(i=>
       (itemTitleText(i)+" "+i.id+" "+catPath(i)+" "+(i.serial||"")).toLowerCase().includes(q));
     box.innerHTML = `<div class="pnav"><div class="pcol wide">
-        <div class="phead">${rows.length} résultat(s) pour « ${esc(q)} »
-          ${rows.length?`<button type="button" class="lnk" onclick="pickAll(${JSON.stringify(rows.map(i=>i.id)).replace(/"/g,'&quot;')},true)">tout cocher</button>`:''}</div>
-        ${rows.map(pickRow).join("") || '<div class="muted" style="padding:10px">Aucun item.</div>'}
+        <div class="phead">${rows.length} result(s) for "${esc(q)}"
+          ${rows.length?`<button type="button" class="lnk" onclick="pickAll(${JSON.stringify(rows.map(i=>i.id)).replace(/"/g,'&quot;')},true)">select all</button>`:''}</div>
+        ${rows.map(pickRow).join("") || '<div class="muted" style="padding:10px">No item.</div>'}
       </div></div>`;
     updatePickCount(); return;
   }
@@ -100,7 +100,7 @@ function renderPicker(){
   }).join("");
 
   // Colonne 2 : sous-catégories de la famille ouverte
-  let subs = '<div class="muted" style="padding:10px">Choisis une famille</div>';
+  let subs = '<div class="muted" style="padding:10px">Pick a family</div>';
   if(pickCat){
     subs = Object.entries(subsOf(pickCat)).map(([k,v])=>{
       const c = pickCount(pickCat, k);
@@ -109,18 +109,18 @@ function renderPicker(){
         <span class="nm">${esc(v.label)}</span>
         <span class="cnt">${c.sel?`<b>${c.sel}</b>/`:''}${c.n}</span><span class="arr">›</span>
       </div>`;
-    }).join("") || '<div class="muted" style="padding:10px">Vide</div>';
+    }).join("") || '<div class="muted" style="padding:10px">Empty</div>';
   }
 
   // Colonne 3 : items du dossier courant
-  let items = '<div class="muted" style="padding:10px">Choisis un dossier</div>';
+  let items = '<div class="muted" style="padding:10px">Pick a folder</div>';
   if(pickCat){
     const its = pickItems(pickCat, pickSub);
     const ids = its.map(i=>i.id);
     const tous = ids.length && ids.every(id=>pickerSel.has(id));
     items = `<div class="phead">${its.length} item(s)
-        <button type="button" class="lnk" onclick="pickAll(${JSON.stringify(ids).replace(/"/g,'&quot;')},${!tous})">${tous?'tout décocher':'tout cocher'}</button>
-      </div>` + (its.map(pickRow).join("") || '<div class="muted" style="padding:10px">Vide</div>');
+        <button type="button" class="lnk" onclick="pickAll(${JSON.stringify(ids).replace(/"/g,'&quot;')},${!tous})">${tous?'clear all':'select all'}</button>
+      </div>` + (its.map(pickRow).join("") || '<div class="muted" style="padding:10px">Empty</div>');
   }
 
   box.innerHTML = `<div class="pnav">
@@ -150,20 +150,20 @@ function togglePick(id,on){
 function updatePickCount(){
   const el = document.getElementById('p-count');
   const n = pickerSel.size;
-  if(!n){ el.innerHTML = '<span class="muted">Aucun item sélectionné.</span>'; return; }
+  if(!n){ el.innerHTML = '<span class="muted">No item selected.</span>'; return; }
   const its = [...pickerSel].map(id=>item(id)).filter(Boolean);
   const max = 30;
-  el.innerHTML = `<b>${n}</b> item(s) sélectionné(s) `
-    + `<button type="button" class="lnk" onclick="pickAll(${JSON.stringify([...pickerSel]).replace(/"/g,'&quot;')},false)">tout retirer</button>`
+  el.innerHTML = `<b>${n}</b> item(s) selected `
+    + `<button type="button" class="lnk" onclick="pickAll(${JSON.stringify([...pickerSel]).replace(/"/g,'&quot;')},false)">clear all</button>`
     + `<div class="pchips">` + its.slice(0,max).map(i=>
         `<span class="chip" onclick="togglePick('${i.id}',false)">${esc(itemTitleText(i))} ✕</span>`).join("")
-    + (its.length>max?`<span class="muted">+ ${its.length-max} autres</span>`:'') + `</div>`;
+    + (its.length>max?`<span class="muted">+ ${its.length-max} more</span>`:'') + `</div>`;
 }
 
 async function saveProj(){
   const name = document.getElementById('p-name').value.trim();
   if(!name){ alert("Le nom est obligatoire."); return; }
-  if(!pickerSel.size){ alert("Sélectionne au moins un item."); return; }
+  if(!pickerSel.size){ alert("Select at least one item."); return; }
   const desc = document.getElementById('p-desc').value.trim();
   if(editingProjId){
     const p = project(editingProjId);
@@ -180,8 +180,8 @@ async function saveProj(){
 }
 async function deleteProj(id){
   const p = project(id);
-  if(p.status==='show'){ alert("Clôture d'abord le show avant de supprimer ce projet."); return; }
-  if(!confirm("Supprimer ce projet ? (le matériel et son historique ne sont pas touchés)")) return;
+  if(p.status==='show'){ alert("Close the show before deleting this project."); return; }
+  if(!confirm("Delete this project? (gear and history are untouched)")) return;
   db.projects = db.projects.filter(x=>x.id!==id);
   await apiDeleteProject(id);
   close_('ovProjDetail'); renderProj();
@@ -206,10 +206,10 @@ function renderProjDetail(id){
     const lignes = arr.map(i=>{
       const busyElsewhere = i.status==='sorti' && (!i.out.projectId || i.out.projectId!==p.id);
       const onTour = i.status==='sorti' && i.out.projectId===p.id;
-      const avail = onTour ? '<span class="tag pshow">en tournée</span>'
-        : busyElsewhere ? `<span class="tag sorti">sorti — ${esc(outBy(i))}</span>`
+      const avail = onTour ? '<span class="tag pshow">on show</span>'
+        : busyElsewhere ? `<span class="tag sorti">out — ${esc(outBy(i))}</span>`
         : i.cond!=='bon' ? `<span class="tag ${i.cond}">${CONDS[i.cond]}</span>`
-        : '<span class="tag dispo">dispo</span>';
+        : '<span class="tag dispo">available</span>';
       const coche = p.prep && p.prep[i.id];
       if(p.status==='show')
         return `<div class="prow"><span class="ph"></span><span class="nm">${itemTitle(i)}</span>
@@ -221,25 +221,25 @@ function renderProjDetail(id){
     }).join("");
     return `<div class="cgroup">
       <div class="chead">${esc(cat)}
-        <span class="muted">${p.status==='show' ? arr.length + ' item(s)' : prets + '/' + arr.length + ' prêts'}</span></div>
+        <span class="muted">${p.status==='show' ? arr.length + ' item(s)' : prets + '/' + arr.length + ' ready'}</span></div>
       ${lignes}</div>`;
   }).join("");
   const missing = (p.item_ids||[]).length - its.length;
-  if(missing>0) list += `<div class="muted" style="padding:8px">⚠️ ${missing} item(s) du template ont été supprimés de l'inventaire.</div>`;
+  if(missing>0) list += `<div class="muted" style="padding:8px">⚠️ ${missing} item(s) from this template were deleted from the inventory.</div>`;
   let actions = "";
-  if(p.status==='inactif') actions = `<button class="btn" onclick="setProjStatus('${p.id}','preparation')">Commencer la préparation</button>`;
-  if(p.status==='preparation') actions = `<button class="btn" onclick="goShow('${p.id}')">🎪 Passer en mode Show</button> <button class="btn sec small" onclick="resetPrep('${p.id}')">Réinitialiser la checklist</button> <button class="btn sec small" onclick="setProjStatus('${p.id}','inactif')">Mettre en pause</button>`;
-  if(p.status==='show') actions = `<button class="btn ok" onclick="closeShow('${p.id}')">📥 Clôturer le show / retour de tournée</button>`;
+  if(p.status==='inactif') actions = `<button class="btn" onclick="setProjStatus('${p.id}','preparation')">Start packing</button>`;
+  if(p.status==='preparation') actions = `<button class="btn" onclick="goShow('${p.id}')">🎪 Go on show</button> <button class="btn sec small" onclick="resetPrep('${p.id}')">Reset checklist</button> <button class="btn sec small" onclick="setProjStatus('${p.id}','inactif')">Pause</button>`;
+  if(p.status==='show') actions = `<button class="btn ok" onclick="closeShow('${p.id}')">📥 Close show / gear back</button>`;
   document.getElementById('projDetailBody').innerHTML = `
     <h3>${esc(p.name)} <span class="tag ${PTAG[p.status]}">${PSTAT[p.status]}</span></h3>
     ${p.description?`<p class="muted" style="margin-bottom:8px">${esc(p.description)}</p>`:""}
-    ${p.status!=='show'?`<div class="pline"><div class="pbar"><div style="width:${pct}%"></div></div><span class="muted"><b>${pr.done}/${pr.total}</b> prêts</span></div>`:""}
-    <div class="clist" style="margin:10px 0">${list||'<div class="muted">Aucun item.</div>'}</div>
+    ${p.status!=='show'?`<div class="pline"><div class="pbar"><div style="width:${pct}%"></div></div><span class="muted"><b>${pr.done}/${pr.total}</b> ready</span></div>`:""}
+    <div class="clist" style="margin:10px 0">${list||'<div class="muted">No item.</div>'}</div>
     <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap">${actions}</div>
     <div class="modal-actions" style="justify-content:space-between">
       <span>
-        ${(can('edit') && p.status!=='show')?`<button class="btn sec small" onclick="openProjForm('${p.id}')">Modifier</button>`:""}
-        ${can('edit')?`<button class="btn danger small" onclick="deleteProj('${p.id}')">Supprimer</button>`:""}
+        ${(can('edit') && p.status!=='show')?`<button class="btn sec small" onclick="openProjForm('${p.id}')">Edit</button>`:""}
+        ${can('edit')?`<button class="btn danger small" onclick="deleteProj('${p.id}')">Delete</button>`:""}
       </span>
       <button class="btn sec" onclick="close_('ovProjDetail')">Fermer</button>
     </div>`;
@@ -271,8 +271,8 @@ async function goShow(pid){
   const its = projItems(p);
   const pr = projProgress(p);
   const busy = its.filter(i=>i.status==='sorti' && (!i.out.projectId || i.out.projectId!==p.id));
-  if(pr.done<pr.total && !confirm(`${pr.total-pr.done} item(s) ne sont pas cochés "prêt". Passer en mode Show quand même ?`)) return;
-  if(busy.length && !confirm(`${busy.length} item(s) sont déjà sortis ailleurs (${busy.map(i=>i.name).join(", ")}). Ils seront ignorés. Continuer ?`)) return;
+  if(pr.done<pr.total && !confirm(`${pr.total-pr.done} item(s) are not ticked as ready. Go on show anyway?`)) return;
+  if(busy.length && !confirm(`${busy.length} item(s) are already checked out elsewhere (${busy.map(i=>i.name).join(", ")}). They will be skipped. Continue?`)) return;
   const date = now();
   for(const i of its){
     if(i.status==='sorti') continue;
@@ -288,12 +288,12 @@ async function goShow(pid){
 }
 async function closeShow(pid){
   const p = project(pid);
-  if(!confirm("Clôturer le show ? Tout le matériel du projet sera checké-in et retournera à son emplacement de référence.")) return;
+  if(!confirm("Close the show? All project gear will be checked in and returned to its home location.")) return;
   const outItems = db.items.filter(i=>i.status==='sorti' && i.out && i.out.projectId===p.id);
   for(const i of outItems){
     i.status = 'dispo'; i.loc = i.home; i.out = null;
     await apiUpdateItem(i.id, {status:'dispo',loc:i.loc,out:null});
-    await hist(i.id,'in',`Retour de tournée — ${p.name}`,null,i.cond);
+    await hist(i.id,'in',`Back from show — ${p.name}`,null,i.cond);
   }
   p.status = 'inactif'; p.prep = {};
   await apiUpdateProject(pid, {status:'inactif',prep:{}});
