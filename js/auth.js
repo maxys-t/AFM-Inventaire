@@ -16,6 +16,9 @@ let me = null;          // profil du compte connecté (ligne de la table profile
    (et faire la modification correspondante côté base). */
 const STAGIAIRE_CAN = ['view','checkout','repair','projectPrep'];
 
+/* La valeur d'achat cumulée n'est montrée qu'aux administrateurs. */
+function canSeeValue(){ return !!(me && me.role === 'admin'); }
+
 function can(what){
   if(!me) return false;
   if(me.role === 'admin') return true;
@@ -83,10 +86,10 @@ async function fetchProfile(userId){
 function renderUserChip(){
   const el = document.getElementById('userChip');
   if(!el) return;
-  if(!me){ el.innerHTML = `<button class="btn sec small" onclick="signOut()">Déconnexion</button>`; return; }
+  if(!me){ el.innerHTML = `<button class="btn sec small" onclick="signOut()">Sign out</button>`; return; }
   el.innerHTML = `<span class="who" title="${esc(me.email)}">${esc(me.name || me.email)}</span>
     <span class="tag ${me.role==='admin'?'cat':'pinactif'}">${me.role==='admin'?'admin':'stagiaire'}</span>
-    <button class="btn sec small" onclick="signOut()">Déconnexion</button>`;
+    <button class="btn sec small" onclick="signOut()">Sign out</button>`;
 }
 
 /* ---- Adapter l'interface au rôle ---- */
