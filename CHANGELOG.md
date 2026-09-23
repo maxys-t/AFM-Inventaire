@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.9.2] — 2026-09-23
+### Modifié
+- **Borrowers** : le matériel de chaque emprunteur se déplie au clic au lieu de
+  s'étaler. « Currently holding » devient « Currently using ». Le nombre d'items
+  en retard est visible sans déplier, et la liste est triée du plus ancien.
+- **Dashboard** : Items available, Items checked out, Items needing repair.
+### Corrigé
+- Les durées affichaient encore « j » au lieu de « d ».
+
 ## [1.9.1] — 2026-09-23
 ### Modifié
 - **Settings** réorganisé en menu latéral : Account, Data, Locations, Users,
