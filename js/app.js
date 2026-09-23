@@ -4,12 +4,20 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.9.0';
 
 /* ---- navigation entre onglets ---- */
+const VIEWS = ['dash','inv','people','proj','out','rep','settings'];
 function show(v){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
-  ['dash','inv','proj','out','rep','people','loc','users'].forEach(x=>document.getElementById('v-'+x).style.display = x===v?'':'none');
+  VIEWS.forEach(x=>{ const el = document.getElementById('v-'+x); if(el) el.style.display = x===v?'':'none'; });
+  const intro = document.getElementById('viewIntro');
+  if(intro){
+    const txt = (LABELS.intro && LABELS.intro[v]) || '';
+    intro.textContent = txt;
+    intro.style.display = txt ? '' : 'none';
+  }
+  try{ window.scrollTo(0,0); }catch(e){}
   render();
 }
 function curView(){ const b = document.querySelector('nav button.active'); return b?b.dataset.v:'dash'; }
@@ -22,8 +30,7 @@ function render(){
   if(v==='out') renderOut();
   if(v==='rep') renderRep();
   if(v==='people') renderPeople();
-  if(v==='loc') renderLoc();
-  if(v==='users') renderUsers();
+  if(v==='settings') renderSettings();
   if(typeof renderBulkBar==='function' && v!=='inv') renderBulkBar();
 }
 
@@ -63,7 +70,7 @@ function toast(msg, type='info', actionLabel=null, actionFn=null, ms=null){
 
 /* Les échecs d'écriture sont déjà signalés par une notification :
    on évite juste les avertissements bruyants dans la console. */
-window.addEventListener('unhandledrejection', e=>{ console.warn('Action interrompue :', e.reason); e.preventDefault(); });
+window.addEventListener('unhandledrejection', e=>{ console.warn('Action interrupted:', e.reason); e.preventDefault(); });
 
 /* ---- modales ----
    Règle générale : une seule fenêtre à la fois (open_).
@@ -118,10 +125,10 @@ function importJSON(inp){
       if(!raw || !Array.isArray(raw.items) || !(raw.users || raw.people)) throw 0;
       d = normalizeImport(raw);
     }catch(err){
-      toast("Fichier invalide : ce n'est pas un export de l'inventaire.", 'error');
+      toast("Invalid file — this is not an inventory export.", 'error');
       inp.value = ""; return;
     }
-    if(!confirm(`Importer ${d.items.length} item(s), ${d.users.length} personne(s), ${d.projects.length} projet(s) et ${d.history.length} ligne(s) d'historique ?\n\nLes items existants portant le même identifiant seront écrasés.`)){ inp.value=""; return; }
+    if(!confirm(`Import ${d.items.length} item(s), ${d.users.length} borrower(s), ${d.projects.length} project(s) and ${d.history.length} history entries?\n\nExisting items with the same ID will be overwritten.`)){ inp.value=""; return; }
     try{
       if(d.locations.length) await apiUpsertLocations(d.locations);
       if(d.users.length) await apiUpsertPeople(d.users);
@@ -138,7 +145,7 @@ function importJSON(inp){
         item_id:h.itemId,type:h.type,date:h.date,detail:h.detail,user_id:h.userId,cond:h.cond?normCond(h.cond):null
       })));
       await loadAll(); render();
-      toast(`Import terminé : ${d.items.length} item(s) restauré(s).`, 'ok', null, null, 5000);
+      toast(`Import complete — ${d.items.length} item(s) restored.`, 'ok', null, null, 5000);
     }catch(err){ /* l'erreur est déjà signalée par run() */ }
     inp.value = "";
   };
