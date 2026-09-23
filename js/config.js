@@ -31,26 +31,26 @@ const APP_URL = "";
 const CATS = {
   instruments: { label:"Instruments", subs:{
     synthe:      {label:"Synth / keyboard",        code:"SYN"},
-    boite:       {label:"Drum machine / groovebox",code:"BAR"},
+    boite:       {label:"Drum machine / groovebox",code:"DMC"},
     guitare:     {label:"Guitar / bass",           code:"GTR"},
     batterie:    {label:"Drums",                   code:"DRM"},
     percussion:  {label:"Percussion",              code:"PRC"},
-    peau10:      {label:"Drumhead 10\"",           code:"P10"},
-    peau12:      {label:"Drumhead 12\"",           code:"P12"},
-    peau13:      {label:"Drumhead 13\"",           code:"P13"},
-    peau14:      {label:"Drumhead 14\"",           code:"P14"},
-    peau16:      {label:"Drumhead 16\"",           code:"P16"},
-    peau18:      {label:"Drumhead 18\"",           code:"P18"},
-    peau22:      {label:"Drumhead 22\"",           code:"P22"},
-    peau_autre:  {label:"Drumhead — other size",   code:"PEA"},
+    peau10:      {label:"Drumhead 10\"",           code:"H10"},
+    peau12:      {label:"Drumhead 12\"",           code:"H12"},
+    peau13:      {label:"Drumhead 13\"",           code:"H13"},
+    peau14:      {label:"Drumhead 14\"",           code:"H14"},
+    peau16:      {label:"Drumhead 16\"",           code:"H16"},
+    peau18:      {label:"Drumhead 18\"",           code:"H18"},
+    peau22:      {label:"Drumhead 22\"",           code:"H22"},
+    peau_autre:  {label:"Drumhead — other size",   code:"HDX"},
     autre_inst:  {label:"Other instrument",        code:"INS"}
   }},
 
   captation: { label:"Microphones", subs:{
-    condensateur:{label:"Condenser mic",      code:"MIC"},
-    dynamique:   {label:"Dynamic mic",        code:"MID"},
-    ruban:       {label:"Ribbon mic",         code:"MIR"},
-    mesure_mic:  {label:"Measurement mic",    code:"MME"},
+    condensateur:{label:"Condenser mic",      code:"MCN"},
+    dynamique:   {label:"Dynamic mic",        code:"MDY"},
+    ruban:       {label:"Ribbon mic",         code:"MRB"},
+    mesure_mic:  {label:"Measurement mic",    code:"MMS"},
     trigger:     {label:"Trigger",            code:"TRG"},
     accessoire:  {label:"Mic accessory",      code:"MAC"}
   }},
@@ -60,19 +60,19 @@ const CATS = {
     eq:          {label:"EQ",          code:"EQU"},
     preampli:    {label:"Preamp",      code:"PRE"},
     effets:      {label:"Effects",     code:"FXR"},
-    chassis:     {label:"500 series rack", code:"CH5"}
+    chassis:     {label:"500 series rack", code:"R50"}
   }},
 
   pedales: { label:"Pedals", subs:{
     drive:       {label:"Drive / distortion",  code:"DRV"},
     modulation:  {label:"Modulation",          code:"MOD"},
     delay:       {label:"Delay",               code:"DLY"},
-    reverb:      {label:"Reverb",              code:"RVB"},
+    reverb:      {label:"Reverb",              code:"REV"},
     filtre:      {label:"Filter / wah",        code:"WAH"},
     pitch:       {label:"Pitch / octave",      code:"PIT"},
     dynamique_p: {label:"Dynamics",            code:"DYN"},
     multi:       {label:"Multi-effects / looper", code:"MFX"},
-    alim:        {label:"Power supply",        code:"ALP"},
+    alim:        {label:"Power supply",        code:"PSU"},
     accordeur:   {label:"Tuner",               code:"TUN"},
     footswitch:  {label:"Footswitch / expression", code:"FSW"}
   }},
@@ -86,8 +86,8 @@ const CATS = {
   amplification: { label:"Amps & monitoring", subs:{
     ampli_inst:  {label:"Guitar / bass amp", code:"AMP"},
     monitoring:  {label:"Studio monitor",    code:"MON"},
-    casque:      {label:"Headphones",        code:"CAS"},
-    ampli_casque:{label:"Headphone amp",     code:"AMC"}
+    casque:      {label:"Headphones",        code:"HPH"},
+    ampli_casque:{label:"Headphone amp",     code:"HPA"}
   }},
 
   consoles: { label:"Consoles", subs:{
@@ -97,15 +97,15 @@ const CATS = {
   }},
 
   mesure: { label:"Measurement", subs:{
-    outil:       {label:"Measurement tool", code:"MES"}
+    outil:       {label:"Measurement tool", code:"MSR"}
   }},
 
   informatique: { label:"Computers & interfaces", subs:{
     interface:   {label:"Audio interface", code:"INT"},
-    ordinateur:  {label:"Computer",        code:"ORD"},
+    ordinateur:  {label:"Computer",        code:"CPU"},
     convertisseur:{label:"Converter",      code:"CNV"},
     controleur:  {label:"MIDI controller", code:"CTL"},
-    stockage:    {label:"Storage",         code:"STK"},
+    stockage:    {label:"Storage",         code:"STG"},
     reseau:      {label:"Network",         code:"NET"},
     midi:        {label:"MIDI interface",  code:"MDI"}
   }},
@@ -119,26 +119,26 @@ const CATS = {
     rca:         {label:"RCA",             code:"RCA"},
     xlrf_trs:    {label:"XLR F / TRS",     code:"XFT"},
     xlrm_trs:    {label:"XLR M / TRS",     code:"XMT"},
-    secteur:     {label:"Power cable",     code:"SEC"},
-    midi_cable:  {label:"MIDI",            code:"CMD"},
+    secteur:     {label:"Power cable",     code:"PWC"},
+    midi_cable:  {label:"MIDI",            code:"MID"},
     multipaire:  {label:"Audio multicore", code:"MUL"},
     adaptateur:  {label:"Adapter",         code:"ADP"},
     patchbay:    {label:"Patchbay",        code:"PBY"}
   }},
 
   supports: { label:"Stands & cases", subs:{
-    pied:        {label:"Mic stand",   code:"PIE"},
+    pied:        {label:"Mic stand",   code:"MST"},
     stand:       {label:"Stand",       code:"STD"},
     flightcase:  {label:"Flight case", code:"FLC"},
-    housse:      {label:"Bag",         code:"HOU"}
+    housse:      {label:"Bag",         code:"BAG"}
   }},
 
   divers: { label:"Facility & other", subs:{
-    mobilier:    {label:"Furniture",           code:"MOB"},
-    eclairage:   {label:"Lighting",            code:"LUM"},
+    mobilier:    {label:"Furniture",           code:"FRN"},
+    eclairage:   {label:"Lighting",            code:"LGT"},
     acoustique:  {label:"Acoustic treatment",  code:"ACO"},
-    electricite: {label:"Power / electrical",  code:"ELE"},
-    autre:       {label:"Other",               code:"DIV"}
+    electricite: {label:"Power / electrical",  code:"ELC"},
+    autre:       {label:"Other",               code:"OTH"}
   }}
 };
 
@@ -170,7 +170,7 @@ const LABELS = {
     proj:      "Projects",
     out:       "Checked out",
     rep:       "Repairs",
-    settings:  "Settings"
+    settings:  "⚙ Settings"
   },
   intro: {
     dash:     "What needs your attention today, and where the gear stands.",
