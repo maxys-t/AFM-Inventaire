@@ -30,8 +30,12 @@ function renderProj(){
   document.getElementById('v-proj').innerHTML = html;
 }
 
-/* ---- formulaire projet (création / modification du template) ---- */
+/* ---- formulaire projet (création / modification du template) ----
+   Le sélecteur fonctionne comme le Finder : familles → sous-catégories → items.
+   Une recherche court-circuite l'arborescence et affiche une liste à plat. */
 let editingProjId = null, pickerSel = new Set();
+let pickCat = "", pickSub = "";       // dossier ouvert
+
 function openProjForm(id){
   editingProjId = id||null;
   const p = id?project(id):null;
@@ -40,22 +44,122 @@ function openProjForm(id){
   document.getElementById('p-desc').value = p?(p.description||""):"";
   document.getElementById('p-search').value = "";
   pickerSel = new Set(p?(p.item_ids||[]):[]);
+  pickCat = ""; pickSub = "";
   renderPicker();
   open_('ovProj');
 }
+
+/* Items d'un dossier : famille, puis sous-catégorie si elle est ouverte */
+function pickItems(cat, sub){
+  return db.items.filter(i=>(!cat || i.cat===cat) && (!sub || i.subcat===sub))
+                 .sort((a,b)=>itemTitleText(a).localeCompare(itemTitleText(b),'fr'));
+}
+function pickCount(cat, sub){
+  const its = pickItems(cat, sub);
+  return {n:its.length, sel:its.filter(i=>pickerSel.has(i.id)).length};
+}
+
+function pickOpenCat(c){ pickCat = (pickCat===c && !pickSub) ? "" : c; pickSub = ""; renderPicker(); }
+function pickOpenSub(sb){ pickSub = (pickSub===sb) ? "" : sb; renderPicker(); }
+
+function pickRow(i){
+  const on = pickerSel.has(i.id);
+  const etat = i.status==='sorti' ? '<span class="tag sorti">sorti</span>'
+             : i.cond!=='bon' ? `<span class="tag ${i.cond}">${CONDS[i.cond]}</span>` : '';
+  return `<label class="prow${on?' on':''}">
+    <input type="checkbox" ${on?'checked':''} onchange="togglePick('${i.id}',this.checked)">
+    ${i.photo?`<img loading="lazy" src="${i.photo}">`:'<span class="ph"></span>'}
+    <span class="nm">${itemTitle(i)}</span>
+    <span class="mono">${i.id}</span>${etat}
+  </label>`;
+}
+
 function renderPicker(){
-  const q = (document.getElementById('p-search').value||"").toLowerCase();
-  const rows = db.items.filter(i=>!q || (i.name+" "+i.id+" "+catPath(i)).toLowerCase().includes(q));
-  document.getElementById('p-picker').innerHTML = rows.map(i=>`
-    <label><input type="checkbox" ${pickerSel.has(i.id)?'checked':''} onchange="togglePick('${i.id}',this.checked)">
-    <span style="flex:1">${itemTitle(i)} <span class="mono">${i.id}</span> <span class="muted">· ${esc(subLabel(i.cat,i.subcat))}</span></span></label>`).join("")
-    || '<div class="muted" style="padding:8px">Aucun item.</div>';
-  document.getElementById('p-count').textContent = pickerSel.size + " item(s) sélectionné(s)";
+  const q = (document.getElementById('p-search').value||"").trim().toLowerCase();
+  const box = document.getElementById('p-picker');
+
+  if(q){                                        // recherche : liste à plat
+    const rows = db.items.filter(i=>
+      (itemTitleText(i)+" "+i.id+" "+catPath(i)+" "+(i.serial||"")).toLowerCase().includes(q));
+    box.innerHTML = `<div class="pnav"><div class="pcol wide">
+        <div class="phead">${rows.length} résultat(s) pour « ${esc(q)} »
+          ${rows.length?`<button type="button" class="lnk" onclick="pickAll(${JSON.stringify(rows.map(i=>i.id)).replace(/"/g,'&quot;')},true)">tout cocher</button>`:''}</div>
+        ${rows.map(pickRow).join("") || '<div class="muted" style="padding:10px">Aucun item.</div>'}
+      </div></div>`;
+    updatePickCount(); return;
+  }
+
+  // Colonne 1 : familles
+  const fams = Object.entries(CATS).map(([k,v])=>{
+    const c = pickCount(k);
+    if(!c.n) return '';
+    return `<div class="pitem${pickCat===k?' on':''}" onclick="pickOpenCat('${k}')">
+      <span class="nm">${esc(v.label)}</span>
+      <span class="cnt">${c.sel?`<b>${c.sel}</b>/`:''}${c.n}</span><span class="arr">›</span>
+    </div>`;
+  }).join("");
+
+  // Colonne 2 : sous-catégories de la famille ouverte
+  let subs = '<div class="muted" style="padding:10px">Choisis une famille</div>';
+  if(pickCat){
+    subs = Object.entries(subsOf(pickCat)).map(([k,v])=>{
+      const c = pickCount(pickCat, k);
+      if(!c.n) return '';
+      return `<div class="pitem${pickSub===k?' on':''}" onclick="pickOpenSub('${k}')">
+        <span class="nm">${esc(v.label)}</span>
+        <span class="cnt">${c.sel?`<b>${c.sel}</b>/`:''}${c.n}</span><span class="arr">›</span>
+      </div>`;
+    }).join("") || '<div class="muted" style="padding:10px">Vide</div>';
+  }
+
+  // Colonne 3 : items du dossier courant
+  let items = '<div class="muted" style="padding:10px">Choisis un dossier</div>';
+  if(pickCat){
+    const its = pickItems(pickCat, pickSub);
+    const ids = its.map(i=>i.id);
+    const tous = ids.length && ids.every(id=>pickerSel.has(id));
+    items = `<div class="phead">${its.length} item(s)
+        <button type="button" class="lnk" onclick="pickAll(${JSON.stringify(ids).replace(/"/g,'&quot;')},${!tous})">${tous?'tout décocher':'tout cocher'}</button>
+      </div>` + (its.map(pickRow).join("") || '<div class="muted" style="padding:10px">Vide</div>');
+  }
+
+  box.innerHTML = `<div class="pnav">
+    <div class="pcol">${fams}</div>
+    <div class="pcol">${subs}</div>
+    <div class="pcol wide">${items}</div>
+  </div>`;
+  updatePickCount();
+}
+
+function pickAll(ids, on){
+  ids.forEach(id=>{ if(on) pickerSel.add(id); else pickerSel.delete(id); });
+  renderPicker();
 }
 function togglePick(id,on){
   if(on) pickerSel.add(id); else pickerSel.delete(id);
-  document.getElementById('p-count').textContent = pickerSel.size + " item(s) sélectionné(s)";
+  // Redessin complet pour rafraîchir les compteurs des dossiers,
+  // en conservant la position de défilement de la colonne des items.
+  const col = document.querySelector('#p-picker .pcol.wide');
+  const sc = col ? col.scrollTop : 0;
+  renderPicker();
+  const nc = document.querySelector('#p-picker .pcol.wide');
+  if(nc) nc.scrollTop = sc;
 }
+
+/* Bandeau de sélection, avec retrait au clic */
+function updatePickCount(){
+  const el = document.getElementById('p-count');
+  const n = pickerSel.size;
+  if(!n){ el.innerHTML = '<span class="muted">Aucun item sélectionné.</span>'; return; }
+  const its = [...pickerSel].map(id=>item(id)).filter(Boolean);
+  const max = 30;
+  el.innerHTML = `<b>${n}</b> item(s) sélectionné(s) `
+    + `<button type="button" class="lnk" onclick="pickAll(${JSON.stringify([...pickerSel]).replace(/"/g,'&quot;')},false)">tout retirer</button>`
+    + `<div class="pchips">` + its.slice(0,max).map(i=>
+        `<span class="chip" onclick="togglePick('${i.id}',false)">${esc(itemTitleText(i))} ✕</span>`).join("")
+    + (its.length>max?`<span class="muted">+ ${its.length-max} autres</span>`:'') + `</div>`;
+}
+
 async function saveProj(){
   const name = document.getElementById('p-name').value.trim();
   if(!name){ alert("Le nom est obligatoire."); return; }
@@ -90,16 +194,35 @@ function renderProjDetail(id){
   const its = projItems(p);
   const pr = projProgress(p);
   const pct = pr.total?Math.round(pr.done/pr.total*100):0;
-  let list = its.map(i=>{
-    const busyElsewhere = i.status==='sorti' && (!i.out.projectId || i.out.projectId!==p.id);
-    const onTour = i.status==='sorti' && i.out.projectId===p.id;
-    const avail = onTour ? '<span class="tag pshow">en tournée</span>'
-      : busyElsewhere ? `<span class="tag sorti">sorti — ${esc(outBy(i))}</span>`
-      : i.cond!=='bon' ? `<span class="tag ${i.cond}">${CONDS[i.cond]}</span>`
-      : '<span class="tag dispo">dispo</span>';
-    const check = p.status==='show' ? '' :
-      `<input type="checkbox" ${p.prep&&p.prep[i.id]?'checked':''} onchange="toggleProjItem('${p.id}','${i.id}',this.checked)">`;
-    return `<label>${check}<span style="flex:1">${itemTitle(i)} <span class="mono">${i.id}</span></span>${avail}</label>`;
+  // Checklist groupée par sous-catégorie : plus lisible qu'une longue liste plate
+  const paquets = new Map();
+  its.forEach(i=>{
+    const k = catPath(i);
+    if(!paquets.has(k)) paquets.set(k, []);
+    paquets.get(k).push(i);
+  });
+  let list = [...paquets.entries()].sort((a,b)=>a[0].localeCompare(b[0],'fr')).map(([cat, arr])=>{
+    const prets = arr.filter(i=>p.prep && p.prep[i.id]).length;
+    const lignes = arr.map(i=>{
+      const busyElsewhere = i.status==='sorti' && (!i.out.projectId || i.out.projectId!==p.id);
+      const onTour = i.status==='sorti' && i.out.projectId===p.id;
+      const avail = onTour ? '<span class="tag pshow">en tournée</span>'
+        : busyElsewhere ? `<span class="tag sorti">sorti — ${esc(outBy(i))}</span>`
+        : i.cond!=='bon' ? `<span class="tag ${i.cond}">${CONDS[i.cond]}</span>`
+        : '<span class="tag dispo">dispo</span>';
+      const coche = p.prep && p.prep[i.id];
+      if(p.status==='show')
+        return `<div class="prow"><span class="ph"></span><span class="nm">${itemTitle(i)}</span>
+                <span class="mono">${i.id}</span>${avail}</div>`;
+      return `<label class="prow${coche?' on':''}">
+        <input type="checkbox" ${coche?'checked':''} onchange="toggleProjItem('${p.id}','${i.id}',this.checked)">
+        ${i.photo?`<img loading="lazy" src="${i.photo}">`:'<span class="ph"></span>'}
+        <span class="nm">${itemTitle(i)}</span><span class="mono">${i.id}</span>${avail}</label>`;
+    }).join("");
+    return `<div class="cgroup">
+      <div class="chead">${esc(cat)}
+        <span class="muted">${p.status==='show' ? arr.length + ' item(s)' : prets + '/' + arr.length + ' prêts'}</span></div>
+      ${lignes}</div>`;
   }).join("");
   const missing = (p.item_ids||[]).length - its.length;
   if(missing>0) list += `<div class="muted" style="padding:8px">⚠️ ${missing} item(s) du template ont été supprimés de l'inventaire.</div>`;
