@@ -17,7 +17,7 @@ const SUPABASE_KEY = "sb_publishable_s9Yip985Howj4yDog-2TTA_ufNaQPVk";
 /* --- Adresse du site (optionnel) ------------------------------
    Laisser vide : les QR codes utilisent l'adresse courante.
    -------------------------------------------------------------- */
-const APP_URL = "https://inventaire.accessflow.fr/";
+const APP_URL = "https://inventory.accessflow.fr/";
 
 /* --- Catégories de matériel -----------------------------------
    Deux niveaux, tous deux obligatoires à la création d'un item.
