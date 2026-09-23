@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.8.0] — 2026-09-23
+### Modifié
+- **Sélecteur de matériel des projets** refait en navigation par dossiers
+  (familles → sous-catégories → items), avec compteurs sélectionnés/total sur
+  chaque dossier, « tout cocher » par dossier, recherche à plat sur tout
+  l'inventaire (nom, identifiant, catégorie, n° de série) et pastilles de
+  sélection retirables. Lignes compactes avec vignette.
+- **Checklist de projet** groupée par sous-catégorie, avec progression par groupe.
+
 ## [1.7.0] — 2026-09-21
 ### Ajouté
 - **Tri de l'inventaire** croissant/décroissant par nom, identifiant, catégorie,
