@@ -4,10 +4,10 @@
 
 function renderOut(){
   const oc = document.getElementById('oCat'), keep = oc.value;
-  oc.innerHTML = '<option value="">Catégorie : toutes</option>' + catOptions();
+  oc.innerHTML = '<option value="">Category: all</option>' + catOptions();
   oc.value = keep;
   const ou = document.getElementById('oUser'), keepU = ou.value;
-  ou.innerHTML = '<option value="">Personne : toutes</option>' + db.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join("")
+  ou.innerHTML = '<option value="">Borrower: all</option>' + db.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join("")
     + db.projects.map(p=>`<option value="p:${p.id}">🎪 ${esc(p.name)}</option>`).join("");
   ou.value = keepU;
   renderOutList();
@@ -29,15 +29,15 @@ function renderOutList(){
     return true;
   }).sort((a,b)=>new Date(a.out.date)-new Date(b.out.date));
   document.getElementById('outList').innerHTML = rows.length ? `<table><thead><tr>
-    <th>Item</th><th>Qui</th><th>Depuis</th><th>Durée</th><th>Retour prévu</th><th>Destination / raison</th><th></th>
+    <th>Item</th><th>Borrower</th><th>Since</th><th>Duration</th><th>Due back</th><th>Destination / reason</th><th></th>
   </tr></thead><tbody>` + rows.map(i=>{
     const d = daysSince(i.out.date), od = overdue(i);
     return `<tr class="rowlink" onclick="openDetail('${i.id}')">
       <td data-l="Item">${itemTitle(i)} <span class="mono">${i.id}</span></td>
-      <td data-l="Qui">${esc(outBy(i))}</td>
+      <td data-l="Borrower">${esc(outBy(i))}</td>
       <td data-l="Depuis">${fdate(i.out.date)}</td>
-      <td data-l="Durée"><span class="${(!i.out.due && d>=ALERT_DAYS)?'days-late':''}">${d} j</span></td>
-      <td data-l="Retour prévu">${i.out.due?`<span class="${od?'days-late':''}">${fdateD(i.out.due)}${od?' ⚠️':''}</span>`:'<span class="muted">—</span>'}</td>
+      <td data-l="Duration"><span class="${(!i.out.due && d>=ALERT_DAYS)?'days-late':''}">${d}d</span></td>
+      <td data-l="Due back">${i.out.due?`<span class="${od?'days-late':''}">${fdateD(i.out.due)}${od?' ⚠️':''}</span>`:'<span class="muted">—</span>'}</td>
       <td data-l="Raison">${esc(i.out.reason)}</td>
       <td onclick="event.stopPropagation()"><button class="btn small ok" onclick="openCheckin('${i.id}')">Check-in</button></td>
     </tr>`;}).join("") + "</tbody></table>"
