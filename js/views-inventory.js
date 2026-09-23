@@ -10,14 +10,14 @@ let expanded = new Set();   // groupes d'exemplaires dépliés
 /* ---- filtres ---- */
 function fillFilters(){
   const fc = document.getElementById('fCat'), keep = fc.value;
-  fc.innerHTML = '<option value="">Catégorie : toutes</option>' + catOptions();
+  fc.innerHTML = '<option value="">Category: all</option>' + catOptions();
   fc.value = keep;
   fillSubFilter();
   const fl = document.getElementById('fLoc'), keepL = fl.value;
-  fl.innerHTML = '<option value="">Emplacement : tous</option>' + locOptions();
+  fl.innerHTML = '<option value="">Location: all</option>' + locOptions();
   fl.value = keepL;
-  fillValueFilter('fOwner', 'Propriétaire', i=>i.owner);
-  fillValueFilter('fProv',  'Fournisseur',  i=>i.provider);
+  fillValueFilter('fOwner', 'Owner', i=>i.owner);
+  fillValueFilter('fProv',  'Provider',  i=>i.provider);
 }
 
 /* Remplit un menu déroulant avec les valeurs présentes dans l'inventaire */
@@ -30,7 +30,7 @@ function fillValueFilter(id, label, get){
   const vides = db.items.filter(i=>!(get(i)||'').trim()).length;
   el.innerHTML = `<option value="">${label} : tous</option>`
     + vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")
-    + (vides ? `<option value="__vide__">— non renseigné (${vides})</option>` : '');
+    + (vides ? `<option value="__vide__">— not set (${vides})</option>` : '');
   el.value = keep;
   if(el.value !== keep) el.value = "";      // la valeur a disparu
 }
@@ -39,9 +39,9 @@ function fillSubFilter(){
   const fc = document.getElementById('fCat'), fs = document.getElementById('fSub');
   if(!fs) return;
   const keep = fs.value;
-  if(!fc.value){ fs.innerHTML = '<option value="">Sous-catégorie : toutes</option>'; fs.disabled = true; return; }
+  if(!fc.value){ fs.innerHTML = '<option value="">Sub-category: all</option>'; fs.disabled = true; return; }
   fs.disabled = false;
-  fs.innerHTML = '<option value="">Sous-catégorie : toutes</option>' + subOptions(fc.value);
+  fs.innerHTML = '<option value="">Sub-category: all</option>' + subOptions(fc.value);
   fs.value = subsOf(fc.value)[keep] ? keep : "";
 }
 function onCatFilterChange(){ fillSubFilter(); renderInv(); }
@@ -109,7 +109,7 @@ function renderInv(){
   renderInvSummary(rows);
 
   if(!rows.length){
-    document.getElementById('invList').innerHTML = '<div class="empty">Aucun item ne correspond.</div>';
+    document.getElementById('invList').innerHTML = '<div class="empty">No item matches.</div>';
     renderBulkBar(); return;
   }
 
@@ -117,8 +117,8 @@ function renderInv(){
   if(by){
     const allSelF = rows.length && rows.every(i=>sel.has(i.id));
     document.getElementById('invList').innerHTML = `<table><thead><tr>
-      <th style="width:34px"><input type="checkbox" ${allSelF?'checked':''} onchange="selectAllVisible(this.checked)" title="Tout sélectionner"></th>
-      <th></th><th>Item</th><th>Catégorie</th><th>Statut</th><th>Emplacement</th><th>État</th><th></th>
+      <th style="width:34px"><input type="checkbox" ${allSelF?'checked':''} onchange="selectAllVisible(this.checked)" title="Select all"></th>
+      <th></th><th>Item</th><th>Category</th><th>Status</th><th>Location</th><th>Condition</th><th></th>
     </tr></thead><tbody>${rows.map(i=>itemRow(i,false)).join("")}</tbody></table>`;
     renderBulkBar(); return;
   }
@@ -150,8 +150,8 @@ function renderInv(){
   const allIds = rows.map(i=>i.id);
   const allSel = allIds.length && allIds.every(id=>sel.has(id));
   document.getElementById('invList').innerHTML = `<table><thead><tr>
-    <th style="width:34px"><input type="checkbox" ${allSel?'checked':''} onchange="selectAllVisible(this.checked)" title="Tout sélectionner"></th>
-    <th></th><th>Item</th><th>Catégorie</th><th>Statut</th><th>Emplacement</th><th>État</th><th></th>
+    <th style="width:34px"><input type="checkbox" ${allSel?'checked':''} onchange="selectAllVisible(this.checked)" title="Select all"></th>
+    <th></th><th>Item</th><th>Category</th><th>Status</th><th>Location</th><th>Condition</th><th></th>
   </tr></thead><tbody>${body}</tbody></table>`;
   renderBulkBar();
 }
@@ -163,11 +163,11 @@ function renderInvSummary(rows){
   const avecPrix = rows.filter(i=>i.price!=null && i.price!=='');
   const total = avecPrix.reduce((s,i)=>s + Number(i.price), 0);
   const sortis = rows.filter(i=>i.status==='sorti').length;
-  el.innerHTML = `<b>${rows.length}</b> item${rows.length>1?'s':''} affiché${rows.length>1?'s':''}`
-    + (rows.length !== db.items.length ? ` <span class="muted">sur ${db.items.length}</span>` : '')
-    + (sortis ? ` · ${sortis} sorti${sortis>1?'s':''}` : '')
-    + (avecPrix.length ? ` · valeur d'achat <b>${fprice(total)}</b>`
-        + (avecPrix.length !== rows.length ? ` <span class="muted">(${avecPrix.length} item(s) avec prix)</span>` : '') : '');
+  el.innerHTML = `<b>${rows.length}</b> item${rows.length>1?'s':''} shown`
+    + (rows.length !== db.items.length ? ` <span class="muted">of ${db.items.length}</span>` : '')
+    + (sortis ? ` · ${sortis} checked out` : '')
+    + (canSeeValue() && avecPrix.length ? ` · purchase value <b>${fprice(total)}</b>`
+        + (avecPrix.length !== rows.length ? ` <span class="muted">(${avecPrix.length} with a price)</span>` : '') : '');
 }
 
 function itemRow(i, isChild){
@@ -175,10 +175,10 @@ function itemRow(i, isChild){
     <td onclick="event.stopPropagation()"><input type="checkbox" ${sel.has(i.id)?'checked':''} onchange="toggleSel('${i.id}',this.checked)"></td>
     <td>${i.photo?`<img class="thumb" loading="lazy" src="${i.photo}">`:""}</td>
     <td data-l="Item">${itemTitle(i)}<br><span class="mono">${i.id}</span></td>
-    <td data-l="Catégorie"><span class="tag cat">${esc(subLabel(i.cat,i.subcat))}</span><br><span class="muted">${esc(catLabel(i.cat))}</span></td>
-    <td data-l="Statut">${statusTag(i)}</td>
-    <td data-l="Emplacement">${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}${i.loc!==i.home?` <span class="muted">(réf : ${esc(locLabel(i.home))})</span>`:""}</td>
-    <td data-l="État"><span class="tag ${i.cond}">${CONDS[i.cond]||i.cond}</span></td>
+    <td data-l="Category"><span class="tag cat">${esc(subLabel(i.cat,i.subcat))}</span><br><span class="muted">${esc(catLabel(i.cat))}</span></td>
+    <td data-l="Status">${statusTag(i)}</td>
+    <td data-l="Location">${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}${i.loc!==i.home?` <span class="muted">(home: ${esc(locLabel(i.home))})</span>`:""}</td>
+    <td data-l="Condition"><span class="tag ${i.cond}">${CONDS[i.cond]||i.cond}</span></td>
     <td onclick="event.stopPropagation()">${actionBtn(i)}</td>
   </tr>`;
 }
@@ -195,11 +195,11 @@ function groupRow(key, items, open){
   return `<tr class="grouprow ${allSel?'selrow':''}" onclick="toggleGroup(${JSON.stringify(key).replace(/"/g,'&quot;')})">
     <td onclick="event.stopPropagation()"><input type="checkbox" ${allSel?'checked':''} onchange="selectGroup(${JSON.stringify(key).replace(/"/g,'&quot;')},this.checked)"></td>
     <td>${photos.length===1&&photos[0]?`<img class="thumb" loading="lazy" src="${photos[0]}">`:''}</td>
-    <td data-l="Item"><span class="chev">${open?'▾':'▸'}</span> ${brands.length===1&&brands[0]?`<b>${esc(brands[0])}</b> `:''}${esc(key)}<br><span class="muted">${items.length} exemplaires</span></td>
-    <td data-l="Catégorie">${cats.length===1?`<span class="tag cat">${esc(subLabel(items[0].cat,items[0].subcat))}</span>`:'<span class="muted">mixte</span>'}</td>
-    <td data-l="Statut">${dispo?`<span class="tag dispo">${dispo} dispo</span> `:''}${sortis?`<span class="tag sorti">${sortis} sorti(s)</span>`:''}</td>
-    <td data-l="Emplacement">${locs.length===1?esc(locs[0]):'<span class="muted">plusieurs</span>'}</td>
-    <td data-l="État">${abimes?`<span class="tag attente">${abimes} à réparer</span>`:'<span class="tag bon">OK</span>'}</td>
+    <td data-l="Item"><span class="chev">${open?'▾':'▸'}</span> ${brands.length===1&&brands[0]?`<b>${esc(brands[0])}</b> `:''}${esc(key)}<br><span class="muted">${items.length} copies</span></td>
+    <td data-l="Category">${cats.length===1?`<span class="tag cat">${esc(subLabel(items[0].cat,items[0].subcat))}</span>`:'<span class="muted">mixed</span>'}</td>
+    <td data-l="Status">${dispo?`<span class="tag dispo">${dispo} available</span> `:''}${sortis?`<span class="tag sorti">${sortis} out</span>`:''}</td>
+    <td data-l="Location">${locs.length===1?esc(locs[0]):'<span class="muted">several</span>'}</td>
+    <td data-l="Condition">${abimes?`<span class="tag attente">${abimes} to fix</span>`:'<span class="tag bon">OK</span>'}</td>
     <td></td>
   </tr>`;
 }
@@ -209,14 +209,14 @@ function toggleGroup(key){
   renderInv();
 }
 function statusTag(i){
-  if(i.status==='dispo') return '<span class="tag dispo">Disponible</span>';
+  if(i.status==='dispo') return '<span class="tag dispo">Available</span>';
   const od = overdue(i);
-  return `<span class="tag ${od?'hs':'sorti'}">Sorti · ${daysSince(i.out.date)} j${od?' ⚠️':''}</span>`;
+  return `<span class="tag ${od?'hs':'sorti'}">Out · ${daysSince(i.out.date)}d${od?' ⚠️':''}</span>`;
 }
 function actionBtn(i){
   return i.status==='dispo'
-    ? `<button class="btn small" onclick="openCheckout('${i.id}')">Check-out</button>`
-    : `<button class="btn small ok" onclick="openCheckin('${i.id}')">Check-in</button>`;
+    ? `<button class="btn small" onclick="openCheckout('${i.id}')">Check out</button>`
+    : `<button class="btn small ok" onclick="openCheckin('${i.id}')">Check in</button>`;
 }
 
 /* ================= SÉLECTION MULTIPLE ================= */
@@ -242,14 +242,14 @@ function renderBulkBar(){
   const nSortis = its.length - nDispo;
   bar.style.display = '';
   bar.innerHTML = `
-    <span class="count"><b>${n}</b> sélectionné${n>1?'s':''}</span>
-    ${nDispo?`<button class="btn small" onclick="openBulkCheckout()">Check-out (${nDispo})</button>`:''}
-    ${nSortis?`<button class="btn small ok" onclick="openBulkCheckin()">Check-in (${nSortis})</button>`:''}
-    ${can('edit')?`<button class="btn small sec" onclick="openBulkMove()">Emplacement</button>`:''}
-    ${can('edit')?`<button class="btn small sec" onclick="openBulkCat()">Catégorie</button>`:''}
-    <button class="btn small sec" onclick="openBulkCond()">État</button>
-    ${can('delete')?`<button class="btn small danger" onclick="bulkTrash()">Corbeille</button>`:''}
-    <button class="btn small sec" onclick="clearSel()">Annuler</button>`;
+    <span class="count"><b>${n}</b> selected</span>
+    ${nDispo?`<button class="btn small" onclick="openBulkCheckout()">Check out (${nDispo})</button>`:''}
+    ${nSortis?`<button class="btn small ok" onclick="openBulkCheckin()">Check in (${nSortis})</button>`:''}
+    ${can('edit')?`<button class="btn small sec" onclick="openBulkMove()">Move</button>`:''}
+    ${can('edit')?`<button class="btn small sec" onclick="openBulkCat()">Category</button>`:''}
+    <button class="btn small sec" onclick="openBulkCond()">Condition</button>
+    ${can('delete')?`<button class="btn small danger" onclick="bulkTrash()">Trash</button>`:''}
+    <button class="btn small sec" onclick="clearSel()">Clear</button>`;
 }
 
 /* ---- fenêtre générique pour les actions groupées ---- */
@@ -273,27 +273,27 @@ async function doBulk(){
   const v = document.getElementById('bulk-select').value;
   const v2 = document.getElementById('bulk-select2').value;
   if(document.getElementById('bulk-row2').style.display !== 'none' && !v2){
-    alert("La sous-catégorie est obligatoire."); return;
+    alert("Sub-category is required."); return;
   }
   close_('ovBulk');
   if(bulkAction) await bulkAction(v, v2);
 }
 
 function openBulkCat(){
-  openBulkModal(`Reclasser ${sel.size} item(s)`, "Catégorie", catOptions(), doBulkCat, "Sous-catégorie");
+  openBulkModal(`Re-categorise ${sel.size} item(s)`, "Category", catOptions(), doBulkCat, "Sub-category");
 }
 async function doBulkCat(cat, subcat){
   const targets = selItems();
   if(!targets.length) return;
   targets.forEach(i=>{ i.cat = cat; i.subcat = subcat; });
   await apiUpdateItemsIn(targets.map(i=>i.id), {cat, subcat});
-  await histMany(targets.map(i=>({itemId:i.id, type:'edit', detail:`reclassé : ${catLabel(cat)} › ${subLabel(cat,subcat)}`})));
+  await histMany(targets.map(i=>({itemId:i.id, type:'edit', detail:`re-categorised: ${catLabel(cat)} › ${subLabel(cat,subcat)}`})));
   clearSel(); render();
-  toast(`${targets.length} item(s) reclassé(s).`, 'ok');
+  toast(`${targets.length} item(s) re-categorised.`, 'ok');
 }
 
 function openBulkMove(){
-  openBulkModal(`Déplacer ${sel.size} item(s)`, "Nouvel emplacement de référence", locOptions(), doBulkMove);
+  openBulkModal(`Move ${sel.size} item(s)`, "New home location", locOptions(), doBulkMove);
 }
 async function doBulkMove(home){
   const targets = selItems();
@@ -303,21 +303,21 @@ async function doBulkMove(home){
   const sortis = targets.filter(i=>i.status!=='dispo').map(i=>i.id);
   await apiUpdateItemsIn(dispo, {home, loc:home});
   await apiUpdateItemsIn(sortis, {home});
-  await histMany(targets.map(i=>({itemId:i.id, type:'move', detail:`nouvel emplacement de référence : ${locLabel(home)}`})));
+  await histMany(targets.map(i=>({itemId:i.id, type:'move', detail:`new home location: ${locLabel(home)}`})));
   clearSel(); render();
-  toast(`${targets.length} item(s) déplacé(s) vers ${locLabel(home)}.`, 'ok');
+  toast(`${targets.length} item(s) moved to ${locLabel(home)}.`, 'ok');
 }
 
 function openBulkCond(){
   const opts = Object.entries(CONDS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
-  openBulkModal(`Changer l'état de ${sel.size} item(s)`, "Nouvel état", opts, doBulkCond);
+  openBulkModal(`Change condition of ${sel.size} item(s)`, "New condition", opts, doBulkCond);
 }
 async function doBulkCond(cond){
   const targets = selItems();
   if(!targets.length) return;
   targets.forEach(i=>i.cond = cond);
   await apiUpdateItemsIn(targets.map(i=>i.id), {cond});
-  await histMany(targets.map(i=>({itemId:i.id, type:'repair', detail:REPACT[cond]||`état : ${CONDS[cond]}`, cond})));
+  await histMany(targets.map(i=>({itemId:i.id, type:'repair', detail:REPACT[cond]||`condition: ${CONDS[cond]}`, cond})));
   clearSel(); render();
   toast(`${targets.length} item(s) : ${CONDS[cond]}.`, 'ok');
 }
@@ -325,8 +325,8 @@ async function doBulkCond(cond){
 async function bulkTrash(){
   const targets = selItems();
   if(!targets.length) return;
-  if(!db.trashSupported){ alert("La corbeille n'est pas activée : exécute sql/004-corbeille.sql."); return; }
-  if(!confirm(`Mettre ${targets.length} item(s) à la corbeille ?\n\nIls seront récupérables pendant ${typeof TRASH_DAYS==='number'?TRASH_DAYS:30} jours.`)) return;
+  if(!db.trashSupported){ alert("Trash is not enabled — run sql/004-corbeille.sql."); return; }
+  if(!confirm(`Move ${targets.length} item(s) to the trash?\n\nThey stay recoverable for ${typeof TRASH_DAYS==='number'?TRASH_DAYS:30} days.`)) return;
   const d = now(), ids = targets.map(i=>i.id);
   targets.forEach(i=>i.deleted_at = d);
   db.items = db.items.filter(i=>!ids.includes(i.id));
@@ -334,7 +334,7 @@ async function bulkTrash(){
   clearSel(); render();
   if(typeof updateTrashBadge==='function') updateTrashBadge();
   await apiUpdateItemsIn(ids, {deleted_at:d});
-  toast(`${targets.length} item(s) mis à la corbeille.`, 'ok');
+  toast(`${targets.length} item(s) moved to the trash.`, 'ok');
 }
 
 /* ---- formulaire item (ajout / modification) ---- */
@@ -352,7 +352,7 @@ function onPhotoChosen(input){
 }
 function recropPhoto(){
   const cur = pendingPhoto || (editingId && item(editingId) ? item(editingId).photo : null);
-  if(!cur){ toast("Aucune photo à recadrer.", 'error'); return; }
+  if(!cur){ toast("No photo to crop.", 'error'); return; }
   openCropper(cur, d=>{ pendingPhoto = d; showPhotoPreview(d); });
 }
 function removePhoto(){
@@ -363,9 +363,9 @@ function showPhotoPreview(src){
   const z = document.getElementById('i-photo-zone');
   z.innerHTML = src
     ? `<img class="sqphoto" src="${src}">
-       <button type="button" class="btn sec small" onclick="recropPhoto()">Recadrer</button>
-       <button type="button" class="btn sec small" onclick="removePhoto()">Retirer</button>`
-    : `<span class="muted">Aucune photo</span>`;
+       <button type="button" class="btn sec small" onclick="recropPhoto()">Crop</button>
+       <button type="button" class="btn sec small" onclick="removePhoto()">Remove</button>`
+    : `<span class="muted">No photo</span>`;
 }
 function openItemForm(id){
   editingId = id||null;
@@ -397,7 +397,7 @@ function openItemForm(id){
 function fillSubForm(sel){
   const c = document.getElementById('i-cat').value;
   const el = document.getElementById('i-subcat');
-  if(!c){ el.innerHTML = '<option value="">— choisir une catégorie d\'abord —</option>'; el.disabled = true; return; }
+  if(!c){ el.innerHTML = '<option value="">— pick a category first —</option>'; el.disabled = true; return; }
   el.disabled = false;
   el.innerHTML = '<option value="">— choisir —</option>' + subOptions(c, sel);
   if(sel) el.value = sel;
@@ -405,12 +405,12 @@ function fillSubForm(sel){
 
 function saveItem(){
   const name = document.getElementById('i-name').value.trim();
-  if(!name){ alert("Le nom est obligatoire."); return; }
+  if(!name){ alert("Name is required."); return; }
   const cat = document.getElementById('i-cat').value;
   const subcat = document.getElementById('i-subcat').value;
-  if(!cat){ alert("La catégorie est obligatoire."); return; }
-  if(!subcat){ alert("La sous-catégorie est obligatoire."); return; }
-  if(!db.locations.length){ alert("Créez d'abord un emplacement (onglet Emplacements)."); return; }
+  if(!cat){ alert("Category is required."); return; }
+  if(!subcat){ alert("Sub-category is required."); return; }
+  if(!db.locations.length){ alert("Create a location first (Settings › Locations)."); return; }
   const vals = {
     name, cat, subcat, brand:document.getElementById('i-brand').value.trim(),
     serial:document.getElementById('i-serial').value.trim(), cond:document.getElementById('i-cond').value,
@@ -434,8 +434,8 @@ function saveItem(){
       if(photo !== null) i.photo = photo ? await uploadIfNeeded(photo, editingId) : null;
       if(i.status==='dispo' && movedHome) i.loc = vals.home;
       await apiUpdateItem(i.id, {...vals, photo:i.photo, loc:i.loc});
-      if(movedHome && i.status==='dispo') await hist(i.id,'move',`nouvel emplacement de référence : ${locLabel(vals.home)}`);
-      if(condChanged) await hist(i.id,'repair',REPACT[vals.cond]||`état : ${CONDS[vals.cond]}`,null,vals.cond);
+      if(movedHome && i.status==='dispo') await hist(i.id,'move',`new home location: ${locLabel(vals.home)}`);
+      if(condChanged) await hist(i.id,'repair',REPACT[vals.cond]||`condition: ${CONDS[vals.cond]}`,null,vals.cond);
       else await hist(i.id,'edit');
     }else{
       const qty = Math.max(1, Math.min(200, parseInt(document.getElementById('i-qty').value)||1));
@@ -450,7 +450,7 @@ function saveItem(){
         db.items.push(row); rows.push(row);
       }
       await apiInsertItems(rows);
-      await histMany(rows.map(r=>({itemId:r.id, type:'create', detail:"Ajout à l'inventaire"})));
+      await histMany(rows.map(r=>({itemId:r.id, type:'create', detail:"Added to inventory"})));
     }
     close_('ovItem'); render();
   };
@@ -460,11 +460,11 @@ async function deleteItem(id){
   const i = item(id);
   if(!i) return;
   if(!db.trashSupported){
-    alert("La corbeille n'est pas encore activée : exécute sql/004-corbeille.sql dans Supabase.");
+    alert("Trash is not enabled yet — run sql/004-corbeille.sql in Supabase.");
     return;
   }
-  if(i.status==='sorti' && !confirm(`« ${i.name} » est actuellement sorti (${outBy(i)}).\nLe mettre quand même à la corbeille ?`)) return;
-  else if(i.status!=='sorti' && !confirm(`Mettre « ${i.name} » à la corbeille ?\n\nIl sera récupérable pendant ${typeof TRASH_DAYS==='number'?TRASH_DAYS:30} jours, avec son historique.`)) return;
+  if(i.status==='sorti' && !confirm(`"${i.name}" is currently checked out (${outBy(i)}).\nMove it to the trash anyway?`)) return;
+  else if(i.status!=='sorti' && !confirm(`Move "${i.name}" to the trash?\n\nIt stays recoverable for ${typeof TRASH_DAYS==='number'?TRASH_DAYS:30} days, with its history.`)) return;
   db.items = db.items.filter(x=>x.id!==id);
   i.deleted_at = now();
   db.trash.unshift(i);
@@ -472,39 +472,42 @@ async function deleteItem(id){
   close_('ovDetail'); render();
   if(typeof updateTrashBadge==='function') updateTrashBadge();
   await apiTrashItem(id);
-  toast(`« ${i.name} » mis à la corbeille.`, 'ok', "Annuler", ()=>restoreItem(id));
+  toast(`"${i.name}" moved to the trash.`, 'ok', "Undo", ()=>restoreItem(id));
 }
 
 /* ================= CHECK-OUT / CHECK-IN ================= */
 let actionId = null, bulkMode = false;
 
 function openCheckout(id){
-  if(!db.users.length){ alert("Ajoutez d'abord une personne (onglet Personnes)."); return; }
   actionId = id; bulkMode = false;
   document.getElementById('out-item').textContent = item(id).name;
   prepCheckoutForm();
 }
 function openBulkCheckout(){
-  if(!db.users.length){ alert("Ajoutez d'abord une personne (onglet Personnes)."); return; }
   const n = selItems().filter(i=>i.status==='dispo').length;
-  if(!n){ toast("Aucun item disponible dans la sélection.", 'error'); return; }
+  if(!n){ toast("No available item in the selection.", 'error'); return; }
   actionId = null; bulkMode = true;
   document.getElementById('out-item').textContent = `${n} item(s)`;
   prepCheckoutForm();
 }
 function prepCheckoutForm(){
-  document.getElementById('out-user').innerHTML = db.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join("");
+  // Liste de suggestions : les emprunteurs déjà connus, les plus récents d'abord
+  document.getElementById('borrowerList').innerHTML =
+    db.users.map(u=>`<option value="${esc(u.name)}">`).join("");
+  document.getElementById('out-user').value = "";
   document.getElementById('out-reason').value = "";
   document.getElementById('out-due').value = "";
   document.getElementById('out-alert').checked = true;
   open_('ovOut');
 }
 async function doCheckout(){
+  const who = document.getElementById('out-user').value.trim();
+  if(!who){ alert("Enter who is taking the gear."); return; }
   const reason = document.getElementById('out-reason').value.trim();
-  if(!reason){ alert("Indiquez la destination ou la raison."); return; }
+  if(!reason){ alert("Enter a destination or a reason."); return; }
   const due = document.getElementById('out-due').value || null;
   const alertOn = document.getElementById('out-alert').checked;
-  const userId = document.getElementById('out-user').value;
+  const userId = await borrowerId(who);
   const targets = bulkMode ? selItems().filter(i=>i.status==='dispo') : [item(actionId)];
   if(!targets.length) return;
 
@@ -512,9 +515,9 @@ async function doCheckout(){
   targets.forEach(i=>{ i.status='sorti'; i.out={...out}; i.loc=reason; });
   await apiUpdateItemsIn(targets.map(i=>i.id), {status:'sorti', out, loc:reason});
   await histMany(targets.map(i=>({itemId:i.id, type:'out',
-    detail: reason + (due?` — retour prévu le ${fdateD(due)}`:''), userId})));
+    detail: reason + (due?` — due back ${fdateD(due)}`:''), userId})));
   close_('ovOut');
-  if(bulkMode){ clearSel(); toast(`${targets.length} item(s) sortis.`, 'ok'); }
+  if(bulkMode){ clearSel(); toast(`${targets.length} item(s) checked out to ${esc(who)}.`, 'ok'); }
   bulkMode = false; render();
 }
 
@@ -528,7 +531,7 @@ function openCheckin(id){
 }
 function openBulkCheckin(){
   const n = selItems().filter(i=>i.status==='sorti').length;
-  if(!n){ toast("Aucun item sorti dans la sélection.", 'error'); return; }
+  if(!n){ toast("No checked-out item in the selection.", 'error'); return; }
   actionId = null; bulkMode = true;
   document.getElementById('in-item').textContent = `${n} item(s)`;
   document.getElementById('in-cond').value = 'bon';
@@ -548,7 +551,7 @@ async function doCheckin(){
   }
   await histMany(rows);
   close_('ovIn');
-  if(bulkMode){ clearSel(); toast(`${targets.length} item(s) rentrés.`, 'ok'); }
+  if(bulkMode){ clearSel(); toast(`${targets.length} item(s) checked in.`, 'ok'); }
   bulkMode = false; render();
 }
 
@@ -559,10 +562,10 @@ function openDetail(id){
   const rows = db.history.filter(h=>h.itemId===id).map(h=>
     `<li>${histIcon(h.type)} ${histText(h)}<div class="when">${fdate(h.date)}${histBy(h)}</div></li>`).join("");
   const outInfo = i.status==='sorti'
-    ? `<div class="alert ${overdue(i)?'bad':''}">📤 Sorti depuis le <b>${fdate(i.out.date)}</b> (${daysSince(i.out.date)} j) — <b>${esc(outBy(i))}</b> · ${esc(i.out.reason)}${i.out.due?`<br>Retour prévu le <b>${fdateD(i.out.due)}</b>${overdue(i)?` — <span class="days-late">en retard de ${daysLate(i)} j</span>`:''}`:''}</div>` : "";
+    ? `<div class="alert ${overdue(i)?'bad':''}">📤 Out since <b>${fdate(i.out.date)}</b> (${daysSince(i.out.date)}d) — <b>${esc(outBy(i))}</b> · ${esc(i.out.reason)}${i.out.due?`<br>Due back <b>${fdateD(i.out.due)}</b>${overdue(i)?` — <span class="days-late">${daysLate(i)}d overdue</span>`:''}`:''}</div>` : "";
   const repBtns = i.cond==='bon'
-    ? `<button class="btn sec small" onclick="openRepair('${i.id}','attente')">Signaler à réparer</button>`
-    : `<button class="btn small ok" onclick="openRepair('${i.id}','bon')">Marquer réparé</button>`;
+    ? `<button class="btn sec small" onclick="openRepair('${i.id}','attente')">Flag for repair</button>`
+    : `<button class="btn small ok" onclick="openRepair('${i.id}','bon')">Mark repaired</button>`;
   document.getElementById('detailBody').innerHTML = `
     <h3>${itemTitle(i)} <span class="mono">${i.id}</span></h3>
     ${i.photo?`<img class="itemphoto" loading="lazy" src="${i.photo}">`:""}
@@ -571,26 +574,26 @@ function openDetail(id){
     </p>
     ${outInfo}
     <p class="muted" style="margin-bottom:4px">
-      ${i.serial?`N° série : <b>${esc(i.serial)}</b><br>`:""}
-      ${i.owner?`Propriétaire : <b>${esc(i.owner)}</b><br>`:""}
-      ${i.provider?`Fournisseur : <b>${esc(i.provider)}</b><br>`:""}
-      ${i.price!=null?`Prix d'achat : <b>${fprice(i.price)}</b>${i.purchase_date?` le ${fdateOnly(i.purchase_date)}`:""}<br>`
-        :(i.purchase_date?`Acheté le <b>${fdateOnly(i.purchase_date)}</b><br>`:"")}
-      ${i.sales_order?`N° de commande : <b>${esc(i.sales_order)}</b><br>`:""}
-      Emplacement de référence : <b>${esc(locLabel(i.home))}</b><br>
-      Emplacement actuel : <b>${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}</b>
+      ${i.serial?`Serial: <b>${esc(i.serial)}</b><br>`:""}
+      ${i.owner?`Owner: <b>${esc(i.owner)}</b><br>`:""}
+      ${i.provider?`Provider: <b>${esc(i.provider)}</b><br>`:""}
+      ${i.price!=null?`Purchase price: <b>${fprice(i.price)}</b>${i.purchase_date?` on ${fdateOnly(i.purchase_date)}`:""}<br>`
+        :(i.purchase_date?`Bought on <b>${fdateOnly(i.purchase_date)}</b><br>`:"")}
+      ${i.sales_order?`Sales order: <b>${esc(i.sales_order)}</b><br>`:""}
+      Home location: <b>${esc(locLabel(i.home))}</b><br>
+      Current location: <b>${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}</b>
     </p>
     ${i.notes?`<p class="muted" style="margin-bottom:10px">📝 ${esc(i.notes)}</p>`:""}
     <div class="modal-actions" style="justify-content:flex-start;margin:12px 0;flex-wrap:wrap">
       ${actionBtn(i)}
       ${repBtns}
-      ${can('edit')?`<button class="btn sec small" onclick="openItemForm('${i.id}')">Modifier</button>`:''}
-      <button class="btn sec small" onclick="showLabel('${i.id}')">Étiquette / QR</button>
-      ${can('delete')?`<button class="btn danger small" onclick="deleteItem('${i.id}')">Mettre à la corbeille</button>`:''}
+      ${can('edit')?`<button class="btn sec small" onclick="openItemForm('${i.id}')">Edit</button>`:''}
+      <button class="btn sec small" onclick="showLabel('${i.id}')">QR label</button>
+      ${can('delete')?`<button class="btn danger small" onclick="deleteItem('${i.id}')">Move to trash</button>`:''}
     </div>
     <div id="qrzone"></div>
-    <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Historique</h3>
-    <ul class="hist">${rows||'<li class="muted">Aucun mouvement</li>'}</ul>
+    <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">History</h3>
+    <ul class="hist">${rows||'<li class="muted">No activity yet</li>'}</ul>
     <div class="modal-actions"><button class="btn sec" onclick="close_('ovDetail')">Fermer</button></div>`;
   open_('ovDetail');
 }
@@ -601,7 +604,7 @@ function consumePendingItem(){
   if(!id) return;
   localStorage.removeItem('pendingItem');
   if(item(id)) openDetail(id);
-  else toast(`Item ${id} introuvable (supprimé ?).`, 'error');
+  else toast(`Item ${id} not found (deleted?).`, 'error');
 }
 
 /* ---- étiquette / QR : encode l'adresse de la fiche ---- */
@@ -610,7 +613,7 @@ function showLabel(id){
   z.innerHTML = `<div id="qrbox"><div id="qrcode"></div>
     <div style="color:#000;text-align:center;font-family:monospace;font-weight:700;margin-top:6px">${i.id}</div>
     <div style="color:#000;text-align:center;font-size:12px">${esc(i.name)}</div></div>
-    <div><button class="btn small sec" onclick="printLabel()">🖨️ Imprimer l'étiquette</button>
+    <div><button class="btn small sec" onclick="printLabel()">🖨️ Print label</button>
     <span class="muted" style="margin-left:8px">Scanner ouvre la fiche dans l'app</span></div>`;
   if(typeof QRCode!=='undefined') new QRCode(document.getElementById('qrcode'),{text:itemUrl(i.id),width:110,height:110});
   else document.getElementById('qrcode').innerHTML = '<span style="color:#000;font-size:12px">(QR indisponible hors ligne)</span>';
