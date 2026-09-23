@@ -47,10 +47,10 @@ function squareFromFile(file){
         ctx.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
         resolve(c.toDataURL('image/jpeg', 0.82));
       };
-      img.onerror = ()=> reject(new Error('image illisible'));
+      img.onerror = ()=> reject(new Error('unreadable image'));
       img.src = e.target.result;
     };
-    rd.onerror = ()=> reject(new Error('lecture impossible'));
+    rd.onerror = ()=> reject(new Error('cannot read file'));
     rd.readAsDataURL(file);
   });
 }
@@ -60,7 +60,7 @@ function openPhotoImport(){
   photoPlan = null;
   document.getElementById('ph-file').value = "";
   document.getElementById('ph-preview').innerHTML =
-    '<div class="muted">Choisis les images : le nom du fichier doit reprendre le modèle de l\'item.</div>';
+    '<div class="muted">Pick your images — the file name must match the item model.</div>';
   document.getElementById('ph-go').style.display = 'none';
   open_('ovPhotos');
 }
@@ -88,38 +88,38 @@ function onPhotosChosen(input){
   const apercu = lignes.slice(0,80).map(l=>`<tr class="${l.ids.length?'':'csv-err'}">
       <td>${esc(l.nom)}</td>
       <td>${l.ids.length
-        ? `${esc(l.cible)} <span class="tag dispo">${l.ids.length} exemplaire${l.ids.length>1?'s':''}</span>`
-          + (l.doublon ? ' <span class="tag attente">⚠ plusieurs fichiers pour cet item</span>' : '')
-        : '<span class="tag hs">aucun item de ce nom</span>'}</td>
+        ? `${esc(l.cible)} <span class="tag dispo">${l.ids.length} cop${l.ids.length>1?'ies':'y'}</span>`
+          + (l.doublon ? ' <span class="tag attente">⚠ several files target this item</span>' : '')
+        : '<span class="tag hs">no item with that name</span>'}</td>
       <td class="muted">${Math.round(l.poids/1024)} Ko</td>
     </tr>`).join("");
 
   document.getElementById('ph-preview').innerHTML = `
     <div class="csv-sum">
-      <span class="tag dispo">${photoPlan.nFiles} photo(s) reconnue(s)</span>
-      <span class="tag cat">${photoPlan.nItems} item(s) habillé(s)</span>
-      ${lignes.length-photoPlan.nFiles ? `<span class="tag hs">${lignes.length-photoPlan.nFiles} sans correspondance</span>`:''}
-      ${lignes.some(l=>l.doublon) ? `<span class="tag attente">${lignes.filter(l=>l.doublon).length} doublon(s)</span>`:''}
-      <span class="muted">· ${sansPhoto} item(s) encore sans photo</span>
+      <span class="tag dispo">${photoPlan.nFiles} photo(s) matched</span>
+      <span class="tag cat">${photoPlan.nItems} item(s) covered</span>
+      ${lignes.length-photoPlan.nFiles ? `<span class="tag hs">${lignes.length-photoPlan.nFiles} unmatched</span>`:''}
+      ${lignes.some(l=>l.doublon) ? `<span class="tag attente">${lignes.filter(l=>l.doublon).length} duplicate(s)</span>`:''}
+      <span class="muted">· ${sansPhoto} item(s) still without a photo</span>
     </div>
-    <div class="csv-table"><table><thead><tr><th>Fichier</th><th>Correspondance</th><th>Poids</th></tr></thead>
+    <div class="csv-table"><table><thead><tr><th>File</th><th>Match</th><th>Size</th></tr></thead>
     <tbody>${apercu}</tbody></table>
-    ${lignes.length>80?`<div class="muted" style="padding:8px">… et ${lignes.length-80} autres</div>`:''}</div>`;
+    ${lignes.length>80?`<div class="muted" style="padding:8px">… and ${lignes.length-80} more</div>`:''}</div>`;
 
   const go = document.getElementById('ph-go');
   go.style.display = photoPlan.nFiles ? '' : 'none';
-  go.textContent = `Envoyer ${photoPlan.nFiles} photo(s)`;
+  go.textContent = `Upload ${photoPlan.nFiles} photo(s)`;
 }
 
 async function runPhotoImport(){
   if(!photoPlan || !photoPlan.nFiles) return;
   const lignes = photoPlan.lignes.filter(l=>l.ids.length);
-  if(!confirm(`Envoyer ${lignes.length} photo(s) et habiller ${photoPlan.nItems} item(s) ?\n\nLes photos déjà en place sur ces items seront remplacées.`)) return;
+  if(!confirm(`Upload ${lignes.length} photo(s) and cover ${photoPlan.nItems} item(s)?\n\nExisting photos on those items will be replaced.`)) return;
 
   const bar = document.getElementById('ph-preview');
   let faits = 0, echecs = [];
   for(const l of lignes){
-    bar.innerHTML = `<div class="alert">📤 Envoi en cours… <b>${faits}/${lignes.length}</b><br>
+    bar.innerHTML = `<div class="alert">📤 Uploading… <b>${faits}/${lignes.length}</b><br>
       <span class="muted">${esc(l.nom)}</span></div>`;
     try{
       const data = await squareFromFile(l.file);
@@ -131,8 +131,8 @@ async function runPhotoImport(){
   }
   close_('ovPhotos');
   await refresh();
-  if(echecs.length) toast(`${faits} photo(s) envoyée(s), ${echecs.length} en échec : ${echecs.slice(0,3).join(', ')}`, 'error', null, null, 10000);
-  else toast(`${faits} photo(s) envoyée(s) — ${photoPlan.nItems} item(s) habillés.`, 'ok', null, null, 6000);
+  if(echecs.length) toast(`${faits} photo(s) uploaded, ${echecs.length} failed: ${echecs.slice(0,3).join(', ')}`, 'error', null, null, 10000);
+  else toast(`${faits} photo(s) uploaded — ${photoPlan.nItems} item(s) covered.`, 'ok', null, null, 6000);
   photoPlan = null;
 }
 
@@ -148,20 +148,20 @@ function listeNomsPhotos(){
   const esc2 = v => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
   const lignes = [...vus.values()]
     .sort((a,b)=> a.cat.localeCompare(b.cat) || a.base.localeCompare(b.base))
-    .map(e=>[`${e.brand} ${e.base}`.trim() + '.jpg', e.brand, e.base, e.n, e.photo?'oui':'non', e.cat].map(esc2).join(';'));
-  const head = 'Nom de fichier attendu;Manufacturer;Modèle;Exemplaires;Photo déjà en place;Catégorie';
+    .map(e=>[`${e.brand} ${e.base}`.trim() + '.jpg', e.brand, e.base, e.n, e.photo?'yes':'no', e.cat].map(esc2).join(';'));
+  const head = 'Expected file name;Manufacturer;Model;Copies;Photo already set;Category';
   const blob = new Blob(["\ufeff" + [head, ...lignes].join('\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'noms-photos-attendus.csv';
+  a.download = 'expected-photo-names.csv';
   a.click();
 }
 
 /* ---------- reprise des photos enregistrées avant le stockage ---------- */
 async function migrerPhotos(){
   const vieilles = db.items.filter(i=>i.photo && i.photo.startsWith('data:'));
-  if(!vieilles.length){ toast("Aucune photo à déplacer : tout est déjà dans le stockage.", 'ok'); return; }
-  if(!confirm(`Déplacer ${vieilles.length} photo(s) de la base vers le stockage ?\n\nL'affichage ne change pas, l'application devient simplement plus rapide.`)) return;
+  if(!vieilles.length){ toast("No photo to move — everything is already in storage.", 'ok'); return; }
+  if(!confirm(`Move ${vieilles.length} photo(s) from the database to storage?\n\nNothing changes visually — the app simply gets faster.`)) return;
   let n = 0;
   for(const i of vieilles){
     try{
@@ -172,5 +172,5 @@ async function migrerPhotos(){
     }catch(e){ /* signalé par apiUploadPhoto */ }
   }
   await refresh();
-  toast(`${n} photo(s) déplacée(s) vers le stockage.`, 'ok', null, null, 6000);
+  toast(`${n} photo(s) moved to storage.`, 'ok', null, null, 6000);
 }
