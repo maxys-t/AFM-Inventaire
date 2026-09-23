@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.9.1] — 2026-09-23
+### Modifié
+- **Settings** réorganisé en menu latéral : Account, Data, Locations, Users,
+  Activity, About, et Sign out détaché en bas en rouge.
+- **Codes d'identifiant alignés sur l'anglais** (migration `010`) : 29 codes
+  changent, 156 items renommés et renumérotés, historique et projets mis à jour.
+  MIC→MCN, PIE→MST, CAS→HPH, ORD→CPU, ALP→PSU, HOU→BAG, MOB→FRN, P14→H14…
+### Corrigé
+- Les filtres Owner et Provider affichaient encore « : tous ».
+
 ## [1.9.0] — 2026-09-23
 ### Modifié
 - **Interface entièrement en anglais**, y compris les catégories, les états et les
