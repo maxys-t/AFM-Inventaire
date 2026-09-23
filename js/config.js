@@ -27,89 +27,90 @@ const APP_URL = "";
    identifiants : MIC-001, DLY-004…).
    Ne jamais réutiliser un code déjà employé par des items existants.
    -------------------------------------------------------------- */
+/* --- Categories: family › sub-category --- */
 const CATS = {
   instruments: { label:"Instruments", subs:{
-    synthe:      {label:"Synthé / clavier",           code:"SYN"},
-    boite:       {label:"Boîte à rythmes / groovebox",code:"BAR"},
-    guitare:     {label:"Guitare / basse",            code:"GTR"},
-    batterie:    {label:"Batterie",                   code:"DRM"},
-    percussion:  {label:"Percussion",                 code:"PRC"},
-    peau10:      {label:"Peau 10\"",   code:"P10"},
-    peau12:      {label:"Peau 12\"",   code:"P12"},
-    peau13:      {label:"Peau 13\"",   code:"P13"},
-    peau14:      {label:"Peau 14\"",   code:"P14"},
-    peau16:      {label:"Peau 16\"",   code:"P16"},
-    peau18:      {label:"Peau 18\"",   code:"P18"},
-    peau22:      {label:"Peau 22\"",   code:"P22"},
-    peau_autre:  {label:"Peau — autre taille", code:"PEA"},
-    autre_inst:  {label:"Autre instrument",           code:"INS"}
+    synthe:      {label:"Synth / keyboard",        code:"SYN"},
+    boite:       {label:"Drum machine / groovebox",code:"BAR"},
+    guitare:     {label:"Guitar / bass",           code:"GTR"},
+    batterie:    {label:"Drums",                   code:"DRM"},
+    percussion:  {label:"Percussion",              code:"PRC"},
+    peau10:      {label:"Drumhead 10\"",           code:"P10"},
+    peau12:      {label:"Drumhead 12\"",           code:"P12"},
+    peau13:      {label:"Drumhead 13\"",           code:"P13"},
+    peau14:      {label:"Drumhead 14\"",           code:"P14"},
+    peau16:      {label:"Drumhead 16\"",           code:"P16"},
+    peau18:      {label:"Drumhead 18\"",           code:"P18"},
+    peau22:      {label:"Drumhead 22\"",           code:"P22"},
+    peau_autre:  {label:"Drumhead — other size",   code:"PEA"},
+    autre_inst:  {label:"Other instrument",        code:"INS"}
   }},
 
-  captation: { label:"Micros & captation", subs:{
-    condensateur:{label:"Micro condensateur", code:"MIC"},
-    dynamique:   {label:"Micro dynamique",    code:"MID"},
-    ruban:       {label:"Micro ruban",        code:"MIR"},
-    mesure_mic:  {label:"Micro de mesure",   code:"MME"},
-    trigger:     {label:"Trigger",           code:"TRG"},
-    accessoire:  {label:"Accessoire micro",  code:"MAC"}
+  captation: { label:"Microphones", subs:{
+    condensateur:{label:"Condenser mic",      code:"MIC"},
+    dynamique:   {label:"Dynamic mic",        code:"MID"},
+    ruban:       {label:"Ribbon mic",         code:"MIR"},
+    mesure_mic:  {label:"Measurement mic",    code:"MME"},
+    trigger:     {label:"Trigger",            code:"TRG"},
+    accessoire:  {label:"Mic accessory",      code:"MAC"}
   }},
 
-  peripheriques: { label:"Périphs", subs:{
-    compresseur: {label:"Compresseur", code:"CMP"},
+  peripheriques: { label:"Outboard", subs:{
+    compresseur: {label:"Compressor",  code:"CMP"},
     eq:          {label:"EQ",          code:"EQU"},
-    preampli:    {label:"Préampli",    code:"PRE"},
-    effets:      {label:"Effets",      code:"FXR"},
-    chassis:     {label:"Châssis 500",        code:"CH5"}
+    preampli:    {label:"Preamp",      code:"PRE"},
+    effets:      {label:"Effects",     code:"FXR"},
+    chassis:     {label:"500 series rack", code:"CH5"}
   }},
 
-  pedales: { label:"Pédales", subs:{
-    drive:       {label:"Drive / Distorsion",   code:"DRV"},
-    modulation:  {label:"Modulation",           code:"MOD"},
-    delay:       {label:"Delay",                code:"DLY"},
-    reverb:      {label:"Reverb",               code:"RVB"},
-    filtre:      {label:"Filtre / Wah",         code:"WAH"},
-    pitch:       {label:"Pitch / Octave",       code:"PIT"},
-    dynamique_p: {label:"Dynamique",            code:"DYN"},
-    multi:       {label:"Multi-effets / Looper",code:"MFX"},
-    alim:        {label:"Alimentation",         code:"ALP"},
-    accordeur:   {label:"Accordeur",          code:"TUN"},
+  pedales: { label:"Pedals", subs:{
+    drive:       {label:"Drive / distortion",  code:"DRV"},
+    modulation:  {label:"Modulation",          code:"MOD"},
+    delay:       {label:"Delay",               code:"DLY"},
+    reverb:      {label:"Reverb",              code:"RVB"},
+    filtre:      {label:"Filter / wah",        code:"WAH"},
+    pitch:       {label:"Pitch / octave",      code:"PIT"},
+    dynamique_p: {label:"Dynamics",            code:"DYN"},
+    multi:       {label:"Multi-effects / looper", code:"MFX"},
+    alim:        {label:"Power supply",        code:"ALP"},
+    accordeur:   {label:"Tuner",               code:"TUN"},
     footswitch:  {label:"Footswitch / expression", code:"FSW"}
   }},
 
   di: { label:"DI & splitters", subs:{
-    boite_di:    {label:"Boîte de direct", code:"DIB"},
-    splitter:    {label:"Splitter",        code:"SPL"},
-    reamp:       {label:"Ré-amp",          code:"RMP"}
+    boite_di:    {label:"DI box",   code:"DIB"},
+    splitter:    {label:"Splitter", code:"SPL"},
+    reamp:       {label:"Reamp",    code:"RMP"}
   }},
 
-  amplification: { label:"Amplification & écoute", subs:{
-    ampli_inst:  {label:"Ampli guitare / basse",  code:"AMP"},
-    monitoring:  {label:"Enceinte de monitoring", code:"MON"},
-    casque:      {label:"Casque",                 code:"CAS"},
-    ampli_casque:{label:"Ampli casque",       code:"AMC"}
+  amplification: { label:"Amps & monitoring", subs:{
+    ampli_inst:  {label:"Guitar / bass amp", code:"AMP"},
+    monitoring:  {label:"Studio monitor",    code:"MON"},
+    casque:      {label:"Headphones",        code:"CAS"},
+    ampli_casque:{label:"Headphone amp",     code:"AMC"}
   }},
 
   consoles: { label:"Consoles", subs:{
-    console:     {label:"Console de mixage", code:"CON"},
-    extension:   {label:"Extension / rack",  code:"CEX"},
-    carte:       {label:"Carte I/O",         code:"CIO"}
+    console:     {label:"Mixing console",  code:"CON"},
+    extension:   {label:"Expander / rack", code:"CEX"},
+    carte:       {label:"I/O card",        code:"CIO"}
   }},
 
-  mesure: { label:"Mesure", subs:{
-    outil:       {label:"Outil de mesure",   code:"MES"}
+  mesure: { label:"Measurement", subs:{
+    outil:       {label:"Measurement tool", code:"MES"}
   }},
 
-  informatique: { label:"Informatique & interfaces", subs:{
-    interface:   {label:"Interface audio",  code:"INT"},
-    ordinateur:  {label:"Ordinateur",       code:"ORD"},
-    convertisseur:{label:"Convertisseur",   code:"CNV"},
-    controleur:  {label:"Contrôleur MIDI",  code:"CTL"},
-    stockage:    {label:"Stockage",         code:"STK"},
-    reseau:      {label:"Réseau",             code:"NET"},
-    midi:        {label:"Interface MIDI",     code:"MDI"}
+  informatique: { label:"Computers & interfaces", subs:{
+    interface:   {label:"Audio interface", code:"INT"},
+    ordinateur:  {label:"Computer",        code:"ORD"},
+    convertisseur:{label:"Converter",      code:"CNV"},
+    controleur:  {label:"MIDI controller", code:"CTL"},
+    stockage:    {label:"Storage",         code:"STK"},
+    reseau:      {label:"Network",         code:"NET"},
+    midi:        {label:"MIDI interface",  code:"MDI"}
   }},
 
-  cablage: { label:"Câblage & connectique", subs:{
+  cablage: { label:"Cables & connectors", subs:{
     xlr:         {label:"XLR",             code:"XLR"},
     trs:         {label:"TRS",             code:"TRS"},
     mini_trs:    {label:"Mini TRS",        code:"MTR"},
@@ -118,52 +119,67 @@ const CATS = {
     rca:         {label:"RCA",             code:"RCA"},
     xlrf_trs:    {label:"XLR F / TRS",     code:"XFT"},
     xlrm_trs:    {label:"XLR M / TRS",     code:"XMT"},
-    secteur:     {label:"Câble secteur",   code:"SEC"},
+    secteur:     {label:"Power cable",     code:"SEC"},
     midi_cable:  {label:"MIDI",            code:"CMD"},
-    multipaire:  {label:"Multipaire audio",code:"MUL"},
-    adaptateur:  {label:"Adaptateur",      code:"ADP"},
+    multipaire:  {label:"Audio multicore", code:"MUL"},
+    adaptateur:  {label:"Adapter",         code:"ADP"},
     patchbay:    {label:"Patchbay",        code:"PBY"}
   }},
 
-  supports: { label:"Supports & transport", subs:{
-    pied:        {label:"Pied de micro", code:"PIE"},
-    stand:       {label:"Stand",         code:"STD"},
-    flightcase:  {label:"Flight case",   code:"FLC"},
-    housse:      {label:"Housse",        code:"HOU"}
+  supports: { label:"Stands & cases", subs:{
+    pied:        {label:"Mic stand",   code:"PIE"},
+    stand:       {label:"Stand",       code:"STD"},
+    flightcase:  {label:"Flight case", code:"FLC"},
+    housse:      {label:"Bag",         code:"HOU"}
   }},
 
-  divers: { label:"Infrastructure & divers", subs:{
-    mobilier:    {label:"Mobilier",              code:"MOB"},
-    eclairage:   {label:"Éclairage",             code:"LUM"},
-    acoustique:  {label:"Traitement acoustique", code:"ACO"},
-    electricite: {label:"Électricité / alimentation", code:"ELE"},
-    autre:       {label:"Divers",                code:"DIV"}
+  divers: { label:"Facility & other", subs:{
+    mobilier:    {label:"Furniture",           code:"MOB"},
+    eclairage:   {label:"Lighting",            code:"LUM"},
+    acoustique:  {label:"Acoustic treatment",  code:"ACO"},
+    electricite: {label:"Power / electrical",  code:"ELE"},
+    autre:       {label:"Other",               code:"DIV"}
   }}
 };
 
-/* --- États du matériel --- */
-const CONDS = {bon:"Bon état",attente:"En attente de réparation",reparation:"En réparation",hs:"Hors service"};
-const REPACT = {reparation:"envoyé en réparation",attente:"mis en attente de réparation",bon:"réparé / remis en service",hs:"déclaré hors service"};
+/* --- Condition --- */
+const CONDS = {bon:"Good", attente:"Needs repair", reparation:"In repair", hs:"Out of service"};
+const REPACT = {
+  reparation:"sent for repair",
+  attente:"flagged as needing repair",
+  bon:"repaired / back in service",
+  hs:"marked out of service"
+};
 
-/* --- Statuts des projets --- */
-const PSTAT = {inactif:"Inactif",preparation:"Préparation",show:"Show"};
-const PTAG = {inactif:"pinactif",preparation:"pprep",show:"pshow"};
+/* --- Project status --- */
+const PSTAT = {inactif:"Idle", preparation:"Packing", show:"On show"};
+const PTAG  = {inactif:"pinactif", preparation:"pprep", show:"pshow"};
 
-/* --- Seuils --- */
-const ALERT_DAYS = 7;              // alerte "sorti depuis X jours" (sans date de retour)
-const TRASH_RETENTION_DAYS = 30;   // durée de conservation dans la corbeille
+/* --- Thresholds --- */
+const ALERT_DAYS = 7;              // flag gear out for more than X days with no due date
+const TRASH_RETENTION_DAYS = 30;   // how long deleted items stay in the trash
 
-/* --- Textes de l'interface --- */
+/* --- Interface copy --- */
 const LABELS = {
   appTitle: "AFM Inventory Tracker",
+  tagline: "Keep track of every piece of studio gear: where it lives, who has it, and what needs fixing.",
   nav: {
-    dash: "Tableau de bord",
-    inv: "Inventaire",
-    proj: "Projets",
-    out: "Sortis",
-    rep: "Réparations",
-    people: "Personnes",
-    loc: "Emplacements",
-    users: "Utilisateurs"
+    dash:      "Dashboard",
+    inv:       "Inventory",
+    people:    "Borrowers",
+    proj:      "Projects",
+    out:       "Checked out",
+    rep:       "Repairs",
+    settings:  "Settings"
+  },
+  intro: {
+    dash:     "What needs your attention today, and where the gear stands.",
+    inv:      "Every item in the studio. Search, filter, sort, and check gear in or out.",
+    people:   "Everyone who borrows gear, and what they currently hold.",
+    proj:     "Build a gear list for a session or a tour, then tick it off as you pack.",
+    out:      "Everything that has left the studio — who has it and since when.",
+    rep:      "Gear that is damaged, waiting for repair, or at the shop.",
+    settings: "Accounts, locations, import and export, activity log."
   }
 };
+
