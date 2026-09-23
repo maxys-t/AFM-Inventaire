@@ -24,7 +24,7 @@ function openCropper(src, cb){
     drawCrop();
     openOver('ovCrop');
   };
-  img.onerror = ()=> toast("Image illisible.", 'error');
+  img.onerror = ()=> toast("Unreadable image.", 'error');
   img.src = src;
 }
 
