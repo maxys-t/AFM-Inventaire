@@ -2,6 +2,10 @@
    APP — navigation, modales, export/import, démarrage
    ============================================================ */
 
+/* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
+   quelle version est réellement en ligne après une mise à jour. */
+const APP_VERSION = '1.8.1';
+
 /* ---- navigation entre onglets ---- */
 function show(v){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
@@ -145,6 +149,8 @@ function importJSON(inp){
 function applyLabels(){
   document.title = LABELS.appTitle;
   document.querySelector('header h1').textContent = LABELS.appTitle;
+  const v = document.getElementById('appVersion');
+  if(v){ v.textContent = 'v' + APP_VERSION; v.title = 'Version en ligne'; }
   document.querySelectorAll('nav button').forEach(b=>{ if(LABELS.nav[b.dataset.v]) b.textContent = LABELS.nav[b.dataset.v]; });
 }
 applyLabels();
