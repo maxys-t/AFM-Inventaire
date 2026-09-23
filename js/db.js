@@ -25,7 +25,7 @@ function showSetup(msg){
   document.getElementById('setup').style.display = '';
   document.querySelector('main').style.display = 'none';
   document.querySelector('nav').style.display = 'none';
-  if(msg) document.getElementById('setupMsg').innerHTML = '⚠️ ' + esc(msg) + '<br>Vérifie l\'URL et la clé ci-dessous.';
+  if(msg) document.getElementById('setupMsg').innerHTML = '⚠️ ' + esc(msg) + '<br>Check the URL and key below.';
 }
 async function init(){
   const cfg = getCfg();
@@ -74,7 +74,7 @@ async function startSession(){
   catch(e){
     showScreen('login');
     const msg = document.getElementById('login-msg');
-    if(msg) msg.textContent = "Connexion à la base impossible : " + (e.message||"");
+    if(msg) msg.textContent = "Cannot reach the database: " + (e.message||"");
     return;
   }
 
@@ -137,9 +137,9 @@ function setSync(state){
   if(!dot) return;
   dot.classList.toggle('on', state==='ok');
   dot.classList.toggle('off', state!=='ok');
-  dot.title = state==='ok' ? "Connecté — données synchronisées"
-            : state==='off' ? "Hors ligne — les modifications ne sont pas enregistrées"
-            : "Problème de synchronisation — recharge la page";
+  dot.title = state==='ok' ? "Connected — data in sync"
+            : state==='off' ? "Offline — changes are not being saved"
+            : "Sync problem — reload the page";
 }
 
 /* Un enregistrement réussi : confirmation discrète et groupée
@@ -148,7 +148,7 @@ let okTimer = null;
 function markSynced(){
   setSync('ok');
   clearTimeout(okTimer);
-  okTimer = setTimeout(()=>{ if(typeof toast==='function') toast("Enregistré", 'ok'); }, 350);
+  okTimer = setTimeout(()=>{ if(typeof toast==='function') toast("Saved", 'ok'); }, 350);
 }
 
 function isNetworkError(e){
@@ -161,8 +161,8 @@ function handleWriteError(e){
   const network = isNetworkError(e);
   setSync(network ? 'off' : 'error');
   const msg = network
-    ? "Pas de connexion — la modification n'a PAS été enregistrée."
-    : "Refusé par la base : " + ((e && e.message) || "erreur inconnue");
+    ? "No connection — the change was NOT saved."
+    : "Rejected by the database: " + ((e && e.message) || "unknown error");
   if(typeof toast==='function'){
     toast(msg, 'error', "Recharger", async ()=>{ await refresh(); });
   }else{
@@ -186,10 +186,10 @@ async function run(promise){
 function watchConnection(){
   window.addEventListener('offline', ()=>{
     setSync('off');
-    if(typeof toast==='function') toast("Connexion perdue — ne fais pas de modification tant qu'elle n'est pas rétablie.", 'error', null, null, 8000);
+    if(typeof toast==='function') toast("Connection lost — avoid making changes until it is back.", 'error', null, null, 8000);
   });
   window.addEventListener('online', async ()=>{
-    if(typeof toast==='function') toast("Connexion rétablie — actualisation…", 'info');
+    if(typeof toast==='function') toast("Connection restored — refreshing…", 'info');
     await refresh();
   });
   if(navigator.onLine === false) setSync('off');
@@ -269,7 +269,7 @@ async function apiUploadPhoto(dataUrl, path){
   const { error } = await sb.storage.from(PHOTO_BUCKET)
     .upload(path, blob, {upsert:true, contentType:blob.type, cacheControl:'3600'});
   if(error){
-    toast("Envoi de la photo impossible : " + (error.message||error), 'error');
+    toast("Could not upload the photo: " + (error.message||error), 'error');
     throw error;
   }
   const { data } = sb.storage.from(PHOTO_BUCKET).getPublicUrl(path);
