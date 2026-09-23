@@ -479,6 +479,85 @@ nav .navgear{ padding:6px 14px }
   .hero h1{ font-size:21px }
   nav .navspace{ display:none }
 }
+/* ============================================================
+   v1.9.2 — Dashboard, Settings, navigation, Borrowers
+   Si tu as déjà collé un bloc « v1.9 », REMPLACE-LE par celui-ci.
+   Sinon, colle-le à la fin de css/styles.css.
+   ============================================================ */
+
+/* --- navigation : l'engrenage est poussé à droite --- */
+nav .navspace{ flex:1 }
+nav .navgear{ padding:6px 14px }
+
+/* --- une phrase sous le titre de chaque écran --- */
+.viewintro{
+  color:var(--muted); font-size:13px; margin:0 0 14px;
+  max-width:70ch; line-height:1.45;
+}
+
+/* --- bandeau d'accueil du tableau de bord --- */
+.hero{
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:16px; padding:22px 24px; margin-bottom:14px;
+}
+.hero h1{ font-size:26px; margin:0 0 6px; letter-spacing:-.02em }
+.hero p{ color:var(--muted); margin:0 0 14px; max-width:62ch; line-height:1.5 }
+.heroacts{ display:flex; gap:8px; flex-wrap:wrap }
+
+/* --- chiffres cliquables --- */
+.stat[role="button"]{ cursor:pointer; transition:transform .08s, border-color .12s }
+.stat[role="button"]:hover{ transform:translateY(-1px); border-color:var(--accent) }
+.stat.value .num{ font-size:22px; letter-spacing:-.02em }
+
+/* --- Settings : menu à gauche, contenu à droite --- */
+.setlayout{ display:grid; grid-template-columns:220px 1fr; gap:14px; align-items:start }
+.setnav{ display:flex; flex-direction:column; gap:10px; position:sticky; top:14px }
+.setcard{ background:var(--panel); border:1px solid var(--border); border-radius:14px;
+          padding:6px; overflow:hidden }
+.setitem{ display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+          background:none; border:0; color:var(--text); font:inherit; font-size:14px;
+          padding:10px 12px; border-radius:10px; cursor:pointer }
+.setitem:hover{ background:var(--border) }
+.setitem.on{ background:var(--accent); color:#fff }
+.setitem .ic{ width:18px; text-align:center; opacity:.85 }
+.setitem.out{ color:var(--danger) }
+.setitem.out:hover{ background:var(--danger); color:#fff }
+.setbody .panel{ margin-bottom:14px }
+#v-settings h2{ margin-bottom:4px }
+.setgrid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px }
+.setgrid h4{ margin:0 0 6px; font-size:13px; text-transform:uppercase;
+             letter-spacing:.06em; color:var(--muted) }
+.setgrid .btn{ margin:0 6px 6px 0 }
+.setgrid p{ margin:4px 0 0; font-size:12px; line-height:1.45 }
+
+/* --- Borrowers : repli par emprunteur --- */
+.bsum{ display:inline-flex; align-items:center; gap:7px; background:none; border:0;
+       color:var(--text); font:inherit; font-size:13px; cursor:pointer;
+       padding:4px 8px; border-radius:8px }
+.bsum:hover{ background:var(--border) }
+.bsum.on{ background:var(--border) }
+.bsum .chev{ color:var(--muted); font-size:11px }
+tr.bdetail td{ padding-top:0; border-top:0 }
+.bchips{ display:flex; flex-wrap:wrap; gap:5px; padding:2px 0 8px }
+.bchips .chip{ cursor:pointer; font-size:12px }
+.bchips .chip:hover{ background:var(--accent); color:#fff }
+.bchips .chip.late{ border-color:var(--danger); color:var(--danger) }
+.bchips .chip .mono{ font-size:10px; opacity:.7 }
+
+/* --- champ emprunteur avec suggestions --- */
+#out-user{ width:100% }
+
+@media(max-width:820px){
+  .setlayout{ grid-template-columns:1fr }
+  .setnav{ position:static }
+  .setcard:first-child{ display:flex; flex-wrap:wrap }
+  .setcard:first-child .setitem{ width:auto }
+}
+@media(max-width:700px){
+  .hero{ padding:18px }
+  .hero h1{ font-size:21px }
+  nav .navspace{ display:none }
+}
 
 
 
