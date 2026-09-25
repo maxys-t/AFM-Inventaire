@@ -54,7 +54,6 @@ function paneAccount(){
   const role = me && me.role === 'admin' ? 'Administrator' : 'Assistant';
   return `<div class="panel">
     <h2>Account</h2>
-    <p class="muted" style="margin-bottom:14px">You are signed in with a magic link — there is no password to remember.</p>
     <div class="field" style="margin-bottom:10px"><label>Name</label>
       <input value="${esc(me && me.name ? me.name : '')}" disabled></div>
     <div class="field" style="margin-bottom:10px"><label>Email</label>
@@ -65,6 +64,22 @@ function paneAccount(){
         ? 'You can add, edit and delete gear, and manage accounts.'
         : 'You can browse, check gear in and out, flag repairs and pack projects.'}</p>
     </div>
+  </div>
+
+  <div class="panel">
+    <h2>Password</h2>
+    <p class="muted" style="margin-bottom:12px">
+      At least ${typeof MIN_PW === 'number' ? MIN_PW : 10} characters.
+      Changing it here does not sign you out of your other devices.
+    </p>
+    <div class="field" style="margin-bottom:10px"><label>New password</label>
+      <input type="password" id="ch-pw1" autocomplete="new-password" style="max-width:320px"
+             onkeydown="if(event.key==='Enter')changeMyPassword()"></div>
+    <div class="field" style="margin-bottom:12px"><label>Confirm</label>
+      <input type="password" id="ch-pw2" autocomplete="new-password" style="max-width:320px"
+             onkeydown="if(event.key==='Enter')changeMyPassword()"></div>
+    <button class="btn" id="ch-btn" onclick="changeMyPassword()">Change password</button>
+    <p class="muted" id="ch-msg" style="margin-top:10px"></p>
   </div>`;
 }
 
