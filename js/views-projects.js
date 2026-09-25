@@ -3,29 +3,55 @@
    checklist de préparation, transitions Inactif → Prépa → Show
    ============================================================ */
 
+/* Un projet archivé sort de la liste sans disparaître : les tournées
+   passées restent consultables, et leur historique reste lisible. */
+let showArchivedProj = false;
+function toggleArchivedProj(){ showArchivedProj = !showArchivedProj; renderProj(); }
+
+/* « 2026/10/12 » ou « 2026/10/12 → 2026/10/13 » */
+function projDates(p){
+  if(!p.starts_on && !p.ends_on) return '';
+  if(p.starts_on && p.ends_on && p.starts_on !== p.ends_on)
+    return fdateD(p.starts_on) + ' → ' + fdateD(p.ends_on);
+  return fdateD(p.starts_on || p.ends_on);
+}
+
 function renderProj(){
   let html = can('edit') ? `<div class="toolbar"><button class="btn" onclick="openProjForm()">+ New project</button></div>` : '';
   if(db.projectsError){
     html += `<div class="alert bad">The projects table does not exist yet — run <b>sql/003-projets.sql</b> in Supabase (SQL Editor), then click ↻ Refresh.</div>`;
     document.getElementById('v-proj').innerHTML = html; return;
   }
-  if(!db.projects.length){
-    html += '<div class="panel"><div class="empty">No project yet. Create a tour template with its fixed gear list — it can be reused every time.</div></div>';
+  const rows = db.projects.filter(p=>showArchivedProj || !p.archived);
+  const nbArch = db.projects.filter(p=>p.archived).length;
+
+  if(!rows.length){
+    html += '<div class="panel"><div class="empty">'
+      + (db.projects.length ? 'No active project — everything is archived.'
+         : 'No project yet. Create a tour template with its fixed gear list — it can be reused every time.')
+      + '</div></div>';
   }else{
-    html += `<div class="panel"><table><thead><tr><th>Project</th><th>Status</th><th>Gear</th><th>Packing</th><th>Last used</th></tr></thead><tbody>` +
-    db.projects.map(p=>{
+    html += `<div class="panel"><table><thead><tr><th>Project</th><th>Destination</th><th>Dates</th><th>Status</th><th>Gear</th><th>Packing</th></tr></thead><tbody>` +
+    rows.map(p=>{
       const pr = projProgress(p);
       const prog = p.status==='preparation'
         ? `<div class="pline" style="margin:0"><div class="pbar"><div style="width:${pr.total?Math.round(pr.done/pr.total*100):0}%"></div></div><span class="muted">${pr.done}/${pr.total}</span></div>`
         : (p.status==='show' ? '<span class="muted">on show</span>' : '<span class="muted">—</span>');
-      return `<tr class="rowlink" onclick="openProject('${p.id}')">
-        <td data-l="Project"><b>${esc(p.name)}</b>${p.description?`<br><span class="muted">${esc(p.description)}</span>`:""}</td>
+      const d = projDates(p);
+      return `<tr class="rowlink ${p.archived?'archrow':''}" onclick="openProject('${p.id}')">
+        <td data-l="Project"><b>${esc(p.name)}</b>${p.archived?' <span class="tag pinactif">archived</span>':''}
+          ${p.description?`<div class="muted">${esc(p.description)}</div>`:""}</td>
+        <td data-l="Destination">${p.loc_name?esc(p.loc_name):'<span class="muted">—</span>'}</td>
+        <td data-l="Dates">${d?esc(d):'<span class="muted">—</span>'}</td>
         <td data-l="Status"><span class="tag ${PTAG[p.status]}">${PSTAT[p.status]||p.status}</span></td>
         <td data-l="Gear">${(p.item_ids||[]).length} item(s)</td>
         <td data-l="Packing">${prog}</td>
-        <td data-l="Last used">${p.last_used?fdate(p.last_used):'<span class="muted">never</span>'}</td>
       </tr>`;
     }).join("") + "</tbody></table></div>";
+  }
+  if(nbArch){
+    html += `<div style="margin-top:-6px"><button class="btn sec small" onclick="toggleArchivedProj()">
+      ${showArchivedProj?'Hide':'Show'} archived (${nbArch})</button></div>`;
   }
   document.getElementById('v-proj').innerHTML = html;
 }
@@ -42,6 +68,21 @@ function openProjForm(id){
   document.getElementById('projFormTitle').textContent = p?'Modifier le projet':'Nouveau projet';
   document.getElementById('p-name').value = p?p.name:"";
   document.getElementById('p-desc').value = p?(p.description||""):"";
+  const dest = document.getElementById('p-dest');
+  if(dest){
+    dest.innerHTML = '<option value="">— no destination —</option>' + locOptions();
+    dest.value = p ? (p.loc_name||"") : "";
+    // Une destination archivée n'est plus dans la liste : on l'y remet
+    // pour ne pas l'effacer silencieusement en rouvrant le formulaire.
+    if(p && p.loc_name && dest.value !== p.loc_name){
+      dest.insertAdjacentHTML('beforeend',
+        `<option value="${esc(p.loc_name)}">${esc(p.loc_name)} (archived)</option>`);
+      dest.value = p.loc_name;
+    }
+  }
+  const s = document.getElementById('p-start'), e = document.getElementById('p-end');
+  if(s) s.value = p ? (p.starts_on||"") : "";
+  if(e) e.value = p ? (p.ends_on||"") : "";
   document.getElementById('p-search').value = "";
   pickerSel = new Set(p?(p.item_ids||[]):[]);
   pickCat = ""; pickSub = "";
@@ -165,18 +206,92 @@ async function saveProj(){
   if(!name){ alert("Le nom est obligatoire."); return; }
   if(!pickerSel.size){ alert("Select at least one item."); return; }
   const desc = document.getElementById('p-desc').value.trim();
+  const loc_name = (document.getElementById('p-dest')||{}).value || '';
+  const starts_on = (document.getElementById('p-start')||{}).value || null;
+  const ends_on = (document.getElementById('p-end')||{}).value || null;
+  if(starts_on && ends_on && ends_on < starts_on){
+    alert("The end date comes before the start date.");
+    return;
+  }
+  const dates = {loc_name: loc_name||null, starts_on, ends_on};
   if(editingProjId){
     const p = project(editingProjId);
     p.name = name; p.description = desc; p.item_ids = [...pickerSel];
+    p.loc_name = loc_name; p.starts_on = starts_on; p.ends_on = ends_on;
     p.prep = p.prep||{};
     Object.keys(p.prep).forEach(k=>{ if(!pickerSel.has(k)) delete p.prep[k]; });
-    await apiUpdateProject(p.id, {name,description:desc,item_ids:p.item_ids,prep:p.prep});
+    await apiUpdateProject(p.id, {name,description:desc,item_ids:p.item_ids,prep:p.prep,...dates});
   }else{
-    const p = {id:"p"+Date.now(), name, description:desc, status:'inactif', item_ids:[...pickerSel], prep:{}, last_used:null, created_at:now()};
+    const p = {id:"p"+Date.now(), name, description:desc, status:'inactif',
+               item_ids:[...pickerSel], prep:{}, last_used:null, created_at:now(),
+               loc_name, starts_on, ends_on, archived:false};
     db.projects.push(p);
-    await apiInsertProject(p);
+    await apiInsertProject({...p, loc_name: loc_name||null});
   }
   close_('ovProj'); renderProj();
+}
+
+/* Archivage : on range, on ne supprime pas. */
+async function archiveProj(id){
+  const p = project(id); if(!p) return;
+  if(!p.archived && p.status === 'show'){
+    alert("Close the show before archiving this project.");
+    return;
+  }
+  p.archived = !p.archived;
+  await apiUpdateProject(id, {archived: p.archived});
+  renderProjDetail(id); renderProj();
+}
+
+/* ---- brouillon de mail de livraison ----
+   Volontairement un brouillon et non un envoi : le message part au nom
+   du studio, autant le relire. Un envoi automatique demanderait en plus
+   un serveur, donc le mot de passe SMTP quelque part hors de l'app. */
+function deliveryMailBody(p){
+  const its = projItems(p);
+  const dest = p.loc_name || '';
+  const addr = dest ? locAddress(dest) : '';
+  const dates = projDates(p);
+
+  const L = [];
+  L.push(`Delivery details — ${p.name}`, '');
+  if(dest)  L.push(`Destination: ${dest}`);
+  if(addr)  L.push(`Address: ${addr}`);
+  if(dates) L.push(`Dates: ${dates}`);
+  L.push(`Items: ${its.length}`, '');
+
+  // Regroupement par sous-catégorie, comme la checklist de préparation
+  const packs = new Map();
+  its.forEach(i=>{
+    const k = catPath(i);
+    if(!packs.has(k)) packs.set(k, []);
+    packs.get(k).push(i);
+  });
+  [...packs.entries()].sort((a,b)=>a[0].localeCompare(b[0],'fr')).forEach(([cat, arr])=>{
+    L.push(`${cat} (${arr.length})`);
+    arr.sort((a,b)=>itemTitleText(a).localeCompare(itemTitleText(b),'fr'))
+       .forEach(i=>L.push(`  - ${itemTitleText(i)} [${i.id}]`));
+    L.push('');
+  });
+
+  const missing = (p.item_ids||[]).length - its.length;
+  if(missing > 0) L.push(`(${missing} item(s) of this project are no longer in the inventory)`, '');
+  L.push(`— ${LABELS.appTitle}`);
+  return L.join('\n');
+}
+
+function openDeliveryMail(id){
+  const p = project(id); if(!p) return;
+  if(!projItems(p).length){ alert("This project has no gear to list."); return; }
+  const subject = `${p.name}${p.loc_name?` — ${p.loc_name}`:''}${projDates(p)?` — ${projDates(p)}`:''}`;
+  const href = 'mailto:?subject=' + encodeURIComponent(subject)
+             + '&body=' + encodeURIComponent(deliveryMailBody(p));
+  // Certains clients mail plafonnent la longueur d'un lien mailto.
+  if(href.length > 16000){
+    alert("This gear list is too long for an email draft. Export the project list instead.");
+    return;
+  }
+  window.location.href = href;
 }
 async function deleteProj(id){
   const p = project(id);
@@ -231,17 +346,25 @@ function renderProjDetail(id){
   if(p.status==='preparation') actions = `<button class="btn" onclick="goShow('${p.id}')">🎪 Go on show</button> <button class="btn sec small" onclick="resetPrep('${p.id}')">Reset checklist</button> <button class="btn sec small" onclick="setProjStatus('${p.id}','inactif')">Pause</button>`;
   if(p.status==='show') actions = `<button class="btn ok" onclick="closeShow('${p.id}')">📥 Close show / gear back</button>`;
   document.getElementById('projDetailBody').innerHTML = `
-    <h3>${esc(p.name)} <span class="tag ${PTAG[p.status]}">${PSTAT[p.status]}</span></h3>
+    <h3>${esc(p.name)} <span class="tag ${PTAG[p.status]}">${PSTAT[p.status]}</span>
+      ${p.archived?'<span class="tag pinactif">archived</span>':''}</h3>
     ${p.description?`<p class="muted" style="margin-bottom:8px">${esc(p.description)}</p>`:""}
+    ${(p.loc_name || projDates(p)) ? `<div class="destbox">
+      ${p.loc_name?`<div><b>${esc(p.loc_name)}</b>${locAddress(p.loc_name)?` <span class="muted">— ${esc(locAddress(p.loc_name))}</span>`:' <span class="muted">— no address on file</span>'}</div>`:''}
+      ${projDates(p)?`<div class="muted">${esc(projDates(p))}</div>`:''}
+    </div>` : ''}
     ${p.status!=='show'?`<div class="pline"><div class="pbar"><div style="width:${pct}%"></div></div><span class="muted"><b>${pr.done}/${pr.total}</b> ready</span></div>`:""}
     <div class="clist" style="margin:10px 0">${list||'<div class="muted">No item.</div>'}</div>
     <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap">${actions}</div>
-    <div class="modal-actions" style="justify-content:space-between">
+    <div class="modal-actions" style="justify-content:space-between;flex-wrap:wrap;gap:6px">
       <span>
         ${(can('edit') && p.status!=='show')?`<button class="btn sec small" onclick="openProjForm('${p.id}')">Edit</button>`:""}
+        <button class="btn sec small" onclick="openDeliveryMail('${p.id}')"
+                title="Opens a pre-filled draft in your mail app">✉️ Delivery details</button>
+        ${can('edit')?`<button class="btn sec small" onclick="archiveProj('${p.id}')">${p.archived?'Restore':'Archive'}</button>`:""}
         ${can('edit')?`<button class="btn danger small" onclick="deleteProj('${p.id}')">Delete</button>`:""}
       </span>
-      <button class="btn sec" onclick="close_('ovProjDetail')">Fermer</button>
+      <button class="btn sec" onclick="close_('ovProjDetail')">Close</button>
     </div>`;
 }
 
