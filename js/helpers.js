@@ -9,8 +9,23 @@ function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">
 
 /* --- Dates --- */
 function now(){ return new Date().toISOString(); }
-function fdate(iso){ return new Date(iso).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}); }
-function fdateD(d){ return new Date(d+'T00:00:00').toLocaleDateString('fr-FR'); }
+
+/* Toutes les dates de l'interface s'affichent en AAAA/MM/JJ.
+   Choix volontaire : 03/04 ne veut pas dire la même chose pour tout
+   le monde, alors que 2026/04/03 ne laisse aucun doute — et se classe
+   correctement dans l'ordre alphabétique. */
+function pad2(n){ return String(n).padStart(2,'0'); }
+function ymd(dt){ return dt.getFullYear() + '/' + pad2(dt.getMonth()+1) + '/' + pad2(dt.getDate()); }
+function fdate(iso){
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  return ymd(d) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+function fdateD(d){
+  if(!d) return '';
+  const x = new Date(d + 'T00:00:00');
+  return isNaN(x.getTime()) ? '' : ymd(x);
+}
 function daysSince(iso){ return Math.floor((Date.now()-new Date(iso))/864e5); }
 function overdue(i){ return !!(i.out && i.out.due && new Date(i.out.due+'T23:59:59') < new Date()); }
 function daysLate(i){ return Math.floor((Date.now()-new Date(i.out.due+'T23:59:59'))/864e5)+1; }
@@ -66,7 +81,7 @@ function parsePrice(v){
 }
 
 /* --- Date d'achat (jour seul, sans heure) --- */
-function fdateOnly(d){ return d ? new Date(d+'T00:00:00').toLocaleDateString('fr-FR') : ''; }
+function fdateOnly(d){ return fdateD(d); }
 /* Accepte « 12/03/2024 », « 2024-03-12 », « 12.03.2024 » → « 2024-03-12 » ; sinon null */
 function parseDate(v){
   const t = String(v==null?'':v).trim();
@@ -101,18 +116,64 @@ function itemUrl(id){
   return base + '?item=' + encodeURIComponent(id);
 }
 
-/* --- Emplacements hiérarchiques --- */
+/* --- Emplacements ---
+   Deux niveaux, pas plus : un SITE (AccessFlow) contient des SALLES
+   (Studio A). À part, les lieux OFF-SITE sont des adresses
+   extérieures — une salle de concert, un client — où du matériel
+   part temporairement. Un item n'y a jamais son rangement habituel.
+
+   Un lieu archivé disparaît des menus déroulants mais reste dans la
+   base : l'historique continue de le nommer correctement. */
 function locObj(n){ return db.locations.find(l=>l.name===n); }
-function locLabel(n){ const l = locObj(n); return l&&l.parent ? l.parent+" › "+n : n; }
-function locRoots(){ return db.locations.filter(l=>!l.parent).sort((a,b)=>a.name.localeCompare(b.name)); }
-function locChildren(p){ return db.locations.filter(l=>l.parent===p).sort((a,b)=>a.name.localeCompare(b.name)); }
-function locOptions(){
+function locKind(n){ const l = locObj(n); return (l && l.kind) || (l && l.parent ? 'room' : 'site'); }
+function isOffsite(n){ return locKind(n) === 'offsite'; }
+function locArchived(n){ const l = locObj(n); return !!(l && l.archived); }
+function locAddress(n){ const l = locObj(n); return (l && l.address) || ''; }
+function locLabel(n){
+  const l = locObj(n);
+  if(!l) return n;
+  return l.parent ? l.parent + " › " + n : n;
+}
+/* Sites uniquement : un off-site n'est pas une racine d'arborescence. */
+function locRoots(){
+  return db.locations.filter(l=>!l.parent && l.kind !== 'offsite')
+                     .sort((a,b)=>a.name.localeCompare(b.name));
+}
+function locChildren(p){
+  return db.locations.filter(l=>l.parent===p).sort((a,b)=>a.name.localeCompare(b.name));
+}
+function offsites(includeArchived){
+  return db.locations.filter(l=>l.kind === 'offsite' && (includeArchived || !l.archived))
+                     .sort((a,b)=>a.name.localeCompare(b.name));
+}
+/* Orphelins : un sous-emplacement dont le parent a disparu. On les
+   affiche quand même, sinon leurs items deviendraient introuvables. */
+function locOrphans(){
+  return db.locations.filter(l=>l.parent && !locObj(l.parent) && l.kind !== 'offsite');
+}
+
+/* Emplacements où un item peut être RANGÉ : sites et salles, jamais
+   un off-site. Utilisé par le formulaire d'item et le déplacement groupé. */
+function homeOptions(){
   let html = "";
-  locRoots().forEach(r=>{
+  locRoots().filter(r=>!r.archived).forEach(r=>{
     html += `<option value="${esc(r.name)}">${esc(r.name)}</option>`;
-    locChildren(r.name).forEach(c=>{ html += `<option value="${esc(c.name)}">&nbsp;&nbsp;&nbsp;└ ${esc(c.name)}</option>`; });
+    locChildren(r.name).filter(c=>!c.archived).forEach(c=>{
+      html += `<option value="${esc(c.name)}">&nbsp;&nbsp;&nbsp;└ ${esc(c.name)}</option>`;
+    });
   });
-  db.locations.filter(l=>l.parent && !locObj(l.parent)).forEach(o=>{ html += `<option value="${esc(o.name)}">${esc(o.name)}</option>`; });
+  locOrphans().forEach(o=>{ html += `<option value="${esc(o.name)}">${esc(o.name)}</option>`; });
+  return html;
+}
+/* Tous les lieux, off-site compris : filtres et destinations. */
+function locOptions(){
+  let html = homeOptions();
+  const off = offsites(false);
+  if(off.length){
+    html += `<optgroup label="Off-site">`
+          + off.map(o=>`<option value="${esc(o.name)}">${esc(o.name)}</option>`).join("")
+          + `</optgroup>`;
+  }
   return html;
 }
 function inLocFilter(sel,name){
