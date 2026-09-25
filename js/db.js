@@ -103,12 +103,24 @@ async function loadAll(){
   db.trash = all.filter(i=>i.deleted_at).sort((a,b)=>new Date(b.deleted_at)-new Date(a.deleted_at));
   db.items = all.filter(i=>!i.deleted_at);
   db.users = pe.data;
-  db.locations = lo.data.map(l=>({name:l.name,parent:l.parent||null}));
+  // kind/address/archived : valeurs de repli si la migration 012 n'est
+  // pas encore passée, pour que l'application tourne quand même.
+  db.locations = lo.data.map(l=>({
+    name: l.name,
+    parent: l.parent || null,
+    kind: l.kind || (l.parent ? 'room' : 'site'),
+    address: l.address || '',
+    archived: !!l.archived
+  }));
   db.history = hi.data.map(h=>({itemId:h.item_id,type:h.type,date:h.date,userId:h.user_id,
                                 detail:h.detail,cond:h.cond?normCond(h.cond):null,actorName:h.actor_name||null}));
   const pr = await sb.from('projects').select('*').order('created_at');
   db.projectsError = !!pr.error;
-  db.projects = pr.error ? [] : pr.data.map(p=>({...p,item_ids:p.item_ids||[],prep:p.prep||{}}));
+  db.projects = pr.error ? [] : pr.data.map(p=>({
+    ...p, item_ids:p.item_ids||[], prep:p.prep||{},
+    loc_name:p.loc_name||'', starts_on:p.starts_on||null, ends_on:p.ends_on||null,
+    archived: !!p.archived
+  }));
 
   const pf = await sb.from('profiles').select('*').order('email');
   db.profiles = pf.error ? [] : pf.data;
@@ -325,6 +337,7 @@ async function apiDeletePerson(id){ await run(sb.from('people').delete().eq('id'
 
 /* --- emplacements --- */
 async function apiInsertLocation(l){ await run(sb.from('locations').insert(l)); }
+async function apiUpdateLocation(name, fields){ await run(sb.from('locations').update(fields).eq('name', name)); }
 async function apiDeleteLocation(name){ await run(sb.from('locations').delete().eq('name', name)); }
 
 /* --- projets --- */
