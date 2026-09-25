@@ -1,5 +1,53 @@
 # Changelog
 
+## [1.10.0] — 2026-09-25
+
+### Ajouté
+
+- **Colonnes configurables dans l'inventaire.** Bouton « Columns » permettant
+  d'afficher ou de masquer chaque colonne. Quinze colonnes disponibles :
+  photo, item, ID, catégorie, famille, statut, emplacement, rangement habituel,
+  état, propriétaire, fournisseur, prix d'achat, date d'achat, n° de commande,
+  n° de série. Sept sont visibles par défaut.
+- **Mémorisation des préférences par compte** (nouvelle table `user_prefs`,
+  migration `011`). Les colonnes choisies suivent la personne d'un appareil à
+  l'autre. Une copie en `localStorage` sert au premier rendu pour éviter le
+  clignotement au chargement.
+- **Bouton « Reset filters »** : vide la recherche, les filtres et le tri.
+  Désactivé tant qu'aucun filtre n'est actif.
+- **Séparateurs de section** dans la liste lorsqu'un tri est actif : lettre
+  pour les noms, code pour les ID, famille pour les catégories, lieu pour les
+  emplacements, tranches pour les prix, mois pour les dates d'achat. Les items
+  sans valeur sont regroupés en fin de liste.
+- Repère visuel sur la colonne « Home » lorsqu'un item ne se trouve pas à son
+  rangement habituel.
+
+### Modifié
+
+- **Hauteur des lignes d'inventaire divisée par deux.** Les cellules
+  n'empilent plus deux informations : l'ID, la famille et le rangement
+  habituel sont devenus des colonnes à part entière. Le texte trop long est
+  tronqué avec une infobulle au survol plutôt que renvoyé à la ligne.
+- La vue inventaire s'élargit à 1380 px pour accueillir les colonnes
+  supplémentaires ; le tableau défile horizontalement au-delà.
+- Le prix d'achat reste réservé aux administrateurs : il n'apparaît ni dans le
+  tableau ni dans le menu de sélection des colonnes pour les autres comptes.
+
+### Corrigé
+
+- L'abonnement temps réel écoutait l'ensemble du schéma. Chaque écriture de
+  préférence d'affichage aurait déclenché un rechargement complet de
+  l'inventaire. L'abonnement est désormais limité aux tables de données.
+
+### Sécurité
+
+- Les préférences sont stockées dans une table `user_prefs` distincte de
+  `profiles`. Ouvrir l'écriture sur `profiles` aurait permis à un compte de
+  modifier son propre rôle et de s'attribuer les droits d'administration.
+  Chaque compte n'écrit que dans sa ligne de `user_prefs`, qui ne contient
+  aucun droit.
+
+
 ## [1.9.2] — 2026-09-23
 ### Modifié
 - **Borrowers** : le matériel de chaque emprunteur se déplie au clic au lieu de
