@@ -558,6 +558,64 @@ tr.bdetail td{ padding-top:0; border-top:0 }
   .hero h1{ font-size:21px }
   nav .navspace{ display:none }
 }
+/* ============================================================
+   v1.10 — À COLLER À LA FIN DE css/styles.css
+   Ne rien supprimer de l'existant : tout est en ajout.
+   ============================================================ */
+
+/* --- Tableau d'inventaire en colonnes ---
+   Une ligne = une ligne. Le texte trop long est coupé par des points
+   de suspension ; l'infobulle au survol donne la valeur complète. */
+.invwrap{overflow-x:auto;margin:0 -4px;padding:0 4px}
+.invtable{table-layout:auto;min-width:100%}
+.invtable th,.invtable td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.invtable th{padding:7px 10px}
+.invtable td{padding:7px 10px;max-width:320px}
+.invtable .thumb{width:30px;height:30px;border-radius:7px}
+.invtable .cbcol{width:34px}
+.invtable .actcol{width:1%}
+.invtable .col-item{max-width:380px}
+.invtable .col-id{width:1%}
+.invtable .col-price{text-align:right}
+
+/* Un item qui n'est pas à son emplacement habituel */
+.awayhome{color:var(--warn)}
+
+/* --- Séparateurs de section (visibles quand un tri est actif) --- */
+.seprow td{background:var(--panel2);color:var(--muted);font-size:11px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.06em;padding:5px 10px;
+  border-bottom:1px solid var(--border);max-width:none}
+.seprow:hover td{background:var(--panel2)}
+
+/* --- Menu de choix des colonnes --- */
+.colbox{position:relative;display:inline-block}
+.colmenu{display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:30;
+  background:var(--panel);border:1px solid var(--border2);border-radius:12px;
+  padding:6px;min-width:212px;max-height:340px;overflow-y:auto;
+  box-shadow:0 12px 34px rgba(0,0,0,.14)}
+.colmenu.open{display:block}
+.colmenu label{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:8px;
+  font-size:14px;cursor:pointer;white-space:nowrap}
+.colmenu label:hover{background:var(--panel2)}
+.colmenu label.fixed{opacity:.6;cursor:default}
+.colmenu-foot{border-top:1px solid var(--border);margin-top:6px;padding-top:8px;text-align:center}
+
+/* --- Bouton de remise à zéro des filtres --- */
+#btnReset:disabled{opacity:.45;cursor:default}
+#btnReset.on{background:rgba(0,113,227,.12);color:var(--accent)}
+
+/* --- L'inventaire respire mieux en large --- */
+body.wideview main{max-width:1380px}
+
+/* --- Mobile : on revient aux cartes empilées de la feuille d'origine --- */
+@media(max-width:700px){
+  body.wideview main{max-width:100%}
+  .invwrap{overflow-x:visible;margin:0;padding:0}
+  .invtable th,.invtable td{white-space:normal;max-width:none;overflow:visible;text-overflow:clip}
+  .invtable .col-price{text-align:left}
+  .seprow td{white-space:nowrap}
+  .colmenu{right:auto;left:0}
+}
 
 
 
