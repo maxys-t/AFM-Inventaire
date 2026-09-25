@@ -128,7 +128,26 @@ function locObj(n){ return db.locations.find(l=>l.name===n); }
 function locKind(n){ const l = locObj(n); return (l && l.kind) || (l && l.parent ? 'room' : 'site'); }
 function isOffsite(n){ return locKind(n) === 'offsite'; }
 function locArchived(n){ const l = locObj(n); return !!(l && l.archived); }
-function locAddress(n){ const l = locObj(n); return (l && l.address) || ''; }
+
+/* --- Adresses ---
+   Une adresse se lit sur plusieurs lignes dans un mail et sur une
+   seule dans un tableau : d'où les deux fonctions. */
+function locAddrParts(n){
+  const l = locObj(n) || {};
+  return {street:l.street||'', extra:l.extra||'', zip:l.zip||'', city:l.city||'', phone:l.phone||''};
+}
+function locAddressLines(n){
+  const a = locAddrParts(n);
+  const out = [];
+  if(a.street) out.push(a.street);
+  if(a.extra)  out.push(a.extra);
+  const cityLine = [a.zip, a.city].filter(Boolean).join(' ').trim();
+  if(cityLine) out.push(cityLine);
+  return out;
+}
+function locAddress(n){ return locAddressLines(n).join(', '); }
+function locPhone(n){ return locAddrParts(n).phone; }
+function hasAddress(n){ return locAddressLines(n).length > 0; }
 function locLabel(n){
   const l = locObj(n);
   if(!l) return n;
