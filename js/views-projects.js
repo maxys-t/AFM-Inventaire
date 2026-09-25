@@ -250,13 +250,15 @@ async function archiveProj(id){
 function deliveryMailBody(p){
   const its = projItems(p);
   const dest = p.loc_name || '';
-  const addr = dest ? locAddress(dest) : '';
   const dates = projDates(p);
 
   const L = [];
   L.push(`Delivery details — ${p.name}`, '');
-  if(dest)  L.push(`Destination: ${dest}`);
-  if(addr)  L.push(`Address: ${addr}`);
+  if(dest) L.push(`Destination: ${dest}`);
+  // L'adresse sort sur plusieurs lignes, comme sur une étiquette
+  // de transport : c'est lisible et ça se recopie sans retouche.
+  if(dest) locAddressLines(dest).forEach(line => L.push('  ' + line));
+  if(dest && locPhone(dest)) L.push(`  Phone: ${locPhone(dest)}`);
   if(dates) L.push(`Dates: ${dates}`);
   L.push(`Items: ${its.length}`, '');
 
@@ -350,7 +352,8 @@ function renderProjDetail(id){
       ${p.archived?'<span class="tag pinactif">archived</span>':''}</h3>
     ${p.description?`<p class="muted" style="margin-bottom:8px">${esc(p.description)}</p>`:""}
     ${(p.loc_name || projDates(p)) ? `<div class="destbox">
-      ${p.loc_name?`<div><b>${esc(p.loc_name)}</b>${locAddress(p.loc_name)?` <span class="muted">— ${esc(locAddress(p.loc_name))}</span>`:' <span class="muted">— no address on file</span>'}</div>`:''}
+      ${p.loc_name?`<div><b>${esc(p.loc_name)}</b>${hasAddress(p.loc_name)?` <span class="muted">— ${esc(locAddress(p.loc_name))}</span>`:' <span class="muted">— no address on file</span>'}
+        ${locPhone(p.loc_name)?`<span class="muted">· ☎ ${esc(locPhone(p.loc_name))}</span>`:''}</div>`:''}
       ${projDates(p)?`<div class="muted">${esc(projDates(p))}</div>`:''}
     </div>` : ''}
     ${p.status!=='show'?`<div class="pline"><div class="pbar"><div style="width:${pct}%"></div></div><span class="muted"><b>${pr.done}/${pr.total}</b> ready</span></div>`:""}
