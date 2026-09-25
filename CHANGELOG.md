@@ -1,5 +1,53 @@
 # Changelog
 
+## [1.11.0] — 2026-09-25
+
+### Ajouté
+
+- **Lieux Off-site** (migration `012`). Un encadré dédié dans Settings →
+  Locations pour les adresses extérieures : salle de concert, client, tournage.
+  Créée une fois, une adresse se réutilise pour toutes les dates suivantes.
+  Un off-site peut être destination d'une sortie de matériel ou d'un projet,
+  mais jamais le rangement habituel d'un item.
+- **Adresse sur les sites et les off-site.** C'est elle qui alimente les mails
+  de livraison.
+- **Archivage** des lieux off-site et des projets. L'élément sort des menus
+  déroulants sans être supprimé : l'historique continue de le nommer, et un
+  bouton « Show archived » le fait réapparaître. Refusé tant que du matériel
+  est encore sur place.
+- **Destination et dates sur les projets**, visibles en colonnes dans la liste.
+  Les dates vivent sur le projet et non sur le lieu, ce qui permet de réutiliser
+  la même adresse d'une date à l'autre.
+- **Brouillon de mail de livraison** (« ✉️ Delivery details » sur la fiche d'un
+  projet) : ouvre dans le logiciel de mail un message pré-rempli avec la
+  destination, l'adresse, les dates et la liste du matériel groupée par
+  catégorie. Volontairement un brouillon relu par un humain, pas un envoi
+  automatique.
+- Suggestions d'adresses extérieures au moment de sortir du matériel. Le champ
+  reste libre ; la liste évite seulement les variantes d'orthographe.
+
+### Modifié
+
+- **Toutes les dates s'affichent en `AAAA/MM/JJ`.** Format non ambigu et qui se
+  classe correctement dans un tri alphabétique. L'import CSV continue
+  d'accepter les écritures jour/mois/année.
+- **Les emplacements se limitent à deux niveaux** : un site (bâtiment, avec
+  adresse) contient des salles. La migration marque les emplacements de premier
+  niveau existants comme des sites.
+- Le rangement habituel d'un item et le déplacement groupé ne proposent plus que
+  des sites et des salles.
+- **Import / export JSON retirés de la barre du haut** : ils restent dans
+  Settings → Data, où ils étaient déjà présents en double.
+- Suppression d'un lieu refusée si un projet y fait référence, avec invitation à
+  l'archiver plutôt.
+
+### Notes de migration
+
+Sans la migration `012`, l'application démarre normalement et traite les
+emplacements existants comme des sites et des salles, mais les adresses,
+l'archivage et les destinations de projet restent inopérants.
+
+
 ## [1.10.0] — 2026-09-25
 
 ### Ajouté
