@@ -616,6 +616,32 @@ body.wideview main{max-width:1380px}
   .seprow td{white-space:nowrap}
   .colmenu{right:auto;left:0}
 }
+/* ============================================================
+   v1.11 — À COLLER À LA FIN DE css/styles.css
+   (après le bloc v1.10). Tout est en ajout.
+   ============================================================ */
+
+/* --- Adresse sous le nom d'un lieu --- */
+.addr{font-size:12px;margin-top:2px;line-height:1.35;white-space:normal}
+.locact{white-space:nowrap;text-align:right}
+.locact .btn{margin-left:4px}
+
+/* --- Lignes archivées : présentes mais en retrait --- */
+.archrow td{opacity:.55}
+.archrow:hover td{opacity:.85}
+
+/* --- Destination et dates sur la fiche projet --- */
+.destbox{background:var(--panel2);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px}
+.destbox .muted{font-size:13px}
+
+/* --- Le tableau des projets a gagné deux colonnes --- */
+#v-proj td[data-l="Destination"],
+#v-proj td[data-l="Dates"]{white-space:nowrap}
+
+@media(max-width:700px){
+  .locact{text-align:left}
+  .locact .btn{margin:2px 4px 2px 0}
+}
 
 
 
