@@ -674,8 +674,13 @@ async function doCheckout(){
   bulkMode = false; render();
 }
 
+/* Retour groupé demandé depuis ailleurs que l'inventaire (onglet
+   Borrowers) : une liste explicite d'identifiants, pour ne pas
+   détourner la sélection de l'inventaire. */
+let checkinTargets = null;
+
 function openCheckin(id){
-  actionId = id; bulkMode = false;
+  actionId = id; bulkMode = false; checkinTargets = null;
   const i = item(id);
   document.getElementById('in-item').textContent = i.name;
   document.getElementById('in-cond').value = i.cond;
@@ -685,16 +690,34 @@ function openCheckin(id){
 function openBulkCheckin(){
   const n = selItems().filter(i=>i.status==='sorti').length;
   if(!n){ toast("No checked-out item in the selection.", 'error'); return; }
-  actionId = null; bulkMode = true;
+  actionId = null; bulkMode = true; checkinTargets = null;
   document.getElementById('in-item').textContent = `${n} item(s)`;
   document.getElementById('in-cond').value = 'bon';
   document.getElementById('in-note').value = "";
   open_('ovIn');
 }
+
+/* Rentrer tout le matériel d'un emprunteur d'un seul geste.
+   On passe par la même fenêtre que le retour groupé : l'état du
+   matériel se renseigne au moment où on l'a entre les mains. */
+function checkInAllFor(userId){
+  const its = db.items.filter(i=>i.status==='sorti' && i.out && i.out.userId===userId);
+  if(!its.length){ toast("Nothing to check in.", 'error'); return; }
+  const who = (db.users.find(u=>u.id===userId)||{}).name || '';
+  actionId = null; bulkMode = false;
+  checkinTargets = its.map(i=>i.id);
+  document.getElementById('in-item').textContent = `${its.length} item(s)${who?` from ${who}`:''}`;
+  document.getElementById('in-cond').value = 'bon';
+  document.getElementById('in-note').value = "";
+  open_('ovIn');
+}
+
 async function doCheckin(){
   const cond = document.getElementById('in-cond').value, note = document.getElementById('in-note').value.trim();
-  const targets = bulkMode ? selItems().filter(i=>i.status==='sorti') : [item(actionId)];
-  if(!targets.length) return;
+  const targets = checkinTargets
+    ? checkinTargets.map(id=>item(id)).filter(i=>i && i.status==='sorti')
+    : bulkMode ? selItems().filter(i=>i.status==='sorti') : [item(actionId)];
+  if(!targets.length){ checkinTargets = null; return; }
   const rows = [];
   for(const i of targets){
     const userId = i.out?i.out.userId:null;
@@ -705,7 +728,8 @@ async function doCheckin(){
   await histMany(rows);
   close_('ovIn');
   if(bulkMode){ clearSel(); toast(`${targets.length} item(s) checked in.`, 'ok'); }
-  bulkMode = false; render();
+  else if(checkinTargets) toast(`${targets.length} item(s) checked in.`, 'ok');
+  bulkMode = false; checkinTargets = null; render();
 }
 
 /* ================= FICHE ITEM ================= */
