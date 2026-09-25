@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.10.0">
+<link rel="stylesheet" href="css/styles.css?v=1.11.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -18,8 +18,8 @@
   <span id="userChip" style="display:none"></span>
   <button class="btn sec small" id="trashBtn" data-req="delete" onclick="openTrash()" title="Trash" style="display:none">🗑<span id="trashCount"></span></button>
   <button class="btn sec small" onclick="refresh()">↻ Refresh</button>
-  <button class="btn sec small" data-req="admin" onclick="exportJSON()">Exporter</button>
-  <button class="btn sec small" data-req="admin" onclick="document.getElementById('importFile').click()">Import</button>
+  <!-- Import / export : uniquement dans Settings → Data.
+       Le champ reste ici, masqué, car c'est lui que Settings déclenche. -->
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this)">
 </header>
 
@@ -202,7 +202,10 @@
       <input id="out-user" list="borrowerList" autocomplete="off" placeholder="Type a name — new names are added automatically">
       <datalist id="borrowerList"></datalist>
     </div>
-    <div class="field full"><label>Destination / reason *</label><input id="out-reason" placeholder="e.g. location session, lent to…, workshop"></div>
+    <div class="field full"><label>Destination / reason *</label>
+      <input id="out-reason" list="offsiteList" autocomplete="off" placeholder="e.g. Trianon, lent to…, workshop">
+      <datalist id="offsiteList"></datalist>
+    </div>
     <div class="field"><label>Expected return date (optional)</label><input type="date" id="out-due"></div>
     <div class="field"><label>&nbsp;</label>
       <label class="checkline"><input type="checkbox" id="out-alert" checked> Alert me if not returned by then</label>
@@ -245,6 +248,12 @@
   <div class="form-grid">
     <div class="field full"><label>Name *</label><input id="p-name" placeholder="e.g. Band X Tour 2026"></div>
     <div class="field full"><label>Description</label><textarea id="p-desc" rows="2"></textarea></div>
+    <div class="field full"><label>Destination</label>
+      <select id="p-dest"></select>
+      <p class="muted" style="margin-top:4px">Add off-site addresses in Settings → Locations.</p>
+    </div>
+    <div class="field"><label>Start date</label><input type="date" id="p-start"></div>
+    <div class="field"><label>End date</label><input type="date" id="p-end"></div>
     <div class="field full"><label>Project gear *</label>
       <input type="search" id="p-search" placeholder="Search the whole inventory (name, ID, serial…)" oninput="renderPicker()" style="width:100%;margin-bottom:8px">
       <div id="p-picker"></div>
@@ -334,23 +343,23 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.10.0"></script>
-<script src="js/auth.js?v=1.10.0"></script>
-<script src="js/helpers.js?v=1.10.0"></script>
-<script src="js/crop.js?v=1.10.0"></script>
-<script src="js/prefs.js?v=1.10.0"></script>
-<script src="js/db.js?v=1.10.0"></script>
-<script src="js/views-dashboard.js?v=1.10.0"></script>
-<script src="js/views-inventory.js?v=1.10.0"></script>
-<script src="js/views-projects.js?v=1.10.0"></script>
-<script src="js/views-out.js?v=1.10.0"></script>
-<script src="js/views-repairs.js?v=1.10.0"></script>
-<script src="js/views-people-loc.js?v=1.10.0"></script>
-<script src="js/views-trash.js?v=1.10.0"></script>
-<script src="js/views-users.js?v=1.10.0"></script>
-<script src="js/views-settings.js?v=1.10.0"></script>
-<script src="js/import-csv.js?v=1.10.0"></script>
-<script src="js/photos-bulk.js?v=1.10.0"></script>
-<script src="js/app.js?v=1.10.0"></script>
+<script src="js/config.js?v=1.11.0"></script>
+<script src="js/auth.js?v=1.11.0"></script>
+<script src="js/helpers.js?v=1.11.0"></script>
+<script src="js/crop.js?v=1.11.0"></script>
+<script src="js/prefs.js?v=1.11.0"></script>
+<script src="js/db.js?v=1.11.0"></script>
+<script src="js/views-dashboard.js?v=1.11.0"></script>
+<script src="js/views-inventory.js?v=1.11.0"></script>
+<script src="js/views-projects.js?v=1.11.0"></script>
+<script src="js/views-out.js?v=1.11.0"></script>
+<script src="js/views-repairs.js?v=1.11.0"></script>
+<script src="js/views-people-loc.js?v=1.11.0"></script>
+<script src="js/views-trash.js?v=1.11.0"></script>
+<script src="js/views-users.js?v=1.11.0"></script>
+<script src="js/views-settings.js?v=1.11.0"></script>
+<script src="js/import-csv.js?v=1.11.0"></script>
+<script src="js/photos-bulk.js?v=1.11.0"></script>
+<script src="js/app.js?v=1.11.0"></script>
 </body>
 </html>
