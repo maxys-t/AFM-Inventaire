@@ -642,6 +642,28 @@ body.wideview main{max-width:1380px}
   .locact{text-align:left}
   .locact .btn{margin:2px 4px 2px 0}
 }
+/* ============================================================
+   v1.12 — À COLLER À LA FIN DE css/styles.css
+   (après les blocs v1.10 et v1.11). Tout est en ajout.
+   ============================================================ */
+
+/* --- Messages de l'écran de connexion --- */
+.errmsg{color:var(--bad)}
+.okmsg{color:var(--ok)}
+#login .panel,#setpw .panel{max-width:420px;margin:40px auto}
+
+/* --- Emprunteurs : tableau dépliable --- */
+.bdetail > td{background:var(--panel2);padding:10px 12px}
+.btable{width:100%;border-collapse:collapse;background:var(--panel);border-radius:10px;overflow:hidden}
+.btable th{font-size:11px;padding:6px 10px;background:var(--panel)}
+.btable td{padding:7px 10px;font-size:14px;white-space:nowrap}
+.btable tr:last-child td{border-bottom:none}
+.btable tr.lateraw td{background:rgba(255,59,48,.05)}
+
+@media(max-width:700px){
+  .btable td{white-space:normal}
+  .bdetail > td{padding:6px}
+}
 
 
 
