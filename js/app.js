@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.9.2';
+const APP_VERSION = '1.10.0';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','rep','settings'];
@@ -17,6 +17,8 @@ function show(v){
     intro.textContent = txt;
     intro.style.display = txt ? '' : 'none';
   }
+  // L'inventaire a besoin de plus de largeur que les autres vues.
+  document.body.classList.toggle('wideview', v === 'inv');
   try{ window.scrollTo(0,0); }catch(e){}
   render();
 }
