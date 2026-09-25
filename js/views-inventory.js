@@ -441,7 +441,7 @@ async function doBulkCat(cat, subcat){
 }
 
 function openBulkMove(){
-  openBulkModal(`Move ${sel.size} item(s)`, "New home location", locOptions(), doBulkMove);
+  openBulkModal(`Move ${sel.size} item(s)`, "New home location", homeOptions(), doBulkMove);
 }
 async function doBulkMove(home){
   const targets = selItems();
@@ -519,7 +519,7 @@ function openItemForm(id){
   editingId = id||null;
   document.getElementById('itemFormTitle').textContent = id?'Modifier l\'item':'Ajouter un item';
   document.getElementById('i-cat').innerHTML = '<option value="">— choisir —</option>' + catOptions();
-  document.getElementById('i-home').innerHTML = locOptions();
+  document.getElementById('i-home').innerHTML = homeOptions();   // jamais un off-site : un item n'habite pas au Trianon
   const i = id?item(id):null;
   document.getElementById('i-name').value = i?i.name:"";
   document.getElementById('i-cat').value = i?i.cat:"";
@@ -642,6 +642,11 @@ function prepCheckoutForm(){
   // Liste de suggestions : les emprunteurs déjà connus, les plus récents d'abord
   document.getElementById('borrowerList').innerHTML =
     db.users.map(u=>`<option value="${esc(u.name)}">`).join("");
+  // La destination reste un champ libre ; les adresses extérieures
+  // connues sont simplement proposées pour éviter les variantes
+  // d'orthographe (« Trianon », « le trianon », « Trianon Paris »).
+  const off = document.getElementById('offsiteList');
+  if(off) off.innerHTML = offsites(false).map(l=>`<option value="${esc(l.name)}">`).join("");
   document.getElementById('out-user').value = "";
   document.getElementById('out-reason').value = "";
   document.getElementById('out-due').value = "";
