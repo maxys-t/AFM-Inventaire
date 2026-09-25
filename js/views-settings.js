@@ -101,17 +101,35 @@ function paneData(){
 
 function paneLocations(){
   return `<div class="panel">
-    <h2>Locations</h2>
+    <h2>Studio locations</h2>
     <p class="muted" style="margin-bottom:12px">
-      A top-level location is a room (Studio A, Control room…). Pick "inside: …"
-      to create a sub-location, e.g. Synth rack inside Studio A.
+      Two levels. A <b>site</b> is a building or address you own — AccessFlow.
+      Inside it, a <b>room</b> is where the gear actually lives — Studio A.
+      Give the site an address: it is the one used in delivery emails.
     </p>
     <div class="toolbar" data-req="edit" style="margin-bottom:12px">
-      <input id="newLoc" placeholder="e.g. Studio A, Synth rack…" onkeydown="if(event.key==='Enter')addLoc()">
+      <input id="newLoc" placeholder="e.g. AccessFlow, Studio A…" onkeydown="if(event.key==='Enter')addLoc()">
       <select id="newLocParent"></select>
-      <button class="btn" onclick="addLoc()">+ Add location</button>
+      <button class="btn" onclick="addLoc()">+ Add</button>
     </div>
     <div id="locList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Off-site</h2>
+    <p class="muted" style="margin-bottom:12px">
+      Addresses where gear goes temporarily: a venue, a rental client, a shoot.
+      They can be picked as a destination when checking gear out, and as a
+      project destination — but never as an item's home.
+      Created once, an address can be reused for every future date.
+    </p>
+    <div class="toolbar" data-req="edit" style="margin-bottom:12px">
+      <input id="newOff" placeholder="e.g. Trianon" onkeydown="if(event.key==='Enter')addOffsite()">
+      <input id="newOffAddr" placeholder="80 Bd de Rochechouart, 75018 Paris" style="min-width:260px;flex:1"
+             onkeydown="if(event.key==='Enter')addOffsite()">
+      <button class="btn" onclick="addOffsite()">+ Add address</button>
+    </div>
+    <div id="offList"></div>
   </div>`;
 }
 
