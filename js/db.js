@@ -28,6 +28,16 @@ function showSetup(msg){
   if(msg) document.getElementById('setupMsg').innerHTML = '⚠️ ' + esc(msg) + '<br>Check the URL and key below.';
 }
 async function init(){
+  /* Le type de lien se lit AVANT toute chose : la bibliothèque
+     Supabase nettoie l'adresse dès qu'elle a consommé le jeton, et
+     c'est ce « type » qui distingue une invitation (premier mot de
+     passe) d'une réinitialisation d'un simple retour sur le site. */
+  let linkType = null;
+  try{
+    linkType = new URLSearchParams(location.hash.replace(/^#/,'')).get('type');
+  }catch(e){}
+  if(linkType === 'invite' || linkType === 'recovery') pendingPasswordSetup = true;
+
   const cfg = getCfg();
   if(!cfg || !cfg.url || !cfg.key){ showSetup(); return; }
   sb = supabase.createClient(cfg.url, cfg.key);
@@ -47,8 +57,9 @@ async function init(){
   if(location.hash.includes('access_token')) history.replaceState(null,'',location.pathname);
 
   sb.auth.onAuthStateChange((event)=>{
+    if(event === 'PASSWORD_RECOVERY'){ pendingPasswordSetup = true; showSetPassword(false); return; }
     if(event === 'SIGNED_IN' && !me) startSession();
-    if(event === 'SIGNED_OUT'){ me = null; showScreen('login'); }
+    if(event === 'SIGNED_OUT'){ me = null; pendingPasswordSetup = false; showScreen('login'); }
   });
 
   if(!session){ showScreen('login'); return; }
@@ -59,6 +70,10 @@ async function init(){
 async function startSession(){
   const {data:{session}} = await sb.auth.getSession();
   if(!session){ showScreen('login'); return; }
+
+  // Arrivée par une invitation ou une réinitialisation : le mot de
+  // passe se choisit avant d'entrer, pas après.
+  if(pendingPasswordSetup){ showSetPassword(true); return; }
 
   me = await loadMe(session.user.id);
   if(!me){
@@ -109,7 +124,13 @@ async function loadAll(){
     name: l.name,
     parent: l.parent || null,
     kind: l.kind || (l.parent ? 'room' : 'site'),
-    address: l.address || '',
+    // `address` (migration 012) reste lu en secours tant que la 013
+    // n'est pas passée : sinon les adresses déjà saisies disparaîtraient.
+    street: l.street || l.address || '',
+    zip: l.zip || '',
+    city: l.city || '',
+    extra: l.extra || '',
+    phone: l.phone || '',
     archived: !!l.archived
   }));
   db.history = hi.data.map(h=>({itemId:h.item_id,type:h.type,date:h.date,userId:h.user_id,
