@@ -27,13 +27,28 @@ function renderPeople(){
          </button>`
       : '<span class="muted">nothing</span>';
 
+    /* Un vrai tableau plutôt qu'une rangée de pastilles : avec dix
+       items sortis, les pastilles deviennent illisibles. */
     const detail = open && using.length
-      ? `<tr class="bdetail"><td></td><td colspan="2">
-           <div class="bchips">${using.map(i=>`
-             <span class="chip${overdue(i)?' late':''}" onclick="openDetail('${i.id}')">
-               ${esc(itemTitleText(i))} <span class="mono">${i.id}</span>
-               · ${daysSince(i.out.date)}d${overdue(i)?' ⚠️':''}
-             </span>`).join("")}</div>
+      ? `<tr class="bdetail"><td colspan="3">
+           <table class="btable"><thead><tr>
+             <th>Item</th><th>ID</th><th>Out since</th><th>Due back</th><th>Destination</th><th></th>
+           </tr></thead><tbody>
+           ${using.map(i=>`<tr class="rowlink${overdue(i)?' lateraw':''}" onclick="openDetail('${i.id}')">
+             <td data-l="Item">${itemTitle(i)}</td>
+             <td data-l="ID"><span class="mono">${esc(i.id)}</span></td>
+             <td data-l="Out since">${daysSince(i.out.date)}d <span class="muted">${esc(fdateD(i.out.date.slice(0,10)))}</span></td>
+             <td data-l="Due back">${i.out.due
+               ? `<span class="${overdue(i)?'days-late':''}">${esc(fdateD(i.out.due))}${overdue(i)?' ⚠️':''}</span>`
+               : '<span class="muted">—</span>'}</td>
+             <td data-l="Destination">${esc(i.out.reason||'')}</td>
+             <td onclick="event.stopPropagation()">${can('checkout')
+               ? `<button class="btn small ok" onclick="openCheckin('${i.id}')">Check in</button>` : ''}</td>
+           </tr>`).join("")}
+           </tbody></table>
+           ${can('checkout') ? `<div style="margin-top:10px">
+             <button class="btn ok small" onclick="checkInAllFor('${u.id}')">📥 Check in all (${using.length})</button>
+           </div>` : ''}
          </td></tr>`
       : '';
 
@@ -103,7 +118,7 @@ function renderLoc(){
     const present = db.items.filter(i=>i.loc===l.name).length;
     return `<tr><td data-l="Location" class="${sub?'subloc':''}">
         <b>${esc(l.name)}</b>${sub?'':' <span class="tag cat">site</span>'}
-        ${l.address?`<div class="muted addr">${esc(l.address)}</div>`:''}</td>
+        ${hasAddress(l.name)?`<div class="muted addr">${esc(locAddress(l.name))}</div>`:''}</td>
       <td data-l="Content">${n} assigned · ${present} on site</td>
       <td class="locact">${can('edit')?`
         ${sub?'':`<button class="btn sec small" data-n="${esc(l.name)}" onclick="editLocAddress(this.dataset.n)">Address</button>`}
@@ -126,7 +141,10 @@ function renderLoc(){
     const projs = db.projects.filter(p=>p.loc_name===l.name && !p.archived).length;
     return `<tr class="${l.archived?'archrow':''}">
       <td data-l="Place"><b>${esc(l.name)}</b>${l.archived?' <span class="tag pinactif">archived</span>':''}
-        ${l.address?`<div class="muted addr">${esc(l.address)}</div>`:'<div class="muted addr">— no address —</div>'}</td>
+        ${hasAddress(l.name)
+          ? `<div class="muted addr">${esc(locAddress(l.name))}</div>`
+          : '<div class="muted addr">— no address —</div>'}
+        ${locPhone(l.name)?`<div class="muted addr">☎ ${esc(locPhone(l.name))}</div>`:''}</td>
       <td data-l="Use">${here?`<span class="tag sorti">${here} item${here>1?'s':''} there</span> `:''}${projs?`${projs} project${projs>1?'s':''}`:(here?'':'<span class="muted">unused</span>')}</td>
       <td class="locact">${can('edit')?`
         <button class="btn sec small" data-n="${esc(l.name)}" onclick="editLocAddress(this.dataset.n)">Edit</button>
@@ -149,8 +167,8 @@ async function addLoc(){
   const parent = document.getElementById('newLocParent').value || null;
   if(!n) return;
   if(locObj(n)){ alert("That location already exists."); return; }
-  const row = {name:n, parent, kind: parent ? 'room' : 'site', address:null, archived:false};
-  db.locations.push({...row, address:''});
+  const row = {name:n, parent, kind: parent ? 'room' : 'site', archived:false};
+  db.locations.push({...row, street:'', extra:'', zip:'', city:'', phone:''});
   inp.value = ""; inp.focus();
   renderLoc();
   await apiInsertLocation(row);
@@ -164,24 +182,52 @@ async function addOffsite(){
   const n = inp.value.trim();
   if(!n) return;
   if(locObj(n)){ alert("A location with that name already exists."); return; }
-  const address = adr ? adr.value.trim() : '';
-  const row = {name:n, parent:null, kind:'offsite', address:address||null, archived:false};
-  db.locations.push({...row, address});
+  const street = adr ? adr.value.trim() : '';
+  const row = {name:n, parent:null, kind:'offsite', street:street||null, archived:false};
+  db.locations.push({name:n, parent:null, kind:'offsite',
+                     street, extra:'', zip:'', city:'', phone:'', archived:false});
   inp.value = ""; if(adr) adr.value = "";
   inp.focus();
   renderLoc();
   await apiInsertLocation(row);
 }
 
+/* ---- Adresse d'un lieu ----
+   Champs séparés plutôt qu'un champ libre : c'est ce qui permet au
+   mail de livraison de sortir une adresse correctement mise en forme. */
+let editingLoc = null;
+
 function editLocAddress(name){
   const l = locObj(name);
   if(!l) return;
-  const v = prompt(`Address for "${name}" — used in delivery emails:`, l.address || '');
-  if(v === null) return;
-  const address = v.trim();
-  l.address = address;
+  editingLoc = name;
+  const set = (id,v)=>{ const el = document.getElementById(id); if(el) el.value = v || ''; };
+  const t = document.getElementById('addrTitle');
+  if(t) t.textContent = 'Address — ' + name;
+  set('ad-street', l.street); set('ad-extra', l.extra);
+  set('ad-zip', l.zip); set('ad-city', l.city); set('ad-phone', l.phone);
+  // Le téléphone de contact n'a de sens que sur une adresse extérieure.
+  const ph = document.getElementById('ad-phone-field');
+  if(ph) ph.style.display = isOffsite(name) ? '' : 'none';
+  open_('ovAddr');
+}
+
+async function saveLocAddress(){
+  const l = locObj(editingLoc);
+  if(!l){ close_('ovAddr'); return; }
+  const get = id => ((document.getElementById(id)||{}).value || '').trim();
+  const fields = {
+    street: get('ad-street'), extra: get('ad-extra'),
+    zip: get('ad-zip'), city: get('ad-city'),
+    phone: isOffsite(editingLoc) ? get('ad-phone') : ''
+  };
+  Object.assign(l, fields);
+  close_('ovAddr');
   renderLoc();
-  apiUpdateLocation(name, {address: address || null});
+  // null plutôt que chaîne vide : une case vide reste vide en base.
+  const row = {};
+  Object.entries(fields).forEach(([k,v])=>{ row[k] = v || null; });
+  await apiUpdateLocation(l.name, row);
 }
 
 /* Archiver plutôt que supprimer : le lieu sort des menus mais
