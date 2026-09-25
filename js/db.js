@@ -112,18 +112,51 @@ async function loadAll(){
 
   const pf = await sb.from('profiles').select('*').order('email');
   db.profiles = pf.error ? [] : pf.data;
+
+  // Préférences d'affichage : une seule fois par session, sans bloquer
+  // le chargement si la migration 011 n'est pas encore passée.
+  if(typeof loadPrefsRemote === 'function') await loadPrefsRemote();
+}
+
+/* --- Préférences d'affichage (table user_prefs) ---
+   Volontairement hors de run() : un échec ici ne doit ni afficher
+   d'erreur ni marquer la synchronisation en défaut. Perdre un
+   réglage de colonne n'est pas un incident. */
+async function apiLoadPrefs(){
+  if(!sb) return null;
+  const {data:{user}} = await sb.auth.getUser();
+  if(!user) return null;
+  const r = await sb.from('user_prefs').select('prefs').eq('user_id', user.id).maybeSingle();
+  if(r.error || !r.data) return null;
+  return r.data.prefs;
+}
+async function apiSavePrefs(p){
+  if(!sb) return;
+  const {data:{user}} = await sb.auth.getUser();
+  if(!user) return;
+  await sb.from('user_prefs').upsert({
+    user_id: user.id, prefs: p, updated_at: new Date().toISOString()
+  });
 }
 async function refresh(){
   if(!sb) return false;
   try{ await loadAll(); render(); setSync('ok'); return true; }
   catch(e){ setSync(navigator.onLine === false ? 'off' : 'error'); return false; }
 }
+/* On s'abonne table par table, et non à tout le schéma : sinon
+   le moindre enregistrement de préférence d'affichage déclencherait
+   un rechargement complet de l'inventaire à chaque case cochée. */
+const SYNC_TABLES = ['items','people','locations','history','projects','profiles'];
 function subscribe(){
   let t = null;
   try{
-    sb.channel('inv-sync').on('postgres_changes',{event:'*',schema:'public'},()=>{
-      clearTimeout(t); t = setTimeout(refresh, 400);
-    }).subscribe();
+    const ch = sb.channel('inv-sync');
+    SYNC_TABLES.forEach(tb=>{
+      ch.on('postgres_changes',{event:'*',schema:'public',table:tb},()=>{
+        clearTimeout(t); t = setTimeout(refresh, 400);
+      });
+    });
+    ch.subscribe();
   }catch(e){}
 }
 
