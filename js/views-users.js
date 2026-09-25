@@ -40,14 +40,14 @@ function renderUsers(){
   box.innerHTML = `
     <h2>Users</h2>
     <p class="muted" style="margin-bottom:10px">
-      Add someone's email to let them in, then just send them the site address:
-      they enter their email and get a sign-in link. Anyone not listed here sees nothing.
+      Inviting someone sends them an email with a link to choose their password.
+      There is no sign-up: an account only exists because an administrator created it here.
     </p>
     <div class="toolbar" style="margin-bottom:10px">
       <input type="email" id="nu-email" placeholder="email@studio.com" style="min-width:220px" onkeydown="if(event.key==='Enter')addUserAccount()">
       <input id="nu-name" placeholder="Name (optional)">
       <select id="nu-role">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select>
-      <button class="btn" onclick="addUserAccount()">+ Allow</button>
+      <button class="btn" id="nu-btn" onclick="addUserAccount()">+ Invite</button>
     </div>
     ${db.profiles.length
       ? `<table><thead><tr><th>Person</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
@@ -60,19 +60,41 @@ function renderUsers(){
     </p>`;
 }
 
+/* Inviter quelqu'un passe par la fonction serveur `invite-user` :
+   créer un compte demande la clé secrète, qui n'a rien à faire ici.
+   La fonction revérifie côté serveur que l'appelant est bien
+   administrateur — ce contrôle-ci n'est que du confort d'interface. */
 async function addUserAccount(){
   const email = (document.getElementById('nu-email').value||"").trim().toLowerCase();
   const name  = (document.getElementById('nu-name').value||"").trim();
   const role  = document.getElementById('nu-role').value;
   if(!email || !email.includes('@')){ toast("Enter a valid email address.", 'error'); return; }
   if(db.profiles.some(p=>p.email.toLowerCase()===email)){ toast("That person is already allowed.", 'error'); return; }
-  const p = {email, name, role, active:true};
-  db.profiles.push({...p, id:'temp-'+Date.now(), user_id:null});
-  document.getElementById('nu-email').value = ""; document.getElementById('nu-name').value = "";
-  renderUsers();
-  await apiInsertProfile(p);
+
+  const btn = document.getElementById('nu-btn');
+  if(btn){ btn.disabled = true; btn.textContent = "Inviting…"; }
+
+  let res;
+  try{
+    res = await sb.functions.invoke('invite-user', {body:{email, name, role}});
+  }catch(e){
+    res = {error:e};
+  }
+  if(btn){ btn.disabled = false; btn.textContent = "+ Invite"; }
+
+  if(res.error){
+    const detail = (res.error && res.error.message) || 'unknown error';
+    toast("Could not send the invitation (" + detail + "). Check that the invite-user function is deployed.",
+          'error', null, null, 9000);
+    return;
+  }
+  const data = res.data || {};
+  if(data.error){ toast(data.error, 'error', null, null, 8000); return; }
+
+  document.getElementById('nu-email').value = "";
+  document.getElementById('nu-name').value = "";
   await refresh();
-  toast(`${email} can now sign in. Send them the site address.`, 'ok', null, null, 6000);
+  toast(data.message || `Invitation sent to ${email}.`, 'ok', null, null, 8000);
 }
 
 async function setUserRole(id, role){
