@@ -101,25 +101,104 @@ function sortItems(rows, by){
   });
 }
 
+/* ---- remise à zéro des filtres ---- */
+const FILTER_IDS = ['q','fCat','fSub','fStatus','fLoc','fOwner','fProv','fCond','fSort'];
+function filtersActive(){
+  return FILTER_IDS.some(id=>{ const el = document.getElementById(id); return el && el.value; });
+}
+function resetFilters(){
+  FILTER_IDS.forEach(id=>{ const el = document.getElementById(id); if(el) el.value = ''; });
+  sortDir = 1;
+  const sd = document.getElementById('sortDir');
+  if(sd) sd.textContent = '↑';
+  fillSubFilter();
+  renderInv();
+}
+function updateResetBtn(){
+  const b = document.getElementById('btnReset');
+  if(!b) return;
+  const on = filtersActive();
+  b.disabled = !on;
+  b.classList.toggle('on', on);
+}
+
+/* ---- séparateurs de section ----
+   Uniquement quand un tri est actif : ils suivent le critère choisi.
+   Les valeurs absentes étant toujours renvoyées en fin de liste par
+   sortItems(), leur section (« No price »…) arrive naturellement en bas. */
+function sepFor(i, by){
+  switch(by){
+    case 'name': {
+      const c = (itemTitleText(i).trim().toUpperCase().charAt(0) || '—');
+      if(/[A-Z]/.test(c)) return c;
+      return /[0-9]/.test(c) ? '0–9' : 'Other';
+    }
+    case 'id':    return (String(i.id).split('-')[0] || '—');
+    case 'cat':   return catLabel(i.cat) || 'Uncategorised';
+    case 'loc':   return (i.status==='sorti' ? i.loc : locLabel(i.loc)) || 'No location';
+    case 'cond':  return CONDS[i.cond] || i.cond;
+    case 'owner': return (i.owner||'').trim() || 'No owner';
+    case 'prov':  return (i.provider||'').trim() || 'No provider';
+    case 'price': {
+      if(i.price==null || i.price==='') return 'No price';
+      const p = Number(i.price);
+      if(isNaN(p)) return 'No price';
+      if(p < 100)  return 'Under 100 €';
+      if(p < 500)  return '100 – 500 €';
+      if(p < 1000) return '500 – 1 000 €';
+      if(p < 5000) return '1 000 – 5 000 €';
+      return '5 000 € and above';
+    }
+    case 'pdate': {
+      if(!i.purchase_date) return 'No purchase date';
+      const d = new Date(i.purchase_date);
+      if(isNaN(d.getTime())) return 'No purchase date';
+      return d.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+    }
+  }
+  return null;
+}
+function sepRow(label, span){
+  return `<tr class="seprow"><td colspan="${span}">${esc(label)}</td></tr>`;
+}
+
+/* ---- en-tête du tableau, construit à partir des colonnes visibles ---- */
+function invHeadHtml(allSel){
+  const cols = invColDefs();
+  return `<tr>
+    <th class="cbcol"><input type="checkbox" ${allSel?'checked':''} onchange="selectAllVisible(this.checked)" title="Select all"></th>
+    ${cols.map(c=>`<th class="col-${c.k}">${c.k==='photo' ? '' : esc(c.label)}</th>`).join("")}
+    <th class="actcol"></th>
+  </tr>`;
+}
+
 /* ---- rendu de la liste ---- */
 function renderInv(){
   const by = (document.getElementById('fSort')||{}).value || "";
   const rows = sortItems(invFiltered(), by);
   const searching = !!(document.getElementById('q').value||"").trim();
   renderInvSummary(rows);
+  updateResetBtn();
 
+  const wrap = document.getElementById('invList');
   if(!rows.length){
-    document.getElementById('invList').innerHTML = '<div class="empty">No item matches.</div>';
+    wrap.innerHTML = '<div class="empty">No item matches.</div>';
     renderBulkBar(); return;
   }
+
+  const span = invColDefs().length + 2;
 
   // Un tri explicite affiche une liste à plat : regrouper masquerait le classement.
   if(by){
     const allSelF = rows.length && rows.every(i=>sel.has(i.id));
-    document.getElementById('invList').innerHTML = `<table><thead><tr>
-      <th style="width:34px"><input type="checkbox" ${allSelF?'checked':''} onchange="selectAllVisible(this.checked)" title="Select all"></th>
-      <th></th><th>Item</th><th>Category</th><th>Status</th><th>Location</th><th>Condition</th><th></th>
-    </tr></thead><tbody>${rows.map(i=>itemRow(i,false)).join("")}</tbody></table>`;
+    let body = "", lastSep = null;
+    rows.forEach(i=>{
+      const s = sepFor(i, by);
+      if(s !== null && s !== lastSep){ lastSep = s; body += sepRow(s, span); }
+      body += itemRow(i, false);
+    });
+    wrap.innerHTML = `<div class="invwrap"><table class="invtable">
+      <thead>${invHeadHtml(allSelF)}</thead><tbody>${body}</tbody></table></div>`;
     renderBulkBar(); return;
   }
 
@@ -149,10 +228,8 @@ function renderInv(){
 
   const allIds = rows.map(i=>i.id);
   const allSel = allIds.length && allIds.every(id=>sel.has(id));
-  document.getElementById('invList').innerHTML = `<table><thead><tr>
-    <th style="width:34px"><input type="checkbox" ${allSel?'checked':''} onchange="selectAllVisible(this.checked)" title="Select all"></th>
-    <th></th><th>Item</th><th>Category</th><th>Status</th><th>Location</th><th>Condition</th><th></th>
-  </tr></thead><tbody>${body}</tbody></table>`;
+  wrap.innerHTML = `<div class="invwrap"><table class="invtable">
+    <thead>${invHeadHtml(allSel)}</thead><tbody>${body}</tbody></table></div>`;
   renderBulkBar();
 }
 
@@ -170,37 +247,108 @@ function renderInvSummary(rows){
         + (avecPrix.length !== rows.length ? ` <span class="muted">(${avecPrix.length} with a price)</span>` : '') : '');
 }
 
+/* ---- contenu des cellules ----
+   invCellText() renvoie le texte brut : il sert à la fois à l'infobulle
+   au survol (le nom complet reste lisible même tronqué) et au calcul
+   des valeurs communes sur une ligne de groupe. */
+function invCellText(c, i){
+  switch(c.k){
+    case 'item':   return itemTitleText(i);
+    case 'id':     return i.id;
+    case 'cat':    return subLabel(i.cat, i.subcat);
+    case 'family': return catLabel(i.cat);
+    case 'loc':    return (i.status==='sorti' ? i.loc : locLabel(i.loc)) || '';
+    case 'home':   return locLabel(i.home) || '';
+    case 'owner':  return i.owner || '';
+    case 'prov':   return i.provider || '';
+    case 'price':  return (i.price==null || i.price==='') ? '' : fprice(Number(i.price));
+    case 'pdate':  return i.purchase_date ? fdateOnly(i.purchase_date) : '';
+    case 'so':     return i.sales_order || '';
+    case 'serial': return i.serial || '';
+  }
+  return '';
+}
+function invCell(c, i){
+  switch(c.k){
+    case 'photo':  return i.photo ? `<img class="thumb" loading="lazy" src="${i.photo}">` : '';
+    case 'item':   return itemTitle(i);
+    case 'id':     return `<span class="mono">${esc(i.id)}</span>`;
+    case 'cat':    return `<span class="tag cat">${esc(subLabel(i.cat,i.subcat))}</span>`;
+    case 'status': return statusTag(i);
+    case 'cond':   return `<span class="tag ${i.cond}">${esc(CONDS[i.cond]||i.cond)}</span>`;
+    // Un item qui n'est pas à sa place se repère d'un coup d'œil.
+    case 'home':   return `<span class="${i.loc!==i.home?'awayhome':''}">${esc(invCellText(c,i))}</span>`;
+    default:       return esc(invCellText(c,i));
+  }
+}
+const NO_TITLE = ['photo','status','cond'];
+
 function itemRow(i, isChild){
+  const cols = invColDefs();
+  const cells = cols.map(c=>{
+    const t = NO_TITLE.includes(c.k) ? '' : invCellText(c, i);
+    return `<td class="col-${c.k}" data-l="${esc(c.label)}"${t?` title="${esc(t)}"`:''}>${invCell(c,i)}</td>`;
+  }).join("");
   return `<tr class="rowlink ${isChild?'childrow':''} ${sel.has(i.id)?'selrow':''}" onclick="openDetail('${i.id}')">
-    <td onclick="event.stopPropagation()"><input type="checkbox" ${sel.has(i.id)?'checked':''} onchange="toggleSel('${i.id}',this.checked)"></td>
-    <td>${i.photo?`<img class="thumb" loading="lazy" src="${i.photo}">`:""}</td>
-    <td data-l="Item">${itemTitle(i)}<br><span class="mono">${i.id}</span></td>
-    <td data-l="Category"><span class="tag cat">${esc(subLabel(i.cat,i.subcat))}</span><br><span class="muted">${esc(catLabel(i.cat))}</span></td>
-    <td data-l="Status">${statusTag(i)}</td>
-    <td data-l="Location">${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}${i.loc!==i.home?` <span class="muted">(home: ${esc(locLabel(i.home))})</span>`:""}</td>
-    <td data-l="Condition"><span class="tag ${i.cond}">${CONDS[i.cond]||i.cond}</span></td>
-    <td onclick="event.stopPropagation()">${actionBtn(i)}</td>
+    <td class="cbcol" onclick="event.stopPropagation()"><input type="checkbox" ${sel.has(i.id)?'checked':''} onchange="toggleSel('${i.id}',this.checked)"></td>
+    ${cells}
+    <td class="actcol" onclick="event.stopPropagation()">${actionBtn(i)}</td>
   </tr>`;
 }
 
+/* Ligne de groupe : même jeu de colonnes, mais chaque cellule résume
+   les exemplaires au lieu d'en décrire un seul. */
+function groupCell(c, key, items, open){
+  const uniq = a => [...new Set(a)];
+  switch(c.k){
+    case 'photo': {
+      const ph = uniq(items.map(i=>i.photo||''));
+      return ph.length===1 && ph[0] ? `<img class="thumb" loading="lazy" src="${ph[0]}">` : '';
+    }
+    case 'item': {
+      const brands = uniq(items.map(i=>(i.brand||'').trim()));
+      return `<span class="chev">${open?'▾':'▸'}</span> `
+           + (brands.length===1 && brands[0] ? `<b>${esc(brands[0])}</b> ` : '')
+           + `${esc(key)} <span class="muted">${items.length} copies</span>`;
+    }
+    case 'cat': {
+      const cc = uniq(items.map(i=>i.cat+'/'+i.subcat));
+      return cc.length===1
+        ? `<span class="tag cat">${esc(subLabel(items[0].cat,items[0].subcat))}</span>`
+        : '<span class="muted">mixed</span>';
+    }
+    case 'status': {
+      const dispo = items.filter(i=>i.status==='dispo').length;
+      const sortis = items.length - dispo;
+      return (dispo?`<span class="tag dispo">${dispo} available</span> `:'')
+           + (sortis?`<span class="tag sorti">${sortis} out</span>`:'');
+    }
+    case 'cond': {
+      const bad = items.filter(i=>i.cond!=='bon').length;
+      return bad ? `<span class="tag attente">${bad} to fix</span>` : '<span class="tag bon">OK</span>';
+    }
+    case 'price': {
+      const wp = items.filter(i=>i.price!=null && i.price!=='');
+      return wp.length ? fprice(wp.reduce((s,i)=>s+Number(i.price),0)) : '';
+    }
+    default: {
+      const v = uniq(items.map(i=>invCellText(c,i)).filter(Boolean));
+      if(!v.length) return '';
+      return v.length===1 ? esc(v[0]) : '<span class="muted">several</span>';
+    }
+  }
+}
+
 function groupRow(key, items, open){
-  const dispo = items.filter(i=>i.status==='dispo').length;
-  const sortis = items.length - dispo;
-  const abimes = items.filter(i=>i.cond!=='bon').length;
   const allSel = items.every(i=>sel.has(i.id));
-  const locs = [...new Set(items.map(i=>i.status==='sorti'?i.loc:locLabel(i.loc)))];
-  const cats = [...new Set(items.map(i=>i.cat+'/'+i.subcat))];
-  const brands = [...new Set(items.map(i=>(i.brand||'').trim()))];
-  const photos = [...new Set(items.map(i=>i.photo||''))];
-  return `<tr class="grouprow ${allSel?'selrow':''}" onclick="toggleGroup(${JSON.stringify(key).replace(/"/g,'&quot;')})">
-    <td onclick="event.stopPropagation()"><input type="checkbox" ${allSel?'checked':''} onchange="selectGroup(${JSON.stringify(key).replace(/"/g,'&quot;')},this.checked)"></td>
-    <td>${photos.length===1&&photos[0]?`<img class="thumb" loading="lazy" src="${photos[0]}">`:''}</td>
-    <td data-l="Item"><span class="chev">${open?'▾':'▸'}</span> ${brands.length===1&&brands[0]?`<b>${esc(brands[0])}</b> `:''}${esc(key)}<br><span class="muted">${items.length} copies</span></td>
-    <td data-l="Category">${cats.length===1?`<span class="tag cat">${esc(subLabel(items[0].cat,items[0].subcat))}</span>`:'<span class="muted">mixed</span>'}</td>
-    <td data-l="Status">${dispo?`<span class="tag dispo">${dispo} available</span> `:''}${sortis?`<span class="tag sorti">${sortis} out</span>`:''}</td>
-    <td data-l="Location">${locs.length===1?esc(locs[0]):'<span class="muted">several</span>'}</td>
-    <td data-l="Condition">${abimes?`<span class="tag attente">${abimes} to fix</span>`:'<span class="tag bon">OK</span>'}</td>
-    <td></td>
+  const k = JSON.stringify(key).replace(/"/g,'&quot;');
+  const cells = invColDefs()
+    .map(c=>`<td class="col-${c.k}" data-l="${esc(c.label)}">${groupCell(c,key,items,open)}</td>`)
+    .join("");
+  return `<tr class="grouprow ${allSel?'selrow':''}" onclick="toggleGroup(${k})">
+    <td class="cbcol" onclick="event.stopPropagation()"><input type="checkbox" ${allSel?'checked':''} onchange="selectGroup(${k},this.checked)"></td>
+    ${cells}
+    <td class="actcol"></td>
   </tr>`;
 }
 
