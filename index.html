@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.12.0">
+<link rel="stylesheet" href="css/styles.css?v=1.12.1">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -322,10 +322,13 @@
 <div class="overlay" id="ovPhotos"><div class="modal" style="max-width:760px">
   <h3>Import photos</h3>
   <p class="muted" style="margin-bottom:12px">
-    Name each image after the item model — <b>Juno-106.jpg</b>, <b>XLR 3m.jpg</b>,
-    <b>Shure SM57.jpg</b> — or after its ID (<b>SYN-001.jpg</b>).
-    One photo per model covers all its copies. Images are cropped to a square
-    and resized automatically.
+    The file name decides what the photo covers, from the most precise to the widest:<br>
+    <b>SYN-001.jpg</b> one item · <b>Roland Juno-106.jpg</b> a model of one brand ·
+    <b>Juno-106.jpg</b> a model · <b>Cordial XLR.jpg</b> one brand across a whole
+    sub-category · <b>XLR.jpg</b> a whole sub-category.<br>
+    The most precise file always wins: drop <b>Cordial XLR.jpg</b> and <b>XLR 3m.jpg</b>
+    together and the 3 m cables keep their own photo.
+    Images are cropped to a square and resized automatically.
   </p>
   <div class="toolbar">
     <button class="btn sec small" onclick="listeNomsPhotos()">⬇ Expected file names</button>
@@ -380,23 +383,23 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.12.0"></script>
-<script src="js/auth.js?v=1.12.0"></script>
-<script src="js/helpers.js?v=1.12.0"></script>
-<script src="js/crop.js?v=1.12.0"></script>
-<script src="js/prefs.js?v=1.12.0"></script>
-<script src="js/db.js?v=1.12.0"></script>
-<script src="js/views-dashboard.js?v=1.12.0"></script>
-<script src="js/views-inventory.js?v=1.12.0"></script>
-<script src="js/views-projects.js?v=1.12.0"></script>
-<script src="js/views-out.js?v=1.12.0"></script>
-<script src="js/views-repairs.js?v=1.12.0"></script>
-<script src="js/views-people-loc.js?v=1.12.0"></script>
-<script src="js/views-trash.js?v=1.12.0"></script>
-<script src="js/views-users.js?v=1.12.0"></script>
-<script src="js/views-settings.js?v=1.12.0"></script>
-<script src="js/import-csv.js?v=1.12.0"></script>
-<script src="js/photos-bulk.js?v=1.12.0"></script>
-<script src="js/app.js?v=1.12.0"></script>
+<script src="js/config.js?v=1.12.1"></script>
+<script src="js/auth.js?v=1.12.1"></script>
+<script src="js/helpers.js?v=1.12.1"></script>
+<script src="js/crop.js?v=1.12.1"></script>
+<script src="js/prefs.js?v=1.12.1"></script>
+<script src="js/db.js?v=1.12.1"></script>
+<script src="js/views-dashboard.js?v=1.12.1"></script>
+<script src="js/views-inventory.js?v=1.12.1"></script>
+<script src="js/views-projects.js?v=1.12.1"></script>
+<script src="js/views-out.js?v=1.12.1"></script>
+<script src="js/views-repairs.js?v=1.12.1"></script>
+<script src="js/views-people-loc.js?v=1.12.1"></script>
+<script src="js/views-trash.js?v=1.12.1"></script>
+<script src="js/views-users.js?v=1.12.1"></script>
+<script src="js/views-settings.js?v=1.12.1"></script>
+<script src="js/import-csv.js?v=1.12.1"></script>
+<script src="js/photos-bulk.js?v=1.12.1"></script>
+<script src="js/app.js?v=1.12.1"></script>
 </body>
 </html>
