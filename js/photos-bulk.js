@@ -14,21 +14,62 @@ function pkey(s){
                 .toLowerCase().replace(/[^a-z0-9]/g,'');
 }
 
-/* Toutes les façons de désigner un item : identifiant, modèle, marque + modèle */
+/* --- Niveaux de précision d'un nom de fichier ---
+   Du plus précis au plus large. Un même nom peut correspondre à
+   plusieurs niveaux : on retient toujours le plus précis.
+
+     1  SYN-001.jpg          un item précis
+     2  Roland Juno-106.jpg  marque + modèle
+     3  Juno-106.jpg         un modèle, tous exemplaires
+     4  Cordial XLR.jpg      une marque dans une sous-catégorie
+     5  XLR.jpg              toute une sous-catégorie
+
+   Le niveau 4 est celui qui sert aux câbles : une seule photo pour
+   tous les Cordial XLR, quelle que soit la longueur, sans habiller
+   au passage les XLR d'une autre marque. */
+const PH_RANKS = ['', 'item', 'brand + model', 'model', 'brand + sub-category', 'sub-category'];
+const PH_WIDE = 4;     // à partir d'ici, la correspondance est large
+
+/* Un index par niveau : photoMatch() descend du plus précis au plus
+   large et s'arrête au premier niveau qui connaît ce nom. */
 function photoIndex(){
-  const map = new Map();
-  const add = (k, label, id)=>{
+  const levels = [];
+  const add = (rank, k, label, id)=>{
     if(!k) return;
-    if(!map.has(k)) map.set(k, {label, ids:[]});
-    map.get(k).ids.push(id);
+    if(!levels[rank]) levels[rank] = new Map();
+    const m = levels[rank];
+    if(!m.has(k)) m.set(k, {label, ids:new Set()});
+    m.get(k).ids.add(id);
   };
   db.items.forEach(i=>{
-    const base = groupKeyOf(i.name) || i.name;
-    add(pkey(i.id), i.id, i.id);
-    add(pkey(base), base, i.id);
-    if(i.brand) add(pkey(i.brand + ' ' + base), i.brand + ' ' + base, i.id);
+    const base  = groupKeyOf(i.name) || i.name;
+    const brand = (i.brand||'').trim();
+    const subL  = subLabel(i.cat, i.subcat) || '';
+    const subC  = ((subsOf(i.cat)||{})[i.subcat]||{}).code || '';
+
+    add(1, pkey(i.id), i.id, i.id);
+    add(3, pkey(base), base, i.id);
+    if(brand) add(2, pkey(brand + ' ' + base), brand + ' ' + base, i.id);
+
+    // La sous-catégorie se désigne par son libellé ou par son code :
+    // « XLR.jpg » marche dans les deux cas.
+    [subL, subC].filter(Boolean).forEach(s=>{
+      add(5, pkey(s), subL || s, i.id);
+      if(brand) add(4, pkey(brand + ' ' + s), brand + ' ' + (subL || s), i.id);
+    });
   });
-  return map;
+  return levels;
+}
+
+function photoMatch(levels, key){
+  for(let r = 1; r < levels.length; r++){
+    const m = levels[r];
+    if(m && m.has(key)){
+      const e = m.get(key);
+      return {label:e.label, ids:[...e.ids], rank:r};
+    }
+  }
+  return null;
 }
 
 /* Recadrage carré automatique, centré, réduit à PHOTO_SIZE */
@@ -60,7 +101,7 @@ function openPhotoImport(){
   photoPlan = null;
   document.getElementById('ph-file').value = "";
   document.getElementById('ph-preview').innerHTML =
-    '<div class="muted">Pick your images — the file name must match the item model.</div>';
+    '<div class="muted">Pick your images — the file name decides what they cover.</div>';
   document.getElementById('ph-go').style.display = 'none';
   open_('ovPhotos');
 }
@@ -68,40 +109,70 @@ function openPhotoImport(){
 function onPhotosChosen(input){
   const files = [...input.files];
   if(!files.length) return;
-  const idx = photoIndex();
+  const levels = photoIndex();
+
   const lignes = files.map(f=>{
     const nom = f.name.replace(/\.[^.]+$/,'');
-    const hit = idx.get(pkey(nom));
-    return {file:f, nom, cible:hit ? hit.label : null, ids:hit ? hit.ids : [], poids:f.size};
+    const hit = photoMatch(levels, pkey(nom));
+    return {file:f, nom, poids:f.size,
+            cible: hit ? hit.label : null,
+            rank: hit ? hit.rank : 99,
+            vises: hit ? hit.ids : [],      // ce que le nom désigne
+            ids: []};                        // ce qui lui restera après arbitrage
   });
-  // Deux fichiers qui visent le même item : le dernier écraserait le premier.
-  // On compare les items visés, pas les noms de fichier (« Juno-106 » et
-  // « Roland Juno-106 » désignent le même synthé).
-  const parItem = {};
-  lignes.forEach(l=>l.ids.forEach(id=>{ parItem[id] = (parItem[id]||0)+1; }));
-  lignes.forEach(l=>{ l.doublon = l.ids.some(id=>parItem[id] > 1); });
+
+  /* Arbitrage : le fichier le plus précis l'emporte.
+     « XLR 3m.jpg » et « Cordial XLR.jpg » dans le même lot, ce n'est
+     pas un conflit mais une hiérarchie : les câbles de 3 m prennent
+     leur photo dédiée, les autres Cordial XLR la générique. Sans
+     cette règle, l'ordre de traitement déciderait à ta place. */
+  const prisPar = new Map();                 // id -> niveau qui l'a pris
+  lignes.filter(l=>l.vises.length)
+        .sort((a,b)=>a.rank - b.rank)
+        .forEach(l=>{
+    const perdus = [];
+    l.vises.forEach(id=>{
+      if(!prisPar.has(id)){ prisPar.set(id, l.rank); l.ids.push(id); }
+      else perdus.push(prisPar.get(id));
+    });
+    l.affine  = perdus.filter(r=>r < l.rank).length;   // repris par plus précis : normal
+    l.doublon = perdus.filter(r=>r === l.rank).length; // deux fichiers au même niveau : conflit
+  });
 
   const ok = lignes.filter(l=>l.ids.length);
   photoPlan = {lignes, nItems: ok.reduce((n,l)=>n+l.ids.length, 0), nFiles: ok.length};
 
   const sansPhoto = db.items.filter(i=>!i.photo).length;
-  const apercu = lignes.slice(0,80).map(l=>`<tr class="${l.ids.length?'':'csv-err'}">
+  const nLarge = ok.filter(l=>l.rank >= PH_WIDE).length;
+  const nVides = lignes.filter(l=>l.vises.length && !l.ids.length).length;
+
+  const apercu = lignes.slice(0,80).map(l=>{
+    if(!l.vises.length) return `<tr class="csv-err"><td>${esc(l.nom)}</td>
+      <td><span class="tag hs">nothing matches that name</span></td>
+      <td class="muted">${Math.round(l.poids/1024)} Ko</td></tr>`;
+    const large = l.rank >= PH_WIDE;
+    return `<tr class="${l.ids.length?'':'csv-warn'}">
       <td>${esc(l.nom)}</td>
-      <td>${l.ids.length
-        ? `${esc(l.cible)} <span class="tag dispo">${l.ids.length} cop${l.ids.length>1?'ies':'y'}</span>`
-          + (l.doublon ? ' <span class="tag attente">⚠ several files target this item</span>' : '')
-        : '<span class="tag hs">no item with that name</span>'}</td>
-      <td class="muted">${Math.round(l.poids/1024)} Ko</td>
-    </tr>`).join("");
+      <td>${esc(l.cible)}
+        <span class="tag ${large?'attente':'dispo'}">${l.ids.length} item${l.ids.length===1?'':'s'}</span>
+        <span class="muted">${PH_RANKS[l.rank]}</span>
+        ${l.affine ? `<span class="muted">· ${l.affine} covered by a more specific file</span>` : ''}
+        ${l.doublon ? ' <span class="tag hs">⚠ another file targets the same items</span>' : ''}
+        ${!l.ids.length ? ' <span class="tag pinactif">nothing left to cover</span>' : ''}</td>
+      <td class="muted">${Math.round(l.poids/1024)} Ko</td></tr>`;
+  }).join("");
 
   document.getElementById('ph-preview').innerHTML = `
     <div class="csv-sum">
       <span class="tag dispo">${photoPlan.nFiles} photo(s) matched</span>
       <span class="tag cat">${photoPlan.nItems} item(s) covered</span>
-      ${lignes.length-photoPlan.nFiles ? `<span class="tag hs">${lignes.length-photoPlan.nFiles} unmatched</span>`:''}
-      ${lignes.some(l=>l.doublon) ? `<span class="tag attente">${lignes.filter(l=>l.doublon).length} duplicate(s)</span>`:''}
+      ${nLarge ? `<span class="tag attente">${nLarge} wide match(es)</span>`:''}
+      ${lignes.length - ok.length - nVides ? `<span class="tag hs">${lignes.length - ok.length - nVides} unmatched</span>`:''}
+      ${lignes.some(l=>l.doublon) ? `<span class="tag hs">${lignes.filter(l=>l.doublon).length} conflict(s)</span>`:''}
       <span class="muted">· ${sansPhoto} item(s) still without a photo</span>
     </div>
+    ${nLarge ? `<div class="alert">A wide match replaces the photo of every item it covers.
+      Check the counts below before uploading.</div>` : ''}
     <div class="csv-table"><table><thead><tr><th>File</th><th>Match</th><th>Size</th></tr></thead>
     <tbody>${apercu}</tbody></table>
     ${lignes.length>80?`<div class="muted" style="padding:8px">… and ${lignes.length-80} more</div>`:''}</div>`;
@@ -114,7 +185,13 @@ function onPhotosChosen(input){
 async function runPhotoImport(){
   if(!photoPlan || !photoPlan.nFiles) return;
   const lignes = photoPlan.lignes.filter(l=>l.ids.length);
-  if(!confirm(`Upload ${lignes.length} photo(s) and cover ${photoPlan.nItems} item(s)?\n\nExisting photos on those items will be replaced.`)) return;
+  const larges = lignes.filter(l=>l.rank >= PH_WIDE);
+  const detail = larges.length
+    ? `\n\nWide matches:\n` + larges.slice(0,8).map(l=>`  • ${l.cible} → ${l.ids.length} items`).join('\n')
+      + (larges.length>8 ? `\n  … and ${larges.length-8} more` : '')
+    : '';
+  if(!confirm(`Upload ${lignes.length} photo(s) and cover ${photoPlan.nItems} item(s)?`
+    + `\n\nExisting photos on those items will be replaced.` + detail)) return;
 
   const bar = document.getElementById('ph-preview');
   let faits = 0, echecs = [];
@@ -138,18 +215,39 @@ async function runPhotoImport(){
 
 /* Liste des noms de fichiers attendus, pour préparer la séance photo */
 function listeNomsPhotos(){
-  const vus = new Map();
+  /* Deux sections : un nom par mod\u00e8le, puis un nom par marque dans
+     chaque sous-cat\u00e9gorie. C'est cette seconde liste qui sert aux
+     c\u00e2bles, o\u00f9 une photo couvre toutes les longueurs d'une marque. */
+  const parModele = new Map(), parMarqueSub = new Map();
+
   db.items.forEach(i=>{
-    const base = groupKeyOf(i.name) || i.name;
-    const k = pkey(i.brand + ' ' + base);
-    if(!vus.has(k)) vus.set(k, {brand:i.brand||'', base, n:0, photo:!!i.photo, cat:catPath(i)});
-    const e = vus.get(k); e.n++; if(i.photo) e.photo = true;
+    const base  = groupKeyOf(i.name) || i.name;
+    const brand = (i.brand||'').trim();
+    const cat   = catPath(i);
+
+    const km = pkey(brand + ' ' + base);
+    if(!parModele.has(km)) parModele.set(km, {nom:`${brand} ${base}`.trim(), n:0, photo:false, cat, scope:'model'});
+    const m = parModele.get(km); m.n++; if(i.photo) m.photo = true;
+
+    const subL = subLabel(i.cat, i.subcat) || '';
+    if(subL){
+      const ks = pkey(brand + ' ' + subL);
+      if(!parMarqueSub.has(ks)) parMarqueSub.set(ks, {nom:`${brand} ${subL}`.trim(), n:0, photo:false, cat, scope:'brand + sub-category'});
+      const s = parMarqueSub.get(ks); s.n++; if(i.photo) s.photo = true;
+    }
   });
+
   const esc2 = v => `"${String(v==null?'':v).replace(/"/g,'""')}"`;
-  const lignes = [...vus.values()]
-    .sort((a,b)=> a.cat.localeCompare(b.cat) || a.base.localeCompare(b.base))
-    .map(e=>[`${e.brand} ${e.base}`.trim() + '.jpg', e.brand, e.base, e.n, e.photo?'yes':'no', e.cat].map(esc2).join(';'));
-  const head = 'Expected file name;Manufacturer;Model;Copies;Photo already set;Category';
+  const ligne = e => [e.nom + '.jpg', e.scope, e.n, e.photo?'some':'no', e.cat].map(esc2).join(';');
+  const tri = (a,b)=> a.cat.localeCompare(b.cat) || a.nom.localeCompare(b.nom);
+
+  // Une marque qui n'a qu'un seul item dans sa sous-cat\u00e9gorie n'a pas
+  // besoin d'une ligne \u00ab large \u00bb : son nom de mod\u00e8le suffit.
+  const lignes = [
+    ...[...parModele.values()].sort(tri).map(ligne),
+    ...[...parMarqueSub.values()].filter(e=>e.n > 1).sort(tri).map(ligne)
+  ];
+  const head = 'Expected file name;Scope;Items covered;Photo already set;Category';
   const blob = new Blob(["\ufeff" + [head, ...lignes].join('\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
