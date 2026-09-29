@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.12.1';
+const APP_VERSION = '1.12.2';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','rep','settings'];
@@ -106,15 +106,38 @@ function exportJSON(){
    — les fichiers de sauvegarde automatique, issus de la base (people, item_id, user_id) */
 function normalizeImport(d){
   const users = d.users || d.people || [];
-  const locations = (d.locations||[]).map(l=>typeof l==='string'?{name:l,parent:null}:{name:l.name,parent:l.parent||null});
+
+  /* Les emplacements ont gagné des colonnes en v1.11 et v1.12 (type,
+     adresse détaillée, archivage). Une restauration doit les rendre :
+     sans ça on récupère un inventaire complet mais des lieux nus.
+     `address` est l'ancien champ libre, encore présent dans les
+     sauvegardes antérieures à la migration 013. */
+  const locations = (d.locations||[]).map(l=>{
+    if(typeof l === 'string') return {name:l, parent:null, kind:'site'};
+    return {
+      name: l.name,
+      parent: l.parent || null,
+      kind: l.kind || (l.parent ? 'room' : 'site'),
+      street: l.street || l.address || null,
+      zip: l.zip || null,
+      city: l.city || null,
+      extra: l.extra || null,
+      phone: l.phone || null,
+      archived: !!l.archived
+    };
+  }).filter(l=>l.name);
+
   const history = (d.history||[]).map(h=>({
     itemId: h.itemId || h.item_id,
     type: h.type,
     date: h.date,
     detail: h.detail||"",
     userId: h.userId || h.user_id || null,
-    cond: h.cond || null
+    cond: h.cond || null,
+    // Qui a fait quoi : sans ce champ, l'historique restauré devient anonyme.
+    actorName: h.actorName || h.actor_name || null
   })).filter(h=>h.itemId && h.type);
+
   return {items:d.items||[], users, locations, history, projects:d.projects||[]};
 }
 function importJSON(inp){
@@ -141,10 +164,15 @@ function importJSON(inp){
       })));
       if(d.projects.length) await apiUpsertProjects(d.projects.map(p=>({
         id:p.id,name:p.name,description:p.description||"",status:p.status||'inactif',
-        item_ids:p.item_ids||[],prep:p.prep||{},last_used:p.last_used||null
+        item_ids:p.item_ids||[],prep:p.prep||{},last_used:p.last_used||null,
+        // Destination, dates et archivage : ajoutés en v1.11, ils étaient
+        // perdus à la restauration jusqu'ici.
+        loc_name:p.loc_name||null,starts_on:p.starts_on||null,
+        ends_on:p.ends_on||null,archived:!!p.archived
       })));
       if(d.history.length) await apiInsertHistoryRows(d.history.map(h=>({
-        item_id:h.itemId,type:h.type,date:h.date,detail:h.detail,user_id:h.userId,cond:h.cond?normCond(h.cond):null
+        item_id:h.itemId,type:h.type,date:h.date,detail:h.detail,user_id:h.userId,
+        cond:h.cond?normCond(h.cond):null,actor_name:h.actorName||null
       })));
       await loadAll(); render();
       toast(`Import complete — ${d.items.length} item(s) restored.`, 'ok', null, null, 5000);
