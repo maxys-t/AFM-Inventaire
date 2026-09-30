@@ -1,7 +1,7 @@
 /* ============================================================
    VUE — Utilisateurs (réservée aux administrateurs)
-   Inscrire un email = autoriser cette personne à se connecter.
-   Tout se fait ici : aucun passage par Supabase nécessaire.
+   Inviter une adresse crée le compte et envoie le mail de mot de
+   passe, via la fonction serveur invite-user (v1.12).
    ============================================================ */
 
 const ROLES = {admin:"Administrator", stagiaire:"Assistant"};
