@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.12.2';
+const APP_VERSION = '1.13.0';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','rep','settings'];
@@ -19,9 +19,22 @@ function show(v){
   }
   // L'inventaire a besoin de plus de largeur que les autres vues.
   document.body.classList.toggle('wideview', v === 'inv');
+  syncStickyOffset();
   try{ window.scrollTo(0,0); }catch(e){}
   render();
 }
+
+/* L'en-tête du site est collant : les en-têtes du tableau doivent se
+   coller JUSTE EN DESSOUS, sinon ils passent derrière. Sa hauteur
+   varie avec la largeur de la fenêtre (les boutons passent à la
+   ligne), donc on la mesure au lieu de la deviner. */
+function syncStickyOffset(){
+  const h = document.querySelector('header');
+  const px = h ? Math.round(h.getBoundingClientRect().height) : 56;
+  document.documentElement.style.setProperty('--hdr', px + 'px');
+}
+window.addEventListener('resize', syncStickyOffset);
+window.addEventListener('load', syncStickyOffset);
 function curView(){ const b = document.querySelector('nav button.active'); return b?b.dataset.v:'dash'; }
 function render(){
   if(typeof updateTrashBadge==='function') updateTrashBadge();
@@ -187,7 +200,7 @@ function applyLabels(){
   document.title = LABELS.appTitle;
   document.querySelector('header h1').textContent = LABELS.appTitle;
   const v = document.getElementById('appVersion');
-  if(v){ v.textContent = 'v' + APP_VERSION; v.title = 'Version en ligne'; }
+  if(v){ v.textContent = 'v' + APP_VERSION; v.title = 'Version currently online'; }
   document.querySelectorAll('nav button').forEach(b=>{ if(LABELS.nav[b.dataset.v]) b.textContent = LABELS.nav[b.dataset.v]; });
 }
 applyLabels();
