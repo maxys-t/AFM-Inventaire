@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.13.1';
+const APP_VERSION = '1.14.0';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','rep','settings'];
