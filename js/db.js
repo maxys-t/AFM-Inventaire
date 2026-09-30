@@ -17,7 +17,7 @@ function getCfg(){
 function saveCfg(){
   const url = document.getElementById('cfg-url').value.trim().replace(/\/$/,"");
   const key = document.getElementById('cfg-key').value.trim();
-  if(!url || !key){ alert("Les deux champs sont obligatoires."); return; }
+  if(!url || !key){ alert("Both fields are required."); return; }
   localStorage.setItem('sbCfg', JSON.stringify({url,key}));
   init();
 }
@@ -266,7 +266,7 @@ function item(id){ return db.items.find(i=>i.id===id); }
 function project(id){ return db.projects.find(p=>p.id===id); }
 function userName(id){ const u = db.users.find(u=>u.id===id); return u?u.name:"?"; }
 function outBy(i){
-  if(i.out && i.out.projectId){ const p = project(i.out.projectId); return "🎪 " + (p?p.name:"Projet"); }
+  if(i.out && i.out.projectId){ const p = project(i.out.projectId); return "🎪 " + (p?p.name:"Project"); }
   return i.out ? userName(i.out.userId) : "";
 }
 function projItems(p){ return (p.item_ids||[]).map(id=>item(id)).filter(Boolean); }
