@@ -213,19 +213,32 @@ function renderInv(){
     groups.get(k).push(i);
   });
 
+  /* Vue par défaut : l'ordre est celui de config.js, famille par
+     famille, et non l'ordre d'importation du fichier Excel d'origine.
+     Un séparateur marque chaque changement de famille — c'est ce qui
+     rend une liste de 648 items parcourable. */
+  const ordonnes = [...rows].sort(byCatOrder);
+
   const done = new Set();
-  let body = "";
-  rows.forEach(i=>{
+  let body = "", derniereFamille = null;
+  ordonnes.forEach(i=>{
+    // On construit d'abord la ligne : un exemplaire déjà affiché dans
+    // son groupe n'en produit aucune, et ne doit donc pas déclencher
+    // un séparateur de famille resté vide.
+    let ligne = "";
     const k = groupKeyOf(i.name);
     if(k && groups.get(k).length > 1){
       if(done.has(k)) return;
       done.add(k);
       const open = expanded.has(k) || searching;
-      body += groupRow(k, groups.get(k), open);
-      if(open) body += groups.get(k).map(x=>itemRow(x, true)).join("");
+      ligne = groupRow(k, groups.get(k), open)
+            + (open ? groups.get(k).map(x=>itemRow(x, true)).join("") : "");
     }else{
-      body += itemRow(i, false);
+      ligne = itemRow(i, false);
     }
+    const fam = catLabel(i.cat) || '—';
+    if(fam !== derniereFamille){ derniereFamille = fam; body += sepRow(fam, span); }
+    body += ligne;
   });
 
   const allIds = rows.map(i=>i.id);
