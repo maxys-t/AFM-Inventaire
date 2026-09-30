@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.13.0';
+const APP_VERSION = '1.13.1';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','rep','settings'];
@@ -24,17 +24,23 @@ function show(v){
   render();
 }
 
-/* L'en-tête du site est collant : les en-têtes du tableau doivent se
-   coller JUSTE EN DESSOUS, sinon ils passent derrière. Sa hauteur
-   varie avec la largeur de la fenêtre (les boutons passent à la
-   ligne), donc on la mesure au lieu de la deviner. */
-function syncStickyOffset(){
-  const h = document.querySelector('header');
-  const px = h ? Math.round(h.getBoundingClientRect().height) : 56;
-  document.documentElement.style.setProperty('--hdr', px + 'px');
+/* Le tableau d'inventaire remplit la hauteur restante de l'écran et
+   défile dans son propre cadre, comme un tableur. C'est ce qui permet
+   aux en-têtes de coller : `position: sticky` se cale sur le conteneur
+   qui défile, et il faut donc que ce conteneur ait une hauteur bornée.
+   Elle dépend de tout ce qui le précède (en-tête, navigation, filtres),
+   dont la hauteur change avec la largeur de la fenêtre : on la mesure
+   plutôt que de la deviner. */
+function syncInvHeight(){
+  const w = document.querySelector('#invList .invwrap');
+  if(!w) return;
+  const haut = w.getBoundingClientRect().top;
+  const dispo = window.innerHeight - haut - 20;   // marge pour la barre de sélection
+  w.style.maxHeight = Math.max(260, Math.round(dispo)) + 'px';
 }
-window.addEventListener('resize', syncStickyOffset);
-window.addEventListener('load', syncStickyOffset);
+function syncStickyOffset(){ syncInvHeight(); }   // ancien nom, conservé
+window.addEventListener('resize', syncInvHeight);
+window.addEventListener('load', syncInvHeight);
 function curView(){ const b = document.querySelector('nav button.active'); return b?b.dataset.v:'dash'; }
 function render(){
   if(typeof updateTrashBadge==='function') updateTrashBadge();
@@ -91,7 +97,12 @@ window.addEventListener('unhandledrejection', e=>{ console.warn('Action interrup
    Règle générale : une seule fenêtre à la fois (open_).
    Exception : les fenêtres imbriquées, comme le recadrage ouvert
    depuis le formulaire d'un item, s'empilent par-dessus (openOver). */
-function close_(id){ document.getElementById(id).classList.remove('open','stacked'); }
+function close_(id){
+  // Refermer la fenêtre de sortie annule l'autorisation donnée pour du
+  // matériel abîmé : elle ne vaut que pour l'opération en cours.
+  if(id === 'ovOut' && typeof allowDamaged !== 'undefined') allowDamaged = false;
+  document.getElementById(id).classList.remove('open','stacked');
+}
 function open_(id){
   document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open','stacked'));
   document.getElementById(id).classList.add('open');
