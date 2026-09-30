@@ -31,6 +31,28 @@ function overdue(i){ return !!(i.out && i.out.due && new Date(i.out.due+'T23:59:
 function daysLate(i){ return Math.floor((Date.now()-new Date(i.out.due+'T23:59:59'))/864e5)+1; }
 
 /* --- Catégories à deux niveaux --- */
+/* --- Ordre d'affichage ---
+   L'ordre d'écriture des familles et des sous-catégories dans
+   config.js EST l'ordre d'affichage. Réordonner le fichier suffit
+   à réordonner l'application : inventaire, filtres, sélecteur de
+   projet. Une famille inconnue passe en fin de liste plutôt que de
+   faire disparaître ses items. */
+function catIndex(c){
+  const i = Object.keys(CATS).indexOf(c);
+  return i === -1 ? 999 : i;
+}
+function subIndex(c, s){
+  const i = Object.keys(subsOf(c)).indexOf(s);
+  return i === -1 ? 999 : i;
+}
+/* Comparateur de la vue par défaut : famille, puis sous-catégorie,
+   puis nom. */
+function byCatOrder(a, b){
+  return catIndex(a.cat) - catIndex(b.cat)
+      || subIndex(a.cat, a.subcat) - subIndex(b.cat, b.subcat)
+      || itemTitleText(a).localeCompare(itemTitleText(b), 'fr');
+}
+
 function catLabel(c){ return (CATS[c] && CATS[c].label) || c || '—'; }
 function subsOf(c){ return (CATS[c] && CATS[c].subs) || {}; }
 function subLabel(c,s){ const x = subsOf(c)[s]; return x ? x.label : (s || '—'); }
