@@ -361,10 +361,27 @@ function statusTag(i){
   const od = overdue(i);
   return `<span class="tag ${od?'hs':'sorti'}">Out · ${daysSince(i.out.date)}d${od?' ⚠️':''}</span>`;
 }
+/* ---- Un item abîmé ne sort pas ----
+   Laisser partir en tournée du matériel signalé en réparation, c'est
+   découvrir le problème sur place. Le retour, lui, reste toujours
+   possible : un item déjà dehors doit pouvoir rentrer quel que soit
+   son état. */
+function checkoutBlockReason(i){
+  if(i.status !== 'dispo') return null;
+  if(i.cond === 'attente')    return "flagged as needing repair";
+  if(i.cond === 'reparation') return "currently at the repair shop";
+  if(i.cond === 'hs')         return "marked out of service";
+  return null;
+}
+function canCheckout(i){ return i.status === 'dispo' && !checkoutBlockReason(i); }
+
 function actionBtn(i){
-  return i.status==='dispo'
-    ? `<button class="btn small" onclick="openCheckout('${i.id}')">Check out</button>`
-    : `<button class="btn small ok" onclick="openCheckin('${i.id}')">Check in</button>`;
+  if(i.status !== 'dispo')
+    return `<button class="btn small ok" onclick="openCheckin('${i.id}')">Check in</button>`;
+  const why = checkoutBlockReason(i);
+  if(why)
+    return `<button class="btn small sec" disabled title="Cannot be checked out — ${esc(why)}">Check out</button>`;
+  return `<button class="btn small" onclick="openCheckout('${i.id}')">Check out</button>`;
 }
 
 /* ================= SÉLECTION MULTIPLE ================= */
@@ -415,7 +432,7 @@ function openBulkModal(title, label, optionsHtml, action, second){
 }
 function fillBulkSub(){
   const c = document.getElementById('bulk-select').value;
-  document.getElementById('bulk-select2').innerHTML = '<option value="">— choisir —</option>' + subOptions(c);
+  document.getElementById('bulk-select2').innerHTML = '<option value="">— choose —</option>' + subOptions(c);
 }
 async function doBulk(){
   const v = document.getElementById('bulk-select').value;
@@ -517,8 +534,8 @@ function showPhotoPreview(src){
 }
 function openItemForm(id){
   editingId = id||null;
-  document.getElementById('itemFormTitle').textContent = id?'Modifier l\'item':'Ajouter un item';
-  document.getElementById('i-cat').innerHTML = '<option value="">— choisir —</option>' + catOptions();
+  document.getElementById('itemFormTitle').textContent = id?'Edit item':'Add item';
+  document.getElementById('i-cat').innerHTML = '<option value="">— choose —</option>' + catOptions();
   document.getElementById('i-home').innerHTML = homeOptions();   // jamais un off-site : un item n'habite pas au Trianon
   const i = id?item(id):null;
   document.getElementById('i-name').value = i?i.name:"";
@@ -547,7 +564,7 @@ function fillSubForm(sel){
   const el = document.getElementById('i-subcat');
   if(!c){ el.innerHTML = '<option value="">— pick a category first —</option>'; el.disabled = true; return; }
   el.disabled = false;
-  el.innerHTML = '<option value="">— choisir —</option>' + subOptions(c, sel);
+  el.innerHTML = '<option value="">— choose —</option>' + subOptions(c, sel);
   if(sel) el.value = sel;
 }
 
@@ -627,15 +644,26 @@ async function deleteItem(id){
 let actionId = null, bulkMode = false;
 
 function openCheckout(id){
+  const i = item(id);
+  const why = i ? checkoutBlockReason(i) : null;
+  if(why){ toast(`${itemTitleText(i)} cannot be checked out — ${why}.`, 'error', null, null, 6000); return; }
   actionId = id; bulkMode = false;
-  document.getElementById('out-item').textContent = item(id).name;
+  document.getElementById('out-item').textContent = i.name;
   prepCheckoutForm();
 }
 function openBulkCheckout(){
-  const n = selItems().filter(i=>i.status==='dispo').length;
-  if(!n){ toast("No available item in the selection.", 'error'); return; }
+  const dispo = selItems().filter(i=>i.status==='dispo');
+  const ok = dispo.filter(canCheckout);
+  const bloques = dispo.length - ok.length;
+  if(!ok.length){
+    toast(bloques ? "Every selected item is flagged for repair." : "No available item in the selection.",
+          'error', null, null, 6000);
+    return;
+  }
+  // On ne sort que ce qui peut sortir, et on le dit plutôt que de le taire.
+  if(bloques) toast(`${bloques} item(s) left out — flagged for repair.`, 'info', null, null, 6000);
   actionId = null; bulkMode = true;
-  document.getElementById('out-item').textContent = `${n} item(s)`;
+  document.getElementById('out-item').textContent = `${ok.length} item(s)`;
   prepCheckoutForm();
 }
 function prepCheckoutForm(){
@@ -661,7 +689,11 @@ async function doCheckout(){
   const due = document.getElementById('out-due').value || null;
   const alertOn = document.getElementById('out-alert').checked;
   const userId = await borrowerId(who);
-  const targets = bulkMode ? selItems().filter(i=>i.status==='dispo') : [item(actionId)];
+  // Dernier filet : l'état a pu changer entre l'ouverture de la fenêtre
+  // et la validation, par exemple depuis un autre poste.
+  const targets = (bulkMode ? selItems().filter(i=>i.status==='dispo') : [item(actionId)])
+                    .filter(i=>i && canCheckout(i));
+  if(!targets.length){ toast("Nothing left to check out — those items are flagged for repair.", 'error'); return; }
   if(!targets.length) return;
 
   const out = {userId, date:now(), reason, due, alertOn};
@@ -735,7 +767,7 @@ async function doCheckin(){
 /* ================= FICHE ITEM ================= */
 function openDetail(id){
   const i = item(id);
-  if(!i){ toast(`Item ${id} introuvable.`, 'error'); return; }
+  if(!i){ toast(`Item ${id} not found.`, 'error'); return; }
   const rows = db.history.filter(h=>h.itemId===id).map(h=>
     `<li>${histIcon(h.type)} ${histText(h)}<div class="when">${fdate(h.date)}${histBy(h)}</div></li>`).join("");
   const outInfo = i.status==='sorti'
@@ -771,7 +803,7 @@ function openDetail(id){
     <div id="qrzone"></div>
     <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">History</h3>
     <ul class="hist">${rows||'<li class="muted">No activity yet</li>'}</ul>
-    <div class="modal-actions"><button class="btn sec" onclick="close_('ovDetail')">Fermer</button></div>`;
+    <div class="modal-actions"><button class="btn sec" onclick="close_('ovDetail')">Close</button></div>`;
   open_('ovDetail');
 }
 
