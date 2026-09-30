@@ -88,7 +88,7 @@ async function addUser(){
 }
 async function delUser(id){
   if(db.items.some(i=>i.status==='sorti'&&i.out.userId===id)){ alert("This borrower still has gear checked out."); return; }
-  if(!confirm("Supprimer cette personne ?")) return;
+  if(!confirm("Remove this borrower?")) return;
   db.users = db.users.filter(u=>u.id!==id);
   renderPeople();
   await apiDeletePerson(id);
