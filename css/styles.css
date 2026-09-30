@@ -711,6 +711,57 @@ td,input,textarea,select,.addr,.mono{-webkit-user-select:text;user-select:text}
 
 /* Un bouton d'action désactivé doit se lire comme désactivé */
 .btn:disabled{opacity:.45;cursor:not-allowed}
+/* ============================================================
+   v1.13.1 — À COLLER À LA FIN DE css/styles.css
+   Ce bloc CORRIGE le bloc v1.13 : garde les deux, celui-ci est
+   plus bas dans le fichier et l'emporte donc sur le précédent.
+   ============================================================ */
+
+/* --- L'inventaire prend tout l'écran ---
+   Plus de largeur maximale : sur un grand moniteur, brider la vue à
+   1380 px laissait un tiers de l'écran noir pendant qu'on faisait
+   défiler un tableau de vingt colonnes. */
+body.wideview main{max-width:100%;padding:12px 20px}
+
+/* --- Le tableau défile dans son propre cadre, comme un tableur ---
+   C'est ce qui règle le débordement ET permet aux en-têtes de coller.
+   `position: sticky` se cale sur le conteneur qui défile : encore
+   faut-il qu'il y en ait un, avec une hauteur bornée. Sa hauteur est
+   calculée en JavaScript (syncInvHeight) pour occuper exactement la
+   place restante sous les filtres. */
+.invwrap{overflow:auto;border-radius:12px}
+.invtable{min-width:100%}
+
+/* Les en-têtes collent au cadre, plus à la page : le décalage --hdr
+   du bloc v1.13 n'a plus lieu d'être. */
+.invtable thead th{position:sticky;top:0;z-index:6;background:var(--panel)}
+.invtable .seprow td{position:sticky;top:31px;z-index:5;background:var(--panel2)}
+
+/* Le panneau ne fait plus que cadrer : c'est le tableau qui défile. */
+body.wideview #v-inv .panel{padding:10px}
+
+@media(max-width:1100px){
+  /* On garde les en-têtes collants aussi sur petit écran : le cadre
+     défile dans les deux sens, donc sticky fonctionne toujours. */
+  .invtable thead th{position:sticky;top:0}
+  .invtable .seprow td{position:sticky;top:31px}
+}
+@media(max-width:700px){
+  body.wideview main{padding:10px}
+  .invwrap{max-height:none !important;overflow:visible}
+  .invtable thead th,.invtable .seprow td{position:static}
+}
+
+/* --- Bouton d'une sortie à confirmer --- */
+.btn.warn{background:rgba(255,149,0,.16);color:var(--warn)}
+.btn.warn:hover{background:rgba(255,149,0,.26)}
+
+/* --- Fenêtre d'avertissement sur le matériel abîmé --- */
+#ovWarn .modal{max-width:560px}
+.warnlist{list-style:none;margin:0 0 4px;max-height:280px;overflow-y:auto}
+.warnlist li{padding:7px 0;border-bottom:1px solid var(--border);font-size:14px}
+.warnlist li:last-child{border-bottom:none}
+.warnlist .mono{margin:0 6px}
 
 
 
