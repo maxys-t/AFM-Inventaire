@@ -37,7 +37,7 @@ function renderRep(){
   groups.forEach(([cond,title])=>{
     const rows = db.items.filter(i=>i.cond===cond);
     html += `<div class="panel"><h2>${title} (${rows.length})</h2>`;
-    if(!rows.length){ html += '<div class="muted">Aucun item.</div></div>'; return; }
+    if(!rows.length){ html += '<div class="muted">No item.</div></div>'; return; }
     html += `<table><thead><tr><th>Item</th><th>Since</th><th>Location</th><th>Details</th><th></th></tr></thead><tbody>`;
     rows.forEach(i=>{
       const since = repSince(i);
