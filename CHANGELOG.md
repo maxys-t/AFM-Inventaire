@@ -1,5 +1,136 @@
 # Changelog
 
+## [1.13.0] — 2026-09-30
+ 
+### Ajouté
+ 
+- **Blocage de la sortie d'un item signalé en réparation.** Un item en
+  « needs repair », « in repair » ou « out of service » ne peut plus être
+  sorti ; son bouton est grisé et l'infobulle en donne la raison. Sur une
+  sortie groupée, les items concernés sont écartés du lot et leur nombre est
+  annoncé.
+- **En-têtes collants** : noms de colonnes et séparateurs de catégorie restent
+  visibles pendant le défilement de l'inventaire.
+### Modifié
+ 
+- **La recherche occupe sa propre ligne**, au-dessus des filtres, sur toute la
+  largeur. Elle se perdait auparavant entre sept menus déroulants.
+- **Le bouton « + Add item » quitte la barre de filtres** pour rejoindre la
+  recherche. Il modifie l'inventaire, alors que les filtres ne font que
+  changer l'affichage : les mélanger invitait à la confusion.
+- La sélection de texte est désactivée sur les boutons, la navigation et les
+  en-têtes, et conservée sur les cellules du tableau et les champs de saisie.
+- Le défilement horizontal du tableau n'est plus actif qu'en dessous de
+  1100 px de large.
+### Corrigé
+ 
+- Derniers libellés restés en français : titre du formulaire d'item, boutons
+  « Fermer », messages de confirmation de suppression, « — choisir — » dans
+  les menus déroulants. Un test automatique vérifie désormais qu'aucun ne
+  réapparaisse.
+- Commentaire obsolète dans `views-users.js`, qui affirmait encore qu'aucun
+  passage par Supabase n'était nécessaire pour créer un compte — faux depuis
+  la v1.12.
+### Note technique
+ 
+Le conteneur à défilement horizontal introduit en v1.10 neutralisait
+`position: sticky` : dès qu'un axe de défilement cesse d'être « visible », le
+navigateur rend l'élément défilant sur les deux axes, et les en-têtes se
+collent au conteneur plutôt qu'à la page. Le décalage vertical est mesuré en
+JavaScript, la hauteur de l'en-tête du site variant selon la largeur de fenêtre.
+ 
+---
+ 
+## [1.12.2] — 2026-09-29
+ 
+### Corrigé
+ 
+- **La restauration JSON ne perd plus de données.** `normalizeImport()` et les
+  écritures associées n'avaient pas suivi les évolutions des v1.11 et v1.12.
+  Une restauration rendait l'inventaire complet mais perdait :
+  - les adresses des lieux et leur type (site, salle, off-site) ;
+  - les archivages de lieux et de projets ;
+  - la destination et les dates des projets ;
+  - l'auteur des lignes d'historique.
+- L'import accepte trois formats : l'export de l'application, les sauvegardes
+  nocturnes du dépôt, et les sauvegardes antérieures à la migration 013 —
+  l'adresse en champ libre y est reversée dans le champ « rue » au lieu d'être
+  jetée.
+### Note
+ 
+Les fichiers de sauvegarde, eux, étaient complets : le script nocturne lit
+toutes les colonnes. Seul le chemin de relecture dans l'application était en
+cause. Ce chemin est désormais couvert par 27 vérifications automatiques.
+ 
+---
+ 
+## [1.12.1] — 2026-09-28
+ 
+### Ajouté
+ 
+- **Deux nouveaux niveaux de correspondance pour l'import groupé de photos** :
+  `Cordial XLR.jpg` habille tous les câbles XLR d'une marque quelle que soit
+  leur longueur, `XLR.jpg` toute la sous-catégorie. La sous-catégorie se
+  désigne par son libellé ou par son code.
+- **Arbitrage par précision** : le fichier le plus précis l'emporte. Déposer
+  `Cordial XLR.jpg` et `XLR 3m.jpg` ensemble n'est pas un conflit — les câbles
+  de 3 m gardent leur photo dédiée, les autres prennent la générique. Deux
+  fichiers de même niveau visant les mêmes items restent signalés comme
+  conflit.
+### Modifié
+ 
+- L'aperçu avant envoi indique le niveau de correspondance et le nombre exact
+  d'items couverts. Une correspondance large est signalée en orange, avec un
+  avertissement en tête de tableau et un récapitulatif dans la confirmation.
+- L'export « Expected file names » liste deux séries : un nom par modèle, et un
+  nom par marque et sous-catégorie, avec le nombre d'items couverts.
+---
+ 
+## [1.12.0] — 2026-09-25
+ 
+### Ajouté
+ 
+- **Connexion par mot de passe.** Écran email + mot de passe, avec
+  « Forgot password? » en secours. Changement du mot de passe depuis
+  Settings → Account.
+- **Invitations** (nouvelle Edge Function `invite-user`). Un administrateur
+  invite une adresse depuis Settings → Users ; la personne reçoit un mail et
+  choisit son mot de passe. La fonction revérifie côté serveur que l'appelant
+  est administrateur avant de créer quoi que ce soit.
+- **Adresses détaillées** (migration `013`) : rue, complément, code postal,
+  ville, et téléphone de contact sur les lieux off-site. Saisie dans une
+  fenêtre dédiée. Le mail de livraison sort l'adresse sur plusieurs lignes.
+- **« Check in all »** dans l'onglet Borrowers : rentre tout le matériel d'une
+  personne en une fois, via la même fenêtre d'état que le retour groupé.
+### Modifié
+ 
+- **Le lien magique disparaît de l'interface.** Il n'y a plus d'inscription :
+  un compte n'existe que parce qu'un administrateur l'a créé.
+- **L'onglet Borrowers affiche un tableau** au lieu d'une rangée de pastilles :
+  item, identifiant, sorti depuis, retour prévu, destination, et un bouton de
+  retour individuel. Les retards sont surlignés.
+- Le message d'échec de connexion reste volontairement vague : distinguer
+  « mauvais mot de passe » de « adresse inconnue » révélerait qui travaille au
+  studio à n'importe quel visiteur.
+- Le retour groupé depuis l'onglet Borrowers n'utilise plus la sélection de
+  l'inventaire, qui reste intacte.
+### Sécurité
+ 
+- La création de comptes passe par du code serveur : elle exige la clé secrète
+  Supabase, qui n'a pas sa place dans un site statique.
+- Réglages à activer côté Supabase : longueur minimale de 10 caractères,
+  exigences de caractères, et surtout **désactivation de l'inscription
+  publique** — c'est ce dernier point qui ferme réellement la porte.
+- La détection des mots de passe compromis (HaveIBeenPwned) est réservée au
+  plan Pro de Supabase et reste donc désactivée. La longueur minimale compense
+  le gros du risque ; subsiste celui d'un mot de passe réutilisé depuis une
+  fuite survenue ailleurs.
+### Notes de migration
+ 
+L'ordre compte : se donner un mot de passe et vérifier qu'il fonctionne
+**avant** de couper l'inscription publique. Le fichier `A-LIRE.txt` détaille
+la marche à suivre et la procédure de secours en cas de blocage.
+
 ## [1.11.0] — 2026-09-25
 
 ### Ajouté
