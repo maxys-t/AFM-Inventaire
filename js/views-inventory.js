@@ -183,7 +183,8 @@ function renderInv(){
   const wrap = document.getElementById('invList');
   if(!rows.length){
     wrap.innerHTML = '<div class="empty">No item matches.</div>';
-    renderBulkBar(); return;
+    renderBulkBar();
+  if(typeof syncInvHeight === 'function') syncInvHeight(); return;
   }
 
   const span = invColDefs().length + 2;
@@ -199,7 +200,8 @@ function renderInv(){
     });
     wrap.innerHTML = `<div class="invwrap"><table class="invtable">
       <thead>${invHeadHtml(allSelF)}</thead><tbody>${body}</tbody></table></div>`;
-    renderBulkBar(); return;
+    renderBulkBar();
+  if(typeof syncInvHeight === 'function') syncInvHeight(); return;
   }
 
   // Regroupement des exemplaires d'un même modèle (« … #1 », « … #2 »)
@@ -231,6 +233,7 @@ function renderInv(){
   wrap.innerHTML = `<div class="invwrap"><table class="invtable">
     <thead>${invHeadHtml(allSel)}</thead><tbody>${body}</tbody></table></div>`;
   renderBulkBar();
+  if(typeof syncInvHeight === 'function') syncInvHeight();
 }
 
 /* Résumé de ce qui est affiché : nombre d'items et valeur d'achat cumulée */
@@ -380,7 +383,8 @@ function actionBtn(i){
     return `<button class="btn small ok" onclick="openCheckin('${i.id}')">Check in</button>`;
   const why = checkoutBlockReason(i);
   if(why)
-    return `<button class="btn small sec" disabled title="Cannot be checked out — ${esc(why)}">Check out</button>`;
+    return `<button class="btn small warn" onclick="openCheckout('${i.id}')"
+              title="${esc(why)} — you will be asked to confirm">Check out ⚠️</button>`;
   return `<button class="btn small" onclick="openCheckout('${i.id}')">Check out</button>`;
 }
 
@@ -643,28 +647,82 @@ async function deleteItem(id){
 /* ================= CHECK-OUT / CHECK-IN ================= */
 let actionId = null, bulkMode = false;
 
+/* ---- Sortie d'un item abîmé : un avertissement, pas un mur ----
+   Interdire complètement serait faux : il arrive qu'on emporte
+   sciemment du matériel imparfait. Mais le laisser passer en silence
+   l'est tout autant. On demande donc, en mettant en avant l'option
+   qui protège — retirer de la sélection. */
+let damagedWarn = null;      // {ids, abimes, mode} en attente de décision
+let allowDamaged = false;    // décision prise pour la sortie en cours
+
 function openCheckout(id){
   const i = item(id);
-  const why = i ? checkoutBlockReason(i) : null;
-  if(why){ toast(`${itemTitleText(i)} cannot be checked out — ${why}.`, 'error', null, null, 6000); return; }
+  if(!i) return;
+  const why = checkoutBlockReason(i);
+  if(why && !allowDamaged){ showDamagedWarning([i], 'single'); return; }
   actionId = id; bulkMode = false;
   document.getElementById('out-item').textContent = i.name;
   prepCheckoutForm();
 }
+
 function openBulkCheckout(){
   const dispo = selItems().filter(i=>i.status==='dispo');
-  const ok = dispo.filter(canCheckout);
-  const bloques = dispo.length - ok.length;
-  if(!ok.length){
-    toast(bloques ? "Every selected item is flagged for repair." : "No available item in the selection.",
-          'error', null, null, 6000);
-    return;
-  }
-  // On ne sort que ce qui peut sortir, et on le dit plutôt que de le taire.
-  if(bloques) toast(`${bloques} item(s) left out — flagged for repair.`, 'info', null, null, 6000);
+  if(!dispo.length){ toast("No available item in the selection.", 'error'); return; }
+  const abimes = dispo.filter(i=>!canCheckout(i));
+  if(abimes.length && !allowDamaged){ showDamagedWarning(abimes, 'bulk'); return; }
+
+  const cibles = allowDamaged ? dispo : dispo.filter(canCheckout);
+  if(!cibles.length){ toast("Nothing left to check out.", 'error'); return; }
   actionId = null; bulkMode = true;
-  document.getElementById('out-item').textContent = `${ok.length} item(s)`;
+  document.getElementById('out-item').textContent = `${cibles.length} item(s)`;
   prepCheckoutForm();
+}
+
+/* La fenêtre d'avertissement. Elle nomme les items concernés :
+   « 3 items sont abîmés » ne dit pas lesquels, et c'est justement ce
+   qu'il faut savoir pour décider. */
+function showDamagedWarning(abimes, mode){
+  damagedWarn = {ids: abimes.map(i=>i.id), mode};
+  const liste = abimes.slice(0, 12).map(i=>`<li>${itemTitle(i)}
+      <span class="mono">${esc(i.id)}</span>
+      <span class="tag ${i.cond}">${esc(CONDS[i.cond]||i.cond)}</span></li>`).join("");
+  const reste = abimes.length > 12 ? `<li class="muted">… and ${abimes.length - 12} more</li>` : '';
+
+  document.getElementById('warnBody').innerHTML = `
+    <h3>⚠️ ${abimes.length} item${abimes.length>1?'s':''} flagged for repair</h3>
+    <p class="muted" style="margin-bottom:10px">${mode === 'bulk'
+      ? 'These items are in your selection. Taking damaged gear on a job usually means discovering the problem on site.'
+      : 'This item is flagged for repair. Taking damaged gear on a job usually means discovering the problem on site.'}</p>
+    <ul class="warnlist">${liste}${reste}</ul>
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
+      ${mode === 'bulk'
+        ? `<button class="btn" onclick="damagedRemove()">Remove them from the selection</button>`
+        : `<button class="btn" onclick="close_('ovWarn')">Cancel</button>`}
+      <button class="btn sec" onclick="damagedProceed()">Check out anyway</button>
+    </div>`;
+  open_('ovWarn');
+}
+
+/* Option mise en avant : on retire les items abîmés et on continue
+   avec le reste. */
+function damagedRemove(){
+  if(!damagedWarn) return close_('ovWarn');
+  damagedWarn.ids.forEach(id=>sel.delete(id));
+  const n = damagedWarn.ids.length;
+  damagedWarn = null;
+  close_('ovWarn');
+  renderInv();
+  toast(`${n} item(s) removed from the selection.`, 'ok');
+  if(selItems().filter(i=>i.status==='dispo').length) openBulkCheckout();
+}
+
+function damagedProceed(){
+  const w = damagedWarn;
+  damagedWarn = null;
+  close_('ovWarn');
+  allowDamaged = true;                 // vaut pour cette sortie uniquement
+  if(w && w.mode === 'single') openCheckout(w.ids[0]);
+  else openBulkCheckout();
 }
 function prepCheckoutForm(){
   // Liste de suggestions : les emprunteurs déjà connus, les plus récents d'abord
@@ -692,8 +750,9 @@ async function doCheckout(){
   // Dernier filet : l'état a pu changer entre l'ouverture de la fenêtre
   // et la validation, par exemple depuis un autre poste.
   const targets = (bulkMode ? selItems().filter(i=>i.status==='dispo') : [item(actionId)])
-                    .filter(i=>i && canCheckout(i));
+                    .filter(i=>i && (allowDamaged || canCheckout(i)));
   if(!targets.length){ toast("Nothing left to check out — those items are flagged for repair.", 'error'); return; }
+  const nAbimes = targets.filter(i=>!canCheckout(i)).length;
   if(!targets.length) return;
 
   const out = {userId, date:now(), reason, due, alertOn};
@@ -703,7 +762,9 @@ async function doCheckout(){
     detail: reason + (due?` — due back ${fdateD(due)}`:''), userId})));
   close_('ovOut');
   if(bulkMode){ clearSel(); toast(`${targets.length} item(s) checked out to ${esc(who)}.`, 'ok'); }
-  bulkMode = false; render();
+  // Une trace explicite : on saura plus tard que c'était un choix.
+  if(nAbimes) toast(`${nAbimes} item(s) went out flagged for repair.`, 'info', null, null, 7000);
+  bulkMode = false; allowDamaged = false; render();
 }
 
 /* Retour groupé demandé depuis ailleurs que l'inventaire (onglet
