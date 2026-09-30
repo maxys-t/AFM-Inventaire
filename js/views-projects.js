@@ -65,7 +65,7 @@ let pickCat = "", pickSub = "";       // dossier ouvert
 function openProjForm(id){
   editingProjId = id||null;
   const p = id?project(id):null;
-  document.getElementById('projFormTitle').textContent = p?'Modifier le projet':'Nouveau projet';
+  document.getElementById('projFormTitle').textContent = p?'Edit project':'New project';
   document.getElementById('p-name').value = p?p.name:"";
   document.getElementById('p-desc').value = p?(p.description||""):"";
   const dest = document.getElementById('p-dest');
@@ -203,7 +203,7 @@ function updatePickCount(){
 
 async function saveProj(){
   const name = document.getElementById('p-name').value.trim();
-  if(!name){ alert("Le nom est obligatoire."); return; }
+  if(!name){ alert("A name is required."); return; }
   if(!pickerSel.size){ alert("Select at least one item."); return; }
   const desc = document.getElementById('p-desc').value.trim();
   const loc_name = (document.getElementById('p-dest')||{}).value || '';
