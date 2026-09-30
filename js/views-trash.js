@@ -53,7 +53,7 @@ function renderTrash(){
         ${nExp ? `<button class="btn sec small" onclick="purgeExpired()">Purge ${nExp} expired</button> ` : ''}
         ${db.trash.length ? `<button class="btn danger small" onclick="purgeAll()">Delete everything permanently</button>` : ''}
       </span>
-      <button class="btn sec" onclick="close_('ovTrash')">Fermer</button>
+      <button class="btn sec" onclick="close_('ovTrash')">Close</button>
     </div>`;
 }
 
