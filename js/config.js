@@ -27,118 +27,125 @@ const APP_URL = "https://inventory.accessflow.fr/";
    identifiants : MIC-001, DLY-004…).
    Ne jamais réutiliser un code déjà employé par des items existants.
    -------------------------------------------------------------- */
-/* --- Categories: family › sub-category --- */
+/* --- Categories: family › sub-category ---
+   L'ORDRE DE CE FICHIER EST L'ORDRE D'AFFICHAGE, partout :
+   inventaire, filtres, sélecteur de projet. Pour réordonner,
+   il suffit de déplacer les blocs. --- */
 const CATS = {
   instruments: { label:"Instruments", subs:{
-    synthe:      {label:"Synth / keyboard",        code:"SYN"},
-    boite:       {label:"Drum machine / groovebox",code:"DMC"},
-    guitare:     {label:"Guitar / bass",           code:"GTR"},
-    batterie:    {label:"Drums",                   code:"DRM"},
-    percussion:  {label:"Percussion",              code:"PRC"},
-    peau10:      {label:"Drumhead 10\"",           code:"H10"},
-    peau12:      {label:"Drumhead 12\"",           code:"H12"},
-    peau13:      {label:"Drumhead 13\"",           code:"H13"},
-    peau14:      {label:"Drumhead 14\"",           code:"H14"},
-    peau16:      {label:"Drumhead 16\"",           code:"H16"},
-    peau18:      {label:"Drumhead 18\"",           code:"H18"},
-    peau22:      {label:"Drumhead 22\"",           code:"H22"},
-    peau_autre:  {label:"Drumhead — other size",   code:"HDX"},
-    autre_inst:  {label:"Other instrument",        code:"INS"}
+    synthe:     {label:"Synth / keyboard",         code:"SYN"},
+    boite:      {label:"Drum machine / groovebox", code:"DMC"},
+    guitare:    {label:"Guitar / bass",            code:"GTR"},
+    batterie:   {label:"Drums",                    code:"DRM"},
+    percussion: {label:"Percussion",               code:"PRC"}
   }},
 
   captation: { label:"Microphones", subs:{
-    condensateur:{label:"Condenser mic",      code:"MCN"},
-    dynamique:   {label:"Dynamic mic",        code:"MDY"},
-    ruban:       {label:"Ribbon mic",         code:"MRB"},
-    mesure_mic:  {label:"Measurement mic",    code:"MMS"},
-    trigger:     {label:"Trigger",            code:"TRG"},
-    accessoire:  {label:"Mic accessory",      code:"MAC"}
+    condensateur: {label:"Condenser mic",   code:"MCN"},
+    dynamique:    {label:"Dynamic mic",     code:"MDY"},
+    ruban:        {label:"Ribbon mic",      code:"MRB"},
+    mesure_mic:   {label:"Measurement mic", code:"MMS"},
+    trigger:      {label:"Trigger",         code:"TRG"},
+    accessoire:   {label:"Mic accessory",   code:"MAC"}
   }},
 
   peripheriques: { label:"Outboard", subs:{
-    compresseur: {label:"Compressor",  code:"CMP"},
-    eq:          {label:"EQ",          code:"EQU"},
-    preampli:    {label:"Preamp",      code:"PRE"},
-    effets:      {label:"Effects",     code:"FXR"},
+    compresseur: {label:"Compressor",      code:"CMP"},
+    eq:          {label:"EQ",              code:"EQU"},
+    preampli:    {label:"Preamp",          code:"PRE"},
+    effets:      {label:"Effects",         code:"FXR"},
     chassis:     {label:"500 series rack", code:"R50"}
   }},
 
   pedales: { label:"Pedals", subs:{
-    drive:       {label:"Drive / distortion",  code:"DRV"},
-    modulation:  {label:"Modulation",          code:"MOD"},
-    delay:       {label:"Delay",               code:"DLY"},
-    reverb:      {label:"Reverb",              code:"REV"},
-    filtre:      {label:"Filter / wah",        code:"WAH"},
-    pitch:       {label:"Pitch / octave",      code:"PIT"},
-    dynamique_p: {label:"Dynamics",            code:"DYN"},
-    multi:       {label:"Multi-effects / looper", code:"MFX"},
-    alim:        {label:"Power supply",        code:"PSU"},
-    accordeur:   {label:"Tuner",               code:"TUN"},
+    drive:       {label:"Drive / distortion",      code:"DRV"},
+    modulation:  {label:"Modulation",              code:"MOD"},
+    delay:       {label:"Delay",                   code:"DLY"},
+    reverb:      {label:"Reverb",                  code:"REV"},
+    filtre:      {label:"Filter / wah",            code:"WAH"},
+    pitch:       {label:"Pitch / octave",          code:"PIT"},
+    dynamique_p: {label:"Dynamics",                code:"DYN"},
+    multi:       {label:"Multi-effects / looper",  code:"MFX"},
+    alim:        {label:"Power supply",            code:"PSU"},
+    accordeur:   {label:"Tuner",                   code:"TUN"},
     footswitch:  {label:"Footswitch / expression", code:"FSW"}
   }},
 
-  di: { label:"DI & splitters", subs:{
-    boite_di:    {label:"DI box",   code:"DIB"},
-    splitter:    {label:"Splitter", code:"SPL"},
-    reamp:       {label:"Reamp",    code:"RMP"}
-  }},
-
-  amplification: { label:"Amps & monitoring", subs:{
-    ampli_inst:  {label:"Guitar / bass amp", code:"AMP"},
-    monitoring:  {label:"Studio monitor",    code:"MON"},
-    casque:      {label:"Headphones",        code:"HPH"},
-    ampli_casque:{label:"Headphone amp",     code:"HPA"}
-  }},
-
   consoles: { label:"Consoles", subs:{
-    console:     {label:"Mixing console",  code:"CON"},
-    extension:   {label:"Expander / rack", code:"CEX"},
-    carte:       {label:"I/O card",        code:"CIO"}
+    console:   {label:"Mixing console",  code:"CON"},
+    extension: {label:"Expander / rack", code:"CEX"},
+    carte:     {label:"I/O card",        code:"CIO"}
   }},
 
-  mesure: { label:"Measurement", subs:{
-    outil:       {label:"Measurement tool", code:"MSR"}
+  di: { label:"DI & splitters", subs:{
+    boite_di: {label:"DI box",   code:"DIB"},
+    splitter: {label:"Splitter", code:"SPL"},
+    reamp:    {label:"Reamp",    code:"RMP"}
   }},
 
   informatique: { label:"Computers & interfaces", subs:{
-    interface:   {label:"Audio interface", code:"INT"},
-    ordinateur:  {label:"Computer",        code:"CPU"},
-    convertisseur:{label:"Converter",      code:"CNV"},
-    controleur:  {label:"MIDI controller", code:"CTL"},
-    stockage:    {label:"Storage",         code:"STG"},
-    reseau:      {label:"Network",         code:"NET"},
-    midi:        {label:"MIDI interface",  code:"MDI"}
+    interface:     {label:"Audio interface", code:"INT"},
+    ordinateur:    {label:"Computer",        code:"CPU"},
+    convertisseur: {label:"Converter",       code:"CNV"},
+    controleur:    {label:"MIDI controller", code:"CTL"},
+    stockage:      {label:"Storage",         code:"STG"},
+    reseau:        {label:"Network",         code:"NET"},
+    midi:          {label:"MIDI interface",  code:"MDI"}
+  }},
+
+  amplification: { label:"Amps & monitoring", subs:{
+    ampli_inst:   {label:"Guitar / bass amp", code:"AMP"},
+    monitoring:   {label:"Studio monitor",    code:"MON"},
+    casque:       {label:"Headphones",        code:"HPH"},
+    ampli_casque: {label:"Headphone amp",     code:"HPA"}
   }},
 
   cablage: { label:"Cables & connectors", subs:{
-    xlr:         {label:"XLR",             code:"XLR"},
-    trs:         {label:"TRS",             code:"TRS"},
-    mini_trs:    {label:"Mini TRS",        code:"MTR"},
-    ts:          {label:"TS",              code:"TS" },
-    mini_ts:     {label:"Mini TS",         code:"MTS"},
-    rca:         {label:"RCA",             code:"RCA"},
-    xlrf_trs:    {label:"XLR F / TRS",     code:"XFT"},
-    xlrm_trs:    {label:"XLR M / TRS",     code:"XMT"},
-    secteur:     {label:"Power cable",     code:"PWC"},
-    midi_cable:  {label:"MIDI",            code:"MID"},
-    multipaire:  {label:"Audio multicore", code:"MUL"},
-    adaptateur:  {label:"Adapter",         code:"ADP"},
-    patchbay:    {label:"Patchbay",        code:"PBY"}
+    xlr:        {label:"XLR",             code:"XLR"},
+    trs:        {label:"TRS",             code:"TRS"},
+    mini_trs:   {label:"Mini TRS",        code:"MTR"},
+    ts:         {label:"TS",              code:"TS"},
+    mini_ts:    {label:"Mini TS",         code:"MTS"},
+    rca:        {label:"RCA",             code:"RCA"},
+    xlrf_trs:   {label:"XLR F / TRS",     code:"XFT"},
+    xlrm_trs:   {label:"XLR M / TRS",     code:"XMT"},
+    secteur:    {label:"Power cable",     code:"PWC"},
+    midi_cable: {label:"MIDI",            code:"MID"},
+    multipaire: {label:"Audio multicore", code:"MUL"},
+    adaptateur: {label:"Adapter",         code:"ADP"},
+    patchbay:   {label:"Patchbay",        code:"PBY"}
   }},
 
   supports: { label:"Stands & cases", subs:{
-    pied:        {label:"Mic stand",   code:"MST"},
-    stand:       {label:"Stand",       code:"STD"},
-    flightcase:  {label:"Flight case", code:"FLC"},
-    housse:      {label:"Bag",         code:"BAG"}
+    pied:             {label:"Mic stand",                   code:"MST"},
+    stand_clavier:    {label:"Keyboard / instrument stand", code:"KST"},
+    stand_enceinte:   {label:"Speaker stand",               code:"SST"},
+    extension_stand:  {label:"Stand extension",             code:"EXT"},
+    adaptateur_stand: {label:"Stand adapter & clamp",       code:"CLP"},
+    plateau:          {label:"Table & tray",                code:"TRY"},
+    housse:           {label:"Bag",                         code:"BAG"},
+    flightcase:       {label:"Flight case",                 code:"FLC"}
+  }},
+
+  consommables: { label:"Consumables", subs:{
+    peau12:     {label:"Drumhead 12\"",         code:"H12"},
+    peau14:     {label:"Drumhead 14\"",         code:"H14"},
+    peau16:     {label:"Drumhead 16\"",         code:"H16"},
+    peau22:     {label:"Drumhead 22\"",         code:"H22"},
+    peau_autre: {label:"Drumhead — other size", code:"HDX"}
+  }},
+
+  mesure: { label:"Measurement", subs:{
+    outil: {label:"Measurement tool", code:"MSR"}
   }},
 
   divers: { label:"Facility & other", subs:{
-    mobilier:    {label:"Furniture",           code:"FRN"},
-    eclairage:   {label:"Lighting",            code:"LGT"},
-    acoustique:  {label:"Acoustic treatment",  code:"ACO"},
-    electricite: {label:"Power / electrical",  code:"ELC"},
-    autre:       {label:"Other",               code:"OTH"}
+    mobilier:    {label:"Furniture",          code:"FRN"},
+    rack19:      {label:"Studio rack",        code:"RCK"},
+    eclairage:   {label:"Lighting",           code:"LGT"},
+    acoustique:  {label:"Acoustic treatment", code:"ACO"},
+    electricite: {label:"Power / electrical", code:"ELC"},
+    autre:       {label:"Other",              code:"OTH"}
   }}
 };
 
