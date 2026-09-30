@@ -664,6 +664,53 @@ body.wideview main{max-width:1380px}
   .btable td{white-space:normal}
   .bdetail > td{padding:6px}
 }
+/* ============================================================
+   v1.13 — À COLLER À LA FIN DE css/styles.css
+   (après les blocs v1.10, v1.11 et v1.12). Tout est en ajout.
+   ============================================================ */
+
+/* --- Recherche seule sur sa ligne, avec l'ajout d'item ---
+   La recherche est l'action la plus fréquente : elle ne doit pas se
+   disputer la place avec sept menus de filtres. Le bouton d'ajout est
+   à côté parce qu'il MODIFIE l'inventaire — il n'a rien à faire au
+   milieu d'options qui ne font que changer l'affichage. */
+.invtop{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.bigsearch{flex:1;min-width:0;font-size:15px;padding:11px 14px}
+.invtop .btn{white-space:nowrap}
+
+/* --- En-têtes collants ---
+   --hdr est mesuré en JavaScript : la hauteur de l'en-tête du site
+   change quand ses boutons passent à la ligne. */
+.invtable thead th{
+  position:sticky;top:var(--hdr,56px);z-index:6;
+  background:var(--panel);
+  box-shadow:0 1px 0 var(--border)
+}
+.invtable .seprow td{
+  position:sticky;top:calc(var(--hdr,56px) + 31px);z-index:5
+}
+
+/* Le conteneur à défilement horizontal de la v1.10 neutralisait
+   `position: sticky` : dès qu'un axe n'est plus « visible », le
+   navigateur rend l'élément défilant dans les deux sens, et les
+   en-têtes se collent au conteneur au lieu de la page. On ne garde
+   donc le défilement horizontal que là où il sert vraiment. */
+.invwrap{overflow:visible}
+@media(max-width:1100px){
+  .invwrap{overflow-x:auto}
+  .invtable thead th,.invtable .seprow td{position:static}
+}
+
+/* --- Plus de texte surligné par accident ---
+   On garde la sélection là où elle sert : cellules du tableau
+   (copier un identifiant) et champs de saisie. */
+nav,header,th,.tag,.chev,.btn,.setitem,.bsum,.colmenu,.seprow td{
+  -webkit-user-select:none;user-select:none
+}
+td,input,textarea,select,.addr,.mono{-webkit-user-select:text;user-select:text}
+
+/* Un bouton d'action désactivé doit se lire comme désactivé */
+.btn:disabled{opacity:.45;cursor:not-allowed}
 
 
 
