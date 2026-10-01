@@ -762,6 +762,97 @@ body.wideview #v-inv .panel{padding:10px}
 .warnlist li{padding:7px 0;border-bottom:1px solid var(--border);font-size:14px}
 .warnlist li:last-child{border-bottom:none}
 .warnlist .mono{margin:0 6px}
+/* ============================================================
+   v1.15 — À COLLER À LA FIN DE css/styles.css
+   (après les blocs v1.10 à v1.13.1). Tout est en ajout ;
+   quelques règles corrigent volontairement les précédentes.
+   ============================================================ */
+
+/* --- Barre du haut --- */
+.btn.big{font-size:15px;padding:12px 22px;font-weight:600}
+.invbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.invbar .spacer{flex:1}
+.invbar .hint{font-size:12px;white-space:nowrap}
+/* Le conteneur a la même couleur que le fond de page : sans bordure,
+   le sélecteur de vue disparaissait purement et simplement. */
+.viewsw{display:inline-flex;gap:3px;background:var(--panel);
+  border:1px solid var(--border2);border-radius:980px;padding:3px}
+.viewsw .btn{background:transparent;color:var(--muted)}
+.viewsw .btn:hover{background:var(--panel2);color:var(--txt)}
+.viewsw .btn.on{background:var(--accent);color:#fff}
+
+/* --- Bandeau des filtres actifs ---
+   Il ne s'affiche que s'il y a quelque chose à montrer. Sans lui, un
+   filtre posé puis oublié disparaîtrait de la vue dès qu'on fait
+   défiler le tableau. */
+.filterbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.fchip{display:inline-flex;align-items:center;gap:6px;background:rgba(0,113,227,.10);
+  color:var(--accent);border-radius:980px;padding:4px 6px 4px 12px;font-size:13px}
+.fchip.sortchip{background:rgba(110,110,115,.14);color:var(--txt)}
+.fchip button{border:none;background:none;color:inherit;cursor:pointer;
+  font-size:13px;line-height:1;padding:2px 4px;opacity:.65}
+.fchip button:hover{opacity:1}
+
+/* --- En-têtes cliquables --- */
+.invtable th{padding:0}
+.invtable th.cbcol,.invtable th.actcol{padding:7px 10px}
+.hbtn{display:inline-flex;align-items:center;gap:5px;background:none;border:none;
+  color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;
+  cursor:pointer;padding:7px 4px 7px 10px;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.hmenu{background:none;border:none;color:var(--muted);cursor:pointer;
+  padding:7px 8px 7px 2px;font-size:11px;opacity:.5}
+.invtable th:hover .hmenu{opacity:1}
+.invtable th.sorted .hbtn,.invtable th.filtered .hbtn{color:var(--accent)}
+.srank{font-size:11px;font-weight:700}
+.fdot{font-size:8px;color:var(--accent)}
+
+/* --- Menu d'un en-tête ---
+   Attaché au document, pas au tableau : le cadre de défilement le
+   couperait. */
+.hdrmenu{display:none;position:fixed;z-index:60;background:var(--panel);
+  border:1px solid var(--border2);border-radius:12px;width:280px;
+  box-shadow:0 14px 40px rgba(0,0,0,.18);overflow:hidden}
+.hdrmenu.open{display:block}
+.hm-sec{padding:6px;border-bottom:1px solid var(--border)}
+.hm-sec:last-child{border-bottom:none}
+.hm-it{display:block;width:100%;text-align:left;background:none;border:none;
+  color:var(--txt);font:inherit;font-size:14px;padding:7px 10px;border-radius:8px;cursor:pointer}
+.hm-it:hover{background:var(--panel2)}
+.hm-it.on{color:var(--accent);font-weight:600}
+.hm-head{display:flex;justify-content:space-between;align-items:center;
+  font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--muted);font-weight:600;padding:4px 10px 6px}
+.hm-link{background:none;border:none;color:var(--accent);cursor:pointer;
+  font-size:12px;text-transform:none;letter-spacing:0;padding:0}
+.hm-search{width:calc(100% - 20px);margin:0 10px 6px;font-size:13px;padding:6px 10px}
+.hm-list{max-height:220px;overflow-y:auto}
+.hm-val{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:8px;
+  cursor:pointer;font-size:14px}
+.hm-val:hover{background:var(--panel2)}
+.hm-vlabel{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* --- En-tête de famille : il structure, il ne décore pas ---
+   Remplace le style discret hérité des séparateurs de tri de la v1.10. */
+.invtable .seprow td{
+  font-size:15px;font-weight:700;letter-spacing:-.01em;text-transform:none;
+  color:var(--txt);background:var(--panel2);
+  padding:16px 12px 8px;
+  border-top:2px solid var(--border2);border-bottom:1px solid var(--border)
+}
+.invtable tbody tr.seprow:first-child td{border-top:none;padding-top:10px}
+
+/* --- Modèle ou exemplaire : la nuance se voit --- */
+.invtable tr.grouprow td{background:rgba(0,113,227,.045)}
+.invtable tr.grouprow:hover td{background:rgba(0,113,227,.08)}
+.invtable tr.childrow td{background:var(--panel2)}
+.invtable tr.childrow .col-item{padding-left:26px}
+
+@media(max-width:700px){
+  .invbar .hint{display:none}
+  .hdrmenu{width:calc(100vw - 24px);left:12px !important}
+  .invtable .seprow td{font-size:14px;padding:12px 10px 6px}
+}
 
 
 
