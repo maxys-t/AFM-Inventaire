@@ -4,115 +4,161 @@
    ============================================================ */
 
 let sel = new Set();        // items sélectionnés (cases à cocher)
-let sortDir = 1;            // 1 = croissant, -1 = décroissant
 let expanded = new Set();   // groupes d'exemplaires dépliés
 
-/* ---- filtres ---- */
-function fillFilters(){
-  const fc = document.getElementById('fCat'), keep = fc.value;
-  fc.innerHTML = '<option value="">Category: all</option>' + catOptions();
-  fc.value = keep;
-  fillSubFilter();
-  const fl = document.getElementById('fLoc'), keepL = fl.value;
-  fl.innerHTML = '<option value="">Location: all</option>' + locOptions();
-  fl.value = keepL;
-  fillValueFilter('fOwner', 'Owner', i=>i.owner);
-  fillValueFilter('fProv',  'Provider',  i=>i.provider);
+/* ============================================================
+   TRI ET FILTRES — depuis les en-têtes de colonnes
+   La barre de sept menus déroulants a disparu en v1.15 : elle
+   occupait deux lignes au-dessus d'un tableau qui, depuis la
+   v1.13.1, occupe la hauteur restante de l'écran. Chaque ligne de
+   réglages coûtait donc des items visibles.
+   ============================================================ */
+
+/* Tri à plusieurs niveaux : [{k:'cat',dir:1},{k:'price',dir:-1}]
+   Le premier départage, le deuxième tranche les égalités, etc. */
+let sortLevels = [];
+/* Filtres par colonne : {owner: Set(['AF','PS'])}
+   Volontairement NON mémorisés d'une session à l'autre : un filtre
+   restauré en silence au démarrage ferait croire à des items
+   disparus. Les colonnes, elles, sont mémorisées. */
+let colFilters = {};
+let headerMenuCol = null;
+
+/* ---- Valeur sur laquelle on filtre ----
+   C'est le texte AFFICHÉ qui sert de clé : on filtre ce qu'on voit.
+   Les colonnes sans texte (statut, état, photo) ont leur propre
+   libellé stable, sinon elles seraient infiltrables. */
+function filterText(c, i){
+  switch(c.k){
+    case 'status': return i.status === 'sorti' ? 'Checked out' : 'Available';
+    case 'cond':   return CONDS[i.cond] || i.cond;
+    case 'photo':  return i.photo ? 'With photo' : 'No photo';
+  }
+  return (invCellText(c, i) || '').trim() || '(empty)';
 }
 
-/* Remplit un menu déroulant avec les valeurs présentes dans l'inventaire */
-function fillValueFilter(id, label, get){
-  const el = document.getElementById(id);
-  if(!el) return;
-  const keep = el.value;
-  const vals = [...new Set(db.items.map(i=>(get(i)||'').trim()).filter(Boolean))]
-                 .sort((a,b)=>a.localeCompare(b,'fr'));
-  const vides = db.items.filter(i=>!(get(i)||'').trim()).length;
-  el.innerHTML = `<option value="">${label}: all</option>`
-    + vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")
-    + (vides ? `<option value="__vide__">— not set (${vides})</option>` : '');
-  el.value = keep;
-  if(el.value !== keep) el.value = "";      // la valeur a disparu
+/* Valeurs distinctes d'une colonne, avec leur nombre d'items. */
+function filterValues(k){
+  const c = INV_COLUMNS.find(x=>x.k === k);
+  if(!c) return [];
+  const n = new Map();
+  db.items.forEach(i=>{ const v = filterText(c, i); n.set(v, (n.get(v)||0) + 1); });
+  return [...n.entries()]
+    .sort((a,b)=> a[0] === '(empty)' ? 1 : b[0] === '(empty)' ? -1
+                : a[0].localeCompare(b[0], 'fr', {numeric:true}))
+    .map(([v, nb])=>({v, nb}));
 }
-/* La liste des sous-catégories dépend de la catégorie choisie */
-function fillSubFilter(){
-  const fc = document.getElementById('fCat'), fs = document.getElementById('fSub');
-  if(!fs) return;
-  const keep = fs.value;
-  if(!fc.value){ fs.innerHTML = '<option value="">Sub-category: all</option>'; fs.disabled = true; return; }
-  fs.disabled = false;
-  fs.innerHTML = '<option value="">Sub-category: all</option>' + subOptions(fc.value);
-  fs.value = subsOf(fc.value)[keep] ? keep : "";
-}
-function onCatFilterChange(){ fillSubFilter(); renderInv(); }
+
+function hasFilter(k){ return !!(colFilters[k] && colFilters[k].size); }
+function activeFilterKeys(){ return Object.keys(colFilters).filter(hasFilter); }
+
 function invFiltered(){
-  const q = (document.getElementById('q').value||"").toLowerCase();
-  const cat = document.getElementById('fCat').value, st = document.getElementById('fStatus').value;
-  const sub = (document.getElementById('fSub')||{}).value || "";
-  const lo = document.getElementById('fLoc').value, co = document.getElementById('fCond').value;
-  const ow = (document.getElementById('fOwner')||{}).value || "";
-  const pr = (document.getElementById('fProv')||{}).value || "";
-  const match = (v, f)=> f === '__vide__' ? !(v||'').trim() : (v||'').trim() === f;
+  const q = ((document.getElementById('q')||{}).value || "").toLowerCase().trim();
+  const actifs = activeFilterKeys().map(k=>({k, c:INV_COLUMNS.find(x=>x.k===k), set:colFilters[k]}))
+                                   .filter(f=>f.c);
   return db.items.filter(i=>{
-    if(q && !(i.name+" "+i.brand+" "+i.serial+" "+i.id+" "+(i.notes||"")+" "+(i.owner||"")+" "+(i.provider||"")+" "+(i.sales_order||"")+" "+catPath(i)).toLowerCase().includes(q)) return false;
-    if(cat && i.cat!==cat) return false;
-    if(sub && i.subcat!==sub) return false;
-    if(st && i.status!==st) return false;
-    if(lo && !inLocFilter(lo,i.loc) && !inLocFilter(lo,i.home)) return false;
-    if(co && i.cond!==co) return false;
-    if(ow && !match(i.owner, ow)) return false;
-    if(pr && !match(i.provider, pr)) return false;
+    if(q){
+      const foin = [i.name, i.brand, i.serial, i.id, i.notes, i.owner,
+                    i.provider, i.sales_order, catPath(i)].join(' ').toLowerCase();
+      if(!foin.includes(q)) return false;
+    }
+    // Plusieurs colonnes filtrées se combinent : toutes doivent passer.
+    for(const f of actifs) if(!f.set.has(filterText(f.c, i))) return false;
     return true;
   });
 }
 
-/* ---- tri ----
-   Les valeurs absentes finissent toujours en bas, quel que soit le sens :
-   un item sans prix n'a rien à faire en tête d'un classement par prix. */
-function toggleSortDir(){
-  sortDir = -sortDir;
-  document.getElementById('sortDir').textContent = sortDir > 0 ? '↑' : '↓';
-  renderInv();
-}
-function sortValue(i, by){
-  switch(by){
-    case 'name':  return itemTitleText(i).toLowerCase();
-    case 'id':    return i.id;
-    case 'cat':   return catPath(i).toLowerCase();
-    case 'loc':   return (i.status==='sorti' ? i.loc : locLabel(i.loc) || '').toLowerCase();
-    case 'cond':  return ['bon','attente','reparation','hs'].indexOf(i.cond);
-    case 'price': return (i.price==null || i.price==='') ? null : Number(i.price);
-    case 'pdate': return i.purchase_date || null;     // « aaaa-mm-jj » se compare tel quel
-    case 'owner': return (i.owner||'').toLowerCase();
-    case 'prov':  return (i.provider||'').toLowerCase();
+/* ---- Tri ----
+   Les valeurs absentes finissent toujours en bas, quel que soit le
+   sens : un item sans prix n'a rien à faire en tête d'un classement
+   par prix. */
+function sortKey(c, i){
+  switch(c.k){
+    case 'item':   return itemTitleText(i).toLowerCase();
+    case 'id':     return i.id;
+    case 'cat':    return catIndex(i.cat) * 1000 + subIndex(i.cat, i.subcat);
+    case 'family': return catIndex(i.cat);
+    case 'status': return i.status === 'sorti' ? 1 : 0;
+    case 'cond':   return ['bon','attente','reparation','hs'].indexOf(i.cond);
+    case 'price':  return (i.price == null || i.price === '') ? null : Number(i.price);
+    case 'pdate':  return i.purchase_date || null;    // « aaaa-mm-jj » se compare tel quel
+    case 'photo':  return i.photo ? 0 : 1;
   }
-  return null;
+  return (invCellText(c, i) || '').toLowerCase();
 }
-function sortItems(rows, by){
-  if(!by) return rows;
-  const vide = v => v === null || v === undefined || v === '' || (typeof v === 'number' && isNaN(v)) || v === -1;
+const videTri = v => v === null || v === undefined || v === ''
+                  || (typeof v === 'number' && isNaN(v)) || v === -1;
+
+function sortItems(rows){
+  if(!sortLevels.length) return rows;
   return [...rows].sort((a,b)=>{
-    const x = sortValue(a,by), y = sortValue(b,by);
-    if(vide(x) && vide(y)) return a.id.localeCompare(b.id);
-    if(vide(x)) return 1;
-    if(vide(y)) return -1;
-    if(typeof x === 'number' && typeof y === 'number') return (x-y) * sortDir;
-    return String(x).localeCompare(String(y),'fr') * sortDir;
+    for(const lv of sortLevels){
+      const c = INV_COLUMNS.find(x=>x.k === lv.k);
+      if(!c) continue;
+      const x = sortKey(c,a), y = sortKey(c,b);
+      if(videTri(x) && videTri(y)) continue;
+      if(videTri(x)) return 1;
+      if(videTri(y)) return -1;
+      const r = (typeof x === 'number' && typeof y === 'number')
+              ? x - y : String(x).localeCompare(String(y), 'fr', {numeric:true});
+      if(r) return r * lv.dir;
+    }
+    return a.id.localeCompare(b.id);
   });
 }
 
-/* ---- remise à zéro des filtres ---- */
-const FILTER_IDS = ['q','fCat','fSub','fStatus','fLoc','fOwner','fProv','fCond','fSort'];
+function sortRank(k){
+  const i = sortLevels.findIndex(l=>l.k === k);
+  return i === -1 ? null : {rang:i+1, dir:sortLevels[i].dir};
+}
+
+/* ---- Actions des menus d'en-tête ---- */
+function sortBy(k, dir, ajouter){
+  const i = sortLevels.findIndex(l=>l.k === k);
+  if(ajouter){
+    if(i === -1) sortLevels.push({k, dir});
+    else sortLevels[i].dir = dir;
+  }else{
+    sortLevels = [{k, dir}];
+  }
+  closeHeaderMenu(); renderInv();
+}
+function unsortBy(k){
+  sortLevels = sortLevels.filter(l=>l.k !== k);
+  closeHeaderMenu(); renderInv();
+}
+/* Clic sur l'en-tête : inverse le sens, ou trie si la colonne ne
+   l'était pas. Maj + clic ajoute un niveau au lieu de remplacer. */
+function headerSortClick(k, maj){
+  const r = sortRank(k);
+  const dir = r ? -r.dir : 1;
+  sortBy(k, dir, maj || (!!r && sortLevels.length > 1));
+}
+
+function toggleFilterValue(k, v, on){
+  if(!colFilters[k]) colFilters[k] = new Set();
+  if(on) colFilters[k].add(v); else colFilters[k].delete(v);
+  if(!colFilters[k].size) delete colFilters[k];
+  renderHeaderMenu(); renderInv();
+}
+function clearFilter(k){
+  delete colFilters[k];
+  closeHeaderMenu(); renderInv();
+}
+function hideColumn(k){
+  closeHeaderMenu();
+  toggleCol(k, false);
+}
+
+/* ---- Remise à zéro ---- */
 function filtersActive(){
-  return FILTER_IDS.some(id=>{ const el = document.getElementById(id); return el && el.value; });
+  const q = ((document.getElementById('q')||{}).value || "").trim();
+  return !!q || sortLevels.length > 0 || activeFilterKeys().length > 0;
 }
 function resetFilters(){
-  FILTER_IDS.forEach(id=>{ const el = document.getElementById(id); if(el) el.value = ''; });
-  sortDir = 1;
-  const sd = document.getElementById('sortDir');
-  if(sd) sd.textContent = '↑';
-  fillSubFilter();
-  renderInv();
+  const q = document.getElementById('q'); if(q) q.value = '';
+  sortLevels = []; colFilters = {};
+  closeHeaderMenu(); renderInv();
 }
 function updateResetBtn(){
   const b = document.getElementById('btnReset');
@@ -121,24 +167,34 @@ function updateResetBtn(){
   b.disabled = !on;
   b.classList.toggle('on', on);
 }
+/* fillFilters n'a plus de menus à remplir : conservée car appelée
+   par render() dans app.js. */
+function fillFilters(){}
 
 /* ---- séparateurs de section ----
-   Uniquement quand un tri est actif : ils suivent le critère choisi.
-   Les valeurs absentes étant toujours renvoyées en fin de liste par
-   sortItems(), leur section (« No price »…) arrive naturellement en bas. */
+   Quand un tri est actif, ils suivent le PREMIER niveau de tri.
+   Les valeurs absentes étant renvoyées en fin de liste par
+   sortItems(), leur section (« No price »…) arrive naturellement
+   en bas. Les clés sont celles des colonnes. */
 function sepFor(i, by){
   switch(by){
-    case 'name': {
+    case 'item': {
       const c = (itemTitleText(i).trim().toUpperCase().charAt(0) || '—');
       if(/[A-Z]/.test(c)) return c;
       return /[0-9]/.test(c) ? '0–9' : 'Other';
     }
-    case 'id':    return (String(i.id).split('-')[0] || '—');
-    case 'cat':   return catLabel(i.cat) || 'Uncategorised';
-    case 'loc':   return (i.status==='sorti' ? i.loc : locLabel(i.loc)) || 'No location';
-    case 'cond':  return CONDS[i.cond] || i.cond;
-    case 'owner': return (i.owner||'').trim() || 'No owner';
-    case 'prov':  return (i.provider||'').trim() || 'No provider';
+    case 'id':     return (String(i.id).split('-')[0] || '—');
+    case 'cat':    return subLabel(i.cat, i.subcat) || 'Uncategorised';
+    case 'family': return catLabel(i.cat) || 'Uncategorised';
+    case 'status': return i.status === 'sorti' ? 'Checked out' : 'Available';
+    case 'loc':    return (i.status==='sorti' ? i.loc : locLabel(i.loc)) || 'No location';
+    case 'home':   return locLabel(i.home) || 'No home';
+    case 'cond':   return CONDS[i.cond] || i.cond;
+    case 'owner':  return (i.owner||'').trim() || 'No owner';
+    case 'prov':   return (i.provider||'').trim() || 'No provider';
+    case 'photo':  return i.photo ? 'With photo' : 'No photo';
+    case 'serial': return (i.serial||'').trim() ? 'With serial number' : 'No serial number';
+    case 'so':     return (i.sales_order||'').trim() || 'No sales order';
     case 'price': {
       if(i.price==null || i.price==='') return 'No price';
       const p = Number(i.price);
@@ -163,22 +219,142 @@ function sepRow(label, span){
 }
 
 /* ---- en-tête du tableau, construit à partir des colonnes visibles ---- */
+/* ---- en-tête : chaque colonne porte son menu ----
+   Le rang de tri est affiché (1↑, 2↓) : sans lui, un tri à deux
+   niveaux serait invisible et donnerait l'impression d'un classement
+   arbitraire. */
 function invHeadHtml(allSel){
   const cols = invColDefs();
   return `<tr>
     <th class="cbcol"><input type="checkbox" ${allSel?'checked':''} onchange="selectAllVisible(this.checked)" title="Select all"></th>
-    ${cols.map(c=>`<th class="col-${c.k}">${c.k==='photo' ? '' : esc(c.label)}</th>`).join("")}
+    ${cols.map(c=>{
+      const r = sortRank(c.k);
+      const f = hasFilter(c.k);
+      return `<th class="col-${c.k}${r?' sorted':''}${f?' filtered':''}">
+        <button class="hbtn" onclick="headerSortClick('${c.k}', event.shiftKey)"
+                title="Click to sort — Shift+click to add a sort level">
+          ${c.k==='photo' ? '📷' : esc(c.label)}
+          ${r ? `<span class="srank">${sortLevels.length>1?r.rang:''}${r.dir>0?'↑':'↓'}</span>` : ''}
+          ${f ? '<span class="fdot" title="Filtered">●</span>' : ''}
+        </button>
+        <button class="hmenu" onclick="openHeaderMenu('${c.k}', this, event)" title="Sort and filter">▾</button>
+      </th>`;
+    }).join("")}
     <th class="actcol"></th>
   </tr>`;
 }
 
+/* ---- menu d'un en-tête ---- */
+function openHeaderMenu(k, btn, ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  if(headerMenuCol === k){ closeHeaderMenu(); return; }
+  headerMenuCol = k;
+  renderHeaderMenu(btn);
+}
+function closeHeaderMenu(){
+  headerMenuCol = null;
+  const m = document.getElementById('hdrMenu');
+  if(m) m.classList.remove('open');
+}
+function renderHeaderMenu(btn){
+  const m = document.getElementById('hdrMenu');
+  if(!m || !headerMenuCol) return;
+  const k = headerMenuCol;
+  const c = INV_COLUMNS.find(x=>x.k === k);
+  if(!c) return closeHeaderMenu();
+
+  const r = sortRank(k);
+  const vals = filterValues(k);
+  const sel = colFilters[k];
+  const tous = !sel || sel.size === 0;
+  // Au-delà d'une trentaine de valeurs la liste devient illisible :
+  // on ouvre un champ de recherche plutôt que de tout dérouler.
+  const recherche = vals.length > 12;
+
+  m.innerHTML = `
+    <div class="hm-sec">
+      <button class="hm-it${r && r.dir>0 ? ' on':''}" onclick="sortBy('${k}',1,false)">↑ Sort A → Z</button>
+      <button class="hm-it${r && r.dir<0 ? ' on':''}" onclick="sortBy('${k}',-1,false)">↓ Sort Z → A</button>
+      ${sortLevels.length && !r
+        ? `<button class="hm-it" onclick="sortBy('${k}',1,true)">+ Add as sort level ${sortLevels.length+1}</button>` : ''}
+      ${r ? `<button class="hm-it" onclick="unsortBy('${k}')">✕ Remove from sort</button>` : ''}
+    </div>
+    <div class="hm-sec">
+      <div class="hm-head">Filter
+        ${!tous ? `<button class="hm-link" onclick="clearFilter('${k}')">show all</button>` : ''}</div>
+      ${recherche ? `<input class="hm-search" placeholder="Search values…" oninput="filterValueSearch(this.value)">` : ''}
+      <div class="hm-list" id="hmList">
+        ${vals.map(x=>`<label class="hm-val" data-v="${esc(x.v.toLowerCase())}">
+            <input type="checkbox" ${sel && sel.has(x.v) ? 'checked':''}
+                   onchange="toggleFilterValue('${k}', ${JSON.stringify(x.v).replace(/"/g,'&quot;')}, this.checked)">
+            <span class="hm-vlabel">${esc(x.v)}</span><span class="muted">${x.nb}</span></label>`).join("")}
+      </div>
+    </div>
+    ${c.fixed ? '' : `<div class="hm-sec">
+      <button class="hm-it" onclick="hideColumn('${k}')">Hide this column</button></div>`}`;
+
+  m.classList.add('open');
+  // Positionnement sous le bouton, sans déborder de l'écran
+  if(btn){
+    const r2 = btn.getBoundingClientRect();
+    m.style.top = Math.round(r2.bottom + 4) + 'px';
+    m.style.left = Math.round(Math.min(r2.left, window.innerWidth - 300)) + 'px';
+  }
+}
+function filterValueSearch(q){
+  const t = (q||'').toLowerCase().trim();
+  document.querySelectorAll('#hmList .hm-val').forEach(l=>{
+    l.style.display = !t || (l.dataset.v||'').includes(t) ? '' : 'none';
+  });
+}
+document.addEventListener('click', e=>{
+  if(!headerMenuCol) return;
+  if(e.target.closest('#hdrMenu') || e.target.closest('.hmenu')) return;
+  closeHeaderMenu();
+});
+
+/* ---- bandeau des filtres actifs ----
+   Le tableau défile dans son cadre : un filtre posé puis oublié
+   deviendrait invisible dès qu'on a fait défiler, et on chercherait
+   un item pourtant présent. Ce bandeau est ce qui remplace la
+   visibilité qu'offrait gratuitement l'ancienne barre de filtres. */
+function renderFilterBar(){
+  const el = document.getElementById('invFilters');
+  if(!el) return;
+  const puces = [];
+  sortLevels.forEach((lv, n)=>{
+    const c = INV_COLUMNS.find(x=>x.k === lv.k);
+    if(!c) return;
+    puces.push(`<span class="fchip sortchip">${sortLevels.length>1?(n+1)+'. ':''}${esc(c.label)}
+      ${lv.dir>0?'↑':'↓'}<button onclick="unsortBy('${lv.k}')" title="Remove">✕</button></span>`);
+  });
+  activeFilterKeys().forEach(k=>{
+    const c = INV_COLUMNS.find(x=>x.k === k);
+    if(!c) return;
+    const v = [...colFilters[k]];
+    const txt = v.length <= 2 ? v.join(', ') : `${v.length} values`;
+    puces.push(`<span class="fchip">${esc(c.label)}: ${esc(txt)}
+      <button onclick="clearFilter('${k}')" title="Remove">✕</button></span>`);
+  });
+  const q = ((document.getElementById('q')||{}).value || '').trim();
+  if(q) puces.push(`<span class="fchip">Search: ${esc(q)}
+      <button onclick="document.getElementById('q').value='';renderInv()" title="Remove">✕</button></span>`);
+
+  el.innerHTML = puces.length
+    ? puces.join('') + `<button class="btn sec small" onclick="resetFilters()">Reset all</button>`
+    : '';
+  el.style.display = puces.length ? '' : 'none';
+}
+
 /* ---- rendu de la liste ---- */
 function renderInv(){
-  const by = (document.getElementById('fSort')||{}).value || "";
-  const rows = sortItems(invFiltered(), by);
+  const by = sortLevels.length ? sortLevels[0].k : "";
+  const rows = sortItems(invFiltered());
   const searching = !!(document.getElementById('q').value||"").trim();
   renderInvSummary(rows);
   updateResetBtn();
+  renderFilterBar();
+  if(typeof renderViewButtons === 'function') renderViewButtons();
 
   const wrap = document.getElementById('invList');
   if(!rows.length){
