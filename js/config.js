@@ -33,11 +33,12 @@ const APP_URL = "https://inventory.accessflow.fr/";
    il suffit de déplacer les blocs. --- */
 const CATS = {
   instruments: { label:"Instruments", subs:{
-    synthe:     {label:"Synth / keyboard",         code:"SYN"},
-    boite:      {label:"Drum machine / groovebox", code:"DMC"},
-    guitare:    {label:"Guitar / bass",            code:"GTR"},
-    batterie:   {label:"Drums",                    code:"DRM"},
-    percussion: {label:"Percussion",               code:"PRC"}
+    synthe:           {label:"Synth / keyboard",         code:"SYN"},
+    boite:            {label:"Drum machine / groovebox", code:"DMC"},
+    guitare:          {label:"Guitar / bass",            code:"GTR"},
+    batterie:         {label:"Drums",                    code:"DRM"},
+    percussion:       {label:"Percussion",               code:"PRC"},
+    consommable_inst: {label:"Instrument consumables",   code:"ICS"}
   }},
 
   captation: { label:"Microphones", subs:{
@@ -128,11 +129,8 @@ const CATS = {
   }},
 
   consommables: { label:"Consumables", subs:{
-    peau12:     {label:"Drumhead 12\"",         code:"H12"},
-    peau14:     {label:"Drumhead 14\"",         code:"H14"},
-    peau16:     {label:"Drumhead 16\"",         code:"H16"},
-    peau22:     {label:"Drumhead 22\"",         code:"H22"},
-    peau_autre: {label:"Drumhead — other size", code:"HDX"}
+    /* Vide pour l'instant : réservée aux consommables qui ne
+       rattachent à aucune famille d'instruments (piles, gaffer…). */
   }},
 
   mesure: { label:"Measurement", subs:{
@@ -148,6 +146,7 @@ const CATS = {
     autre:       {label:"Other",              code:"OTH"}
   }}
 };
+
 
 /* --- Condition --- */
 const CONDS = {bon:"Good", attente:"Needs repair", reparation:"In repair", hs:"Out of service"};
