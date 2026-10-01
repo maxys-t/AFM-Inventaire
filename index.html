@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.14.0">
+<link rel="stylesheet" href="css/styles.css?v=1.15.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -109,48 +109,23 @@
     <div class="invtop">
       <input type="search" id="q" class="bigsearch"
              placeholder="Search name, manufacturer, serial, ID…" oninput="renderInv()">
-      <button class="btn" data-req="edit" onclick="openItemForm()">+ Add item</button>
+      <button class="btn big" data-req="edit" onclick="openItemForm()">+ Add item</button>
     </div>
-    <div class="toolbar">
-      <select id="fCat" onchange="onCatFilterChange()"></select>
-      <select id="fSub" onchange="renderInv()" disabled></select>
-      <select id="fStatus" onchange="renderInv()">
-        <option value="">Status: all</option>
-        <option value="dispo">Available</option>
-        <option value="sorti">Checked out</option>
-      </select>
-      <select id="fLoc" onchange="renderInv()"></select>
-      <select id="fOwner" onchange="renderInv()"></select>
-      <select id="fProv" onchange="renderInv()"></select>
-      <select id="fCond" onchange="renderInv()">
-        <option value="">Condition: all</option>
-        <option value="bon">Good</option>
-        <option value="attente">Needs repair</option>
-        <option value="reparation">In repair</option>
-        <option value="hs">Out of service</option>
-      </select>
-      <span class="sortbox">
-        <select id="fSort" onchange="renderInv()">
-          <option value="">Sort: default</option>
-          <option value="name">Name</option>
-          <option value="id">ID</option>
-          <option value="cat">Category</option>
-          <option value="loc">Location</option>
-          <option value="cond">Condition</option>
-          <option value="price">Purchase price</option>
-          <option value="pdate">Purchase date</option>
-          <option value="owner">Owner</option>
-          <option value="prov">Provider</option>
-        </select>
-        <button class="btn sec small" id="sortDir" onclick="toggleSortDir()" title="Sort direction">↑</button>
+    <div class="invbar">
+      <span class="viewsw">
+        <button class="btn sec small" id="view-compact" onclick="setInvView('compact')">Compact</button>
+        <button class="btn sec small" id="view-full" onclick="setInvView('full')">Full</button>
       </span>
-      <button class="btn sec small" id="btnReset" onclick="resetFilters()" disabled
-              title="Clear search, filters and sorting">Reset filters</button>
       <span class="colbox">
         <button class="btn sec small" onclick="toggleColMenu()" title="Choose visible columns">Columns ▾</button>
         <div class="colmenu" id="colMenu"></div>
       </span>
+      <button class="btn sec small" id="btnReset" onclick="resetFilters()" disabled
+              title="Clear search, filters and sorting">Reset</button>
+      <span class="spacer"></span>
+      <span class="muted hint">Click a column header to sort · ▾ to filter</span>
     </div>
+    <div id="invFilters" class="filterbar" style="display:none"></div>
     <div id="invSummary" class="muted" style="margin:-4px 0 10px"></div>
     <div class="panel"><div id="invList"></div></div>
   </section>
@@ -263,6 +238,8 @@
     <button class="btn" onclick="doRepair()">Apply</button>
   </div>
 </div></div>
+
+<div class="hdrmenu" id="hdrMenu"></div>
 
 <div class="overlay" id="ovWarn"><div class="modal" id="warnBody"></div></div>
 
@@ -388,23 +365,23 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.14.0"></script>
-<script src="js/auth.js?v=1.14.0"></script>
-<script src="js/helpers.js?v=1.14.0"></script>
-<script src="js/crop.js?v=1.14.0"></script>
-<script src="js/prefs.js?v=1.14.0"></script>
-<script src="js/db.js?v=1.14.0"></script>
-<script src="js/views-dashboard.js?v=1.14.0"></script>
-<script src="js/views-inventory.js?v=1.14.0"></script>
-<script src="js/views-projects.js?v=1.14.0"></script>
-<script src="js/views-out.js?v=1.14.0"></script>
-<script src="js/views-repairs.js?v=1.14.0"></script>
-<script src="js/views-people-loc.js?v=1.14.0"></script>
-<script src="js/views-trash.js?v=1.14.0"></script>
-<script src="js/views-users.js?v=1.14.0"></script>
-<script src="js/views-settings.js?v=1.14.0"></script>
-<script src="js/import-csv.js?v=1.14.0"></script>
-<script src="js/photos-bulk.js?v=1.14.0"></script>
-<script src="js/app.js?v=1.14.0"></script>
+<script src="js/config.js?v=1.15.0"></script>
+<script src="js/auth.js?v=1.15.0"></script>
+<script src="js/helpers.js?v=1.15.0"></script>
+<script src="js/crop.js?v=1.15.0"></script>
+<script src="js/prefs.js?v=1.15.0"></script>
+<script src="js/db.js?v=1.15.0"></script>
+<script src="js/views-dashboard.js?v=1.15.0"></script>
+<script src="js/views-inventory.js?v=1.15.0"></script>
+<script src="js/views-projects.js?v=1.15.0"></script>
+<script src="js/views-out.js?v=1.15.0"></script>
+<script src="js/views-repairs.js?v=1.15.0"></script>
+<script src="js/views-people-loc.js?v=1.15.0"></script>
+<script src="js/views-trash.js?v=1.15.0"></script>
+<script src="js/views-users.js?v=1.15.0"></script>
+<script src="js/views-settings.js?v=1.15.0"></script>
+<script src="js/import-csv.js?v=1.15.0"></script>
+<script src="js/photos-bulk.js?v=1.15.0"></script>
+<script src="js/app.js?v=1.15.0"></script>
 </body>
 </html>
