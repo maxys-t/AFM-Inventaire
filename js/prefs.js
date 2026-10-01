@@ -36,13 +36,22 @@ const INV_COLUMNS = [
 ];
 
 const INV_DEFAULT_COLS = ['photo','item','id','cat','status','loc','cond'];
+
+/* --- Vues fixes ---
+   Deux jeux de colonnes couvrant les deux usages : repérer vite, ou
+   tout voir. Le troisième état, « custom », n'est pas une vue : c'est
+   simplement le réglage manuel, mémorisé dès qu'on coche une colonne. */
+const INV_VIEWS = {
+  compact: {label:'Compact', cols:['photo','item','id','status','loc']},
+  full:    {label:'Full',    cols:null}      // null = toutes les colonnes
+};
 const PREFS_KEY = 'afm.prefs.v1';
 
 let prefs = null;
 let prefsLoadedRemote = false;
 let prefsTimer = null;
 
-function defaultPrefs(){ return {invCols: INV_DEFAULT_COLS.slice()}; }
+function defaultPrefs(){ return {invCols: INV_DEFAULT_COLS.slice(), invView: null}; }
 
 /* Lecture tolérante : une colonne supprimée dans une version
    future ne doit pas casser les préférences enregistrées. */
@@ -53,6 +62,7 @@ function sanitizePrefs(p){
     const keep = p.invCols.filter(k=>known.includes(k));
     if(keep.length) out.invCols = keep;
   }
+  if(p && (p.invView === 'compact' || p.invView === 'full')) out.invView = p.invView;
   return out;
 }
 
@@ -87,11 +97,46 @@ function schedulePrefsSave(){
 }
 
 /* --- Colonnes réellement affichées --- */
-function invColDefs(){
+/* Colonnes du jeu courant : la vue choisie, sinon le réglage manuel. */
+function invColKeys(){
   if(!prefs) loadPrefsLocal();
+  const v = prefs.invView && INV_VIEWS[prefs.invView];
+  if(v) return v.cols === null ? INV_COLUMNS.map(c=>c.k) : v.cols.slice();
+  return prefs.invCols;
+}
+
+/* Une colonne sur laquelle on trie ou on filtre s'affiche d'office.
+   Sinon on classerait selon une donnée invisible, ou on filtrerait
+   sans trace à l'écran — deux façons de rendre la liste incompréhensible. */
+function forcedCols(){
+  const f = new Set();
+  if(typeof sortLevels !== 'undefined') sortLevels.forEach(l=>f.add(l.k));
+  if(typeof colFilters !== 'undefined')
+    Object.keys(colFilters).forEach(k=>{ if(colFilters[k] && colFilters[k].size) f.add(k); });
+  return f;
+}
+
+function invColDefs(){
+  const keys = invColKeys(), forcee = forcedCols();
   return INV_COLUMNS.filter(c=>{
     if(c.admin && typeof canSeeValue === 'function' && !canSeeValue()) return false;
-    return c.fixed || prefs.invCols.includes(c.k);
+    return c.fixed || keys.includes(c.k) || forcee.has(c.k);
+  });
+}
+
+/* --- Bascule de vue --- */
+function setInvView(v){
+  // Recliquer sur la vue active revient au réglage manuel.
+  prefs.invView = (prefs.invView === v) ? null : v;
+  schedulePrefsSave();
+  renderViewButtons();
+  renderColMenu();
+  renderInv();
+}
+function renderViewButtons(){
+  Object.keys(INV_VIEWS).forEach(v=>{
+    const b = document.getElementById('view-' + v);
+    if(b) b.classList.toggle('on', prefs && prefs.invView === v);
   });
 }
 function invColCount(){ return invColDefs().length + 2; }   // + case à cocher + actions
@@ -99,6 +144,9 @@ function invColCount(){ return invColDefs().length + 2; }   // + case à cocher 
 function toggleCol(k, on){
   const c = INV_COLUMNS.find(x=>x.k===k);
   if(!c || c.fixed) return;
+  // Toucher une colonne à la main, c'est quitter la vue fixe : on part
+  // de ce qui est affiché pour ne rien perdre au passage.
+  if(prefs.invView){ prefs.invCols = invColKeys(); prefs.invView = null; }
   const set = new Set(prefs.invCols);
   if(on) set.add(k); else set.delete(k);
   prefs.invCols = INV_COLUMNS.map(x=>x.k).filter(x=>set.has(x));   // on garde l'ordre canonique
@@ -108,7 +156,9 @@ function toggleCol(k, on){
 }
 function resetCols(){
   prefs.invCols = INV_DEFAULT_COLS.slice();
+  prefs.invView = null;
   schedulePrefsSave();
+  renderViewButtons();
   renderColMenu();
   renderInv();
 }
@@ -127,7 +177,7 @@ function renderColMenu(){
   const rows = INV_COLUMNS
     .filter(c=>!(c.admin && typeof canSeeValue === 'function' && !canSeeValue()))
     .map(c=>{
-      const on = c.fixed || prefs.invCols.includes(c.k);
+      const on = c.fixed || invColKeys().includes(c.k);
       return `<label${c.fixed?' class="fixed"':''}>
         <input type="checkbox" ${on?'checked':''} ${c.fixed?'disabled':''}
                onchange="toggleCol('${c.k}',this.checked)">
