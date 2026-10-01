@@ -66,14 +66,17 @@ function renderDash(){
     </div>`;
 }
 
-/* Ouvre l'inventaire avec un filtre déjà appliqué */
+/* Ouvre l'inventaire avec un filtre déjà appliqué.
+   Depuis la v1.15 les filtres vivent dans colFilters et portent sur
+   le texte affiché : « Available », « Checked out », « Needs repair ». */
 function goInventory(filters){
   show('inv');
-  const set = (id,v)=>{ const el = document.getElementById(id); if(el) el.value = v || ''; };
-  set('q',''); set('fCat',''); set('fSub',''); set('fLoc',''); set('fCond','');
-  set('fOwner',''); set('fProv',''); set('fSort','');
-  set('fStatus', filters.status);
-  if(filters.cond) set('fCond', filters.cond);
-  if(typeof fillSubFilter === 'function') fillSubFilter();
+  const q = document.getElementById('q'); if(q) q.value = '';
+  sortLevels = [];
+  colFilters = {};
+  if(filters.status)
+    colFilters.status = new Set([filters.status === 'sorti' ? 'Checked out' : 'Available']);
+  if(filters.cond)
+    colFilters.cond = new Set([CONDS[filters.cond] || filters.cond]);
   renderInv();
 }
