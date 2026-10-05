@@ -126,6 +126,7 @@ function invColDefs(){
 
 /* --- Bascule de vue --- */
 function setInvView(v){
+  if(typeof invResetScroll === 'function') invResetScroll();
   // Recliquer sur la vue active revient au réglage manuel.
   prefs.invView = (prefs.invView === v) ? null : v;
   schedulePrefsSave();
