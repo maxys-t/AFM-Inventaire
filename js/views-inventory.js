@@ -24,6 +24,28 @@ let sortLevels = [];
 let colFilters = {};
 let headerMenuCol = null;
 
+/* ---- Position de défilement ----
+   Depuis la v1.13.1 le tableau défile dans son propre cadre, et
+   renderInv() reconstruit ce cadre entièrement. Sans précaution, le
+   moindre rafraîchissement — déplier un groupe, cocher une case —
+   renvoie en haut de la liste.
+   On la conserve par défaut, SAUF quand l'ordre ou le contenu change
+   vraiment (tri, filtre, recherche) : là, revenir en haut est le bon
+   comportement. */
+let invScrollReset = false;
+function invScrollSave(){
+  const w = document.querySelector('#invList .invwrap');
+  return w ? {top:w.scrollTop, left:w.scrollLeft} : null;
+}
+function invScrollRestore(p){
+  const w = document.querySelector('#invList .invwrap');
+  if(!w) return;
+  if(invScrollReset){ w.scrollTop = 0; invScrollReset = false; return; }
+  if(p){ w.scrollTop = p.top; w.scrollLeft = p.left; }
+}
+/* Appelée par tout ce qui réordonne ou refiltre la liste. */
+function invResetScroll(){ invScrollReset = true; }
+
 /* ---- Valeur sur laquelle on filtre ----
    C'est le texte AFFICHÉ qui sert de clé : on filtre ce qu'on voit.
    Les colonnes sans texte (statut, état, photo) ont leur propre
@@ -114,6 +136,7 @@ function sortRank(k){
 
 /* ---- Actions des menus d'en-tête ---- */
 function sortBy(k, dir, ajouter){
+  invResetScroll();
   const i = sortLevels.findIndex(l=>l.k === k);
   if(ajouter){
     if(i === -1) sortLevels.push({k, dir});
@@ -124,6 +147,7 @@ function sortBy(k, dir, ajouter){
   closeHeaderMenu(); renderInv();
 }
 function unsortBy(k){
+  invResetScroll();
   sortLevels = sortLevels.filter(l=>l.k !== k);
   closeHeaderMenu(); renderInv();
 }
@@ -136,12 +160,14 @@ function headerSortClick(k, maj){
 }
 
 function toggleFilterValue(k, v, on){
+  invResetScroll();
   if(!colFilters[k]) colFilters[k] = new Set();
   if(on) colFilters[k].add(v); else colFilters[k].delete(v);
   if(!colFilters[k].size) delete colFilters[k];
   renderHeaderMenu(); renderInv();
 }
 function clearFilter(k){
+  invResetScroll();
   delete colFilters[k];
   closeHeaderMenu(); renderInv();
 }
@@ -156,6 +182,7 @@ function filtersActive(){
   return !!q || sortLevels.length > 0 || activeFilterKeys().length > 0;
 }
 function resetFilters(){
+  invResetScroll();
   const q = document.getElementById('q'); if(q) q.value = '';
   sortLevels = []; colFilters = {};
   closeHeaderMenu(); renderInv();
@@ -348,6 +375,7 @@ function renderFilterBar(){
 
 /* ---- rendu de la liste ---- */
 function renderInv(){
+  const scroll = invScrollSave();
   const by = sortLevels.length ? sortLevels[0].k : "";
   const rows = sortItems(invFiltered());
   const searching = !!(document.getElementById('q').value||"").trim();
@@ -360,7 +388,8 @@ function renderInv(){
   if(!rows.length){
     wrap.innerHTML = '<div class="empty">No item matches.</div>';
     renderBulkBar();
-  if(typeof syncInvHeight === 'function') syncInvHeight(); return;
+  if(typeof syncInvHeight === 'function') syncInvHeight();
+  invScrollRestore(scroll); return;
   }
 
   const span = invColDefs().length + 2;
@@ -377,7 +406,8 @@ function renderInv(){
     wrap.innerHTML = `<div class="invwrap"><table class="invtable">
       <thead>${invHeadHtml(allSelF)}</thead><tbody>${body}</tbody></table></div>`;
     renderBulkBar();
-  if(typeof syncInvHeight === 'function') syncInvHeight(); return;
+  if(typeof syncInvHeight === 'function') syncInvHeight();
+  invScrollRestore(scroll); return;
   }
 
   // Regroupement des exemplaires d'un même modèle (« … #1 », « … #2 »)
@@ -423,6 +453,7 @@ function renderInv(){
     <thead>${invHeadHtml(allSel)}</thead><tbody>${body}</tbody></table></div>`;
   renderBulkBar();
   if(typeof syncInvHeight === 'function') syncInvHeight();
+  invScrollRestore(scroll);
 }
 
 /* Résumé de ce qui est affiché : nombre d'items et valeur d'achat cumulée */
