@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.15.2">
+<link rel="stylesheet" href="css/styles.css?v=1.16.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -13,11 +13,11 @@
 <header>
   <h1>AFM Inventory Tracker</h1>
   <span id="appVersion" class="vtag"></span>
-  <span id="syncdot" title="Supabase connection"></span>
+  <span id="syncdot" data-tip="Green: your changes are saved. Grey or red: not saved — check your connection."></span>
   <span class="spacer"></span>
   <span id="userChip" style="display:none"></span>
   <button class="btn sec small" id="trashBtn" data-req="delete" onclick="openTrash()" title="Trash" style="display:none">🗑<span id="trashCount"></span></button>
-  <button class="btn sec small" onclick="refresh()">↻ Refresh</button>
+  <button class="btn sec small" onclick="refresh()" data-tip="Reload everything from the database">↻ Refresh</button>
   <!-- Import / export : uniquement dans Settings → Data.
        Le champ reste ici, masqué, car c'est lui que Settings déclenche. -->
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this)">
@@ -113,15 +113,15 @@
     </div>
     <div class="invbar">
       <span class="viewsw">
-        <button class="btn sec small" id="view-compact" onclick="setInvView('compact')">Compact</button>
-        <button class="btn sec small" id="view-full" onclick="setInvView('full')">Full</button>
+        <button class="btn sec small" id="view-compact" onclick="setInvView('compact')" data-tip="A short set of columns, to scan the list quickly">Compact</button>
+        <button class="btn sec small" id="view-full" onclick="setInvView('full')" data-tip="Every column. Click again to return to your own selection.">Full</button>
       </span>
       <span class="colbox">
-        <button class="btn sec small" onclick="toggleColMenu()" title="Choose visible columns">Columns ▾</button>
+        <button class="btn sec small" onclick="toggleColMenu()" data-tip="Choose which columns are shown. On a phone, which details appear under each name.">Columns ▾</button>
         <div class="colmenu" id="colMenu"></div>
       </span>
       <button class="btn sec small" id="btnReset" onclick="resetFilters()" disabled
-              title="Clear search, filters and sorting">Reset</button>
+              data-tip="Clear the search, every filter and the sorting">Reset</button>
       <span class="spacer"></span>
       <span class="muted hint">Click a column header to sort · ▾ to filter</span>
     </div>
@@ -178,7 +178,9 @@
       <option value="bon">Good</option><option value="attente">Needs repair</option>
       <option value="reparation">In repair</option><option value="hs">Out of service</option>
     </select></div>
-    <div class="field full"><label>Home location *</label><select id="i-home"></select></div>
+    <div class="field full">
+      <label data-tip="Where this item is stored when it is not in use. Different from its current location, which changes when you check it out.">Home location * ⓘ</label>
+      <select id="i-home"></select></div>
     <div class="field full"><label>Photo (optional) — cropped to a square</label>
       <div id="i-photo-zone" class="photozone"></div>
       <input type="file" id="i-photo" accept="image/*" onchange="onPhotoChosen(this)" style="margin-top:8px">
@@ -240,6 +242,7 @@
 </div></div>
 
 <div class="hdrmenu" id="hdrMenu"></div>
+<div id="tipbox"></div>
 
 <div class="overlay" id="ovWarn"><div class="modal" id="warnBody"></div></div>
 
@@ -365,23 +368,23 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.15.2"></script>
-<script src="js/auth.js?v=1.15.2"></script>
-<script src="js/helpers.js?v=1.15.2"></script>
-<script src="js/crop.js?v=1.15.2"></script>
-<script src="js/prefs.js?v=1.15.2"></script>
-<script src="js/db.js?v=1.15.2"></script>
-<script src="js/views-dashboard.js?v=1.15.2"></script>
-<script src="js/views-inventory.js?v=1.15.2"></script>
-<script src="js/views-projects.js?v=1.15.2"></script>
-<script src="js/views-out.js?v=1.15.2"></script>
-<script src="js/views-repairs.js?v=1.15.2"></script>
-<script src="js/views-people-loc.js?v=1.15.2"></script>
-<script src="js/views-trash.js?v=1.15.2"></script>
-<script src="js/views-users.js?v=1.15.2"></script>
-<script src="js/views-settings.js?v=1.15.2"></script>
-<script src="js/import-csv.js?v=1.15.2"></script>
-<script src="js/photos-bulk.js?v=1.15.2"></script>
-<script src="js/app.js?v=1.15.2"></script>
+<script src="js/config.js?v=1.16.0"></script>
+<script src="js/auth.js?v=1.16.0"></script>
+<script src="js/helpers.js?v=1.16.0"></script>
+<script src="js/crop.js?v=1.16.0"></script>
+<script src="js/prefs.js?v=1.16.0"></script>
+<script src="js/db.js?v=1.16.0"></script>
+<script src="js/views-dashboard.js?v=1.16.0"></script>
+<script src="js/views-inventory.js?v=1.16.0"></script>
+<script src="js/views-projects.js?v=1.16.0"></script>
+<script src="js/views-out.js?v=1.16.0"></script>
+<script src="js/views-repairs.js?v=1.16.0"></script>
+<script src="js/views-people-loc.js?v=1.16.0"></script>
+<script src="js/views-trash.js?v=1.16.0"></script>
+<script src="js/views-users.js?v=1.16.0"></script>
+<script src="js/views-settings.js?v=1.16.0"></script>
+<script src="js/import-csv.js?v=1.16.0"></script>
+<script src="js/photos-bulk.js?v=1.16.0"></script>
+<script src="js/app.js?v=1.16.0"></script>
 </body>
 </html>
