@@ -853,6 +853,97 @@ body.wideview #v-inv .panel{padding:10px}
   .hdrmenu{width:calc(100vw - 24px);left:12px !important}
   .invtable .seprow td{font-size:14px;padding:12px 10px 6px}
 }
+/* ============================================================
+   v1.16 — À COLLER À LA FIN DE css/styles.css
+   Mobile, tablette et infobulles.
+   ============================================================ */
+
+/* --- Infobulles ---
+   Les natives (attribut title) mettent une seconde à venir et
+   n'existent pas au tactile. Celles-ci répondent tout de suite à la
+   souris et à l'appui long. */
+#tipbox{position:fixed;z-index:200;max-width:280px;pointer-events:none;
+  background:var(--txt);color:var(--bg);font-size:13px;line-height:1.4;
+  padding:8px 11px;border-radius:9px;opacity:0;transform:translateY(-3px);
+  transition:opacity .12s,transform .12s;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+#tipbox.on{opacity:1;transform:translateY(0)}
+[data-tip]{cursor:help}
+button[data-tip],label[data-tip]{cursor:pointer}
+
+/* --- Cartes mobiles ---
+   Deux lignes et une action. Objectif : au moins six items visibles
+   sans défiler sur un téléphone de 390 px. */
+.mlist{display:flex;flex-direction:column;gap:5px}
+.mcard{display:flex;align-items:center;gap:9px;padding:6px 9px;
+  background:var(--panel);border-radius:12px;cursor:pointer;
+  border:1px solid var(--border)}
+.mcard:active{background:var(--panel2)}
+.mcard.msel{border-color:var(--accent);background:rgba(0,113,227,.06)}
+.mcard.mchild{margin-left:16px;background:var(--panel2)}
+.mcard.mgroup{background:rgba(0,113,227,.05)}
+
+/* Cible tactile confortable sans grossir la carte : la zone cliquable
+   déborde de la case elle-même. */
+/* La zone cliquable déborde de la case pour rester confortable au
+   doigt sans faire grandir la carte. */
+.mcb{display:flex;align-items:center;justify-content:center;
+  min-width:38px;min-height:38px;margin:-6px 0 -6px -5px}
+.mcb input{width:19px;height:19px}
+
+.mthumb{width:36px;height:36px;object-fit:cover;border-radius:8px;
+  background:var(--panel2);flex-shrink:0}
+.mthumb.empty{display:block}
+
+.mbody{flex:1;min-width:0}
+.mtitle{font-size:14.5px;line-height:1.2;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+/* line-height serré : c'est lui qui décide de la hauteur de carte,
+   donc du nombre d'items visibles sans défiler. */
+.mmeta{display:flex;align-items:center;gap:5px;margin-top:1px;line-height:1.3;
+  font-size:11.5px;color:var(--muted);overflow:hidden;white-space:nowrap}
+.mmeta .tag{font-size:11px;padding:1px 7px}
+.mmeta .mono{font-size:12px}
+.msep{opacity:.45}
+
+.mact{min-width:52px;min-height:36px;flex-shrink:0;padding:7px 13px}
+
+.msep-head{font-size:13px;font-weight:700;color:var(--txt);
+  padding:12px 4px 3px;letter-spacing:-.01em}
+.mlist > .msep-head:first-child{padding-top:2px}
+
+/* --- Téléphone --- */
+@media(max-width:700px){
+  /* Les règles « tableau en blocs » de la feuille d'origine ne
+     s'appliquent plus à l'inventaire : il a son propre rendu. */
+  /* Recherche et ajout sur UNE ligne. En pleine largeur chacun, ils
+     coûtaient 120 px de haut en permanence — soit deux items. */
+  #v-inv .invtop{flex-wrap:nowrap;gap:8px;margin-bottom:8px}
+  #v-inv .bigsearch{flex:1 1 auto;min-width:0;font-size:14px;padding:10px 12px}
+  #v-inv .invtop .btn.big{flex:0 0 auto;padding:10px 14px;font-size:14px}
+  #v-inv .viewintro{display:none}
+  #invSummary{font-size:12px;margin:-2px 0 6px !important}
+  #v-inv .panel{padding:8px}
+  .invbar{gap:6px}
+  .viewsw{display:none}          /* Compact / Full n'a pas de sens ici */
+  .filterbar{font-size:13px}
+
+  /* Cibles tactiles sur les actions fréquentes */
+  nav button{min-height:42px}
+  .modal-actions .btn{min-height:44px;padding:11px 18px}
+  .btn.small{min-height:36px}
+}
+
+/* --- Tablette ---
+   L'iPad garde le tableau : au-delà de 700 px il reste lisible, et
+   c'est la cible privilégiée pour manipuler l'inventaire debout. */
+@media(min-width:701px) and (max-width:1024px){
+  body.wideview main{padding:10px 12px}
+  .invtable td{padding:9px 8px}      /* lignes un peu plus hautes au doigt */
+  .invtable .thumb{width:34px;height:34px}
+  .hbtn{padding:10px 4px 10px 8px}
+  .hmenu{padding:10px 8px}
+  .btn.small{min-height:34px}
+}
 
 
 
