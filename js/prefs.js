@@ -41,6 +41,21 @@ const INV_DEFAULT_COLS = ['photo','item','id','cat','status','loc','cond'];
    Deux jeux de colonnes couvrant les deux usages : repérer vite, ou
    tout voir. Le troisième état, « custom », n'est pas une vue : c'est
    simplement le réglage manuel, mémorisé dès qu'on coche une colonne. */
+/* --- Colonnes du mobile ---
+   INDÉPENDANTES de celles du bureau. C'est le cœur de la v1.16 :
+   jusqu'ici la vue mobile reprenait la sélection du bureau et
+   transformait chaque colonne en une ligne « label : valeur ».
+   Afficher quatorze colonnes produisait quatorze lignes par item, et
+   enrichir le tableau dégradait mécaniquement le téléphone.
+
+   Ici elles ne décrivent qu'une chose : ce qui tient sur la ligne de
+   repères sous le titre. Le titre et l'action sont toujours là. */
+const MOBILE_DEFAULT_COLS = ['id','status','loc'];
+/* Au-delà de quatre, la ligne déborde et la carte redevient illisible. */
+const MOBILE_MAX_COLS = 4;
+/* Un libellé long n'a pas sa place sur une ligne de repères. */
+const MOBILE_COLS = ['id','cat','family','status','loc','home','cond','owner','prov','price','pdate','serial'];
+
 const INV_VIEWS = {
   compact: {label:'Compact', cols:['photo','item','id','status','loc']},
   full:    {label:'Full',    cols:null}      // null = toutes les colonnes
@@ -51,7 +66,10 @@ let prefs = null;
 let prefsLoadedRemote = false;
 let prefsTimer = null;
 
-function defaultPrefs(){ return {invCols: INV_DEFAULT_COLS.slice(), invView: null}; }
+function defaultPrefs(){
+  return {invCols: INV_DEFAULT_COLS.slice(), invView: null,
+          invColsMobile: MOBILE_DEFAULT_COLS.slice(), mobilePhoto: true};
+}
 
 /* Lecture tolérante : une colonne supprimée dans une version
    future ne doit pas casser les préférences enregistrées. */
@@ -63,6 +81,11 @@ function sanitizePrefs(p){
     if(keep.length) out.invCols = keep;
   }
   if(p && (p.invView === 'compact' || p.invView === 'full')) out.invView = p.invView;
+  if(p && Array.isArray(p.invColsMobile)){
+    const keep = p.invColsMobile.filter(k=>MOBILE_COLS.includes(k)).slice(0, MOBILE_MAX_COLS);
+    if(keep.length) out.invColsMobile = keep;
+  }
+  if(p && typeof p.mobilePhoto === 'boolean') out.mobilePhoto = p.mobilePhoto;
   return out;
 }
 
@@ -124,6 +147,35 @@ function invColDefs(){
   });
 }
 
+/* --- Colonnes du mobile --- */
+function mobileColDefs(){
+  if(!prefs) loadPrefsLocal();
+  return INV_COLUMNS.filter(c=>{
+    if(c.admin && typeof canSeeValue === 'function' && !canSeeValue()) return false;
+    return prefs.invColsMobile.includes(c.k);
+  });
+}
+function toggleMobileCol(k, on){
+  if(!MOBILE_COLS.includes(k)) return;
+  const set = new Set(prefs.invColsMobile);
+  if(on){
+    if(set.size >= MOBILE_MAX_COLS){
+      if(typeof toast === 'function')
+        toast(`${MOBILE_MAX_COLS} fields maximum on mobile — uncheck one first.`, 'error');
+      renderColMenu(); return;
+    }
+    set.add(k);
+  }else set.delete(k);
+  prefs.invColsMobile = MOBILE_COLS.filter(x=>set.has(x));
+  schedulePrefsSave();
+  renderColMenu(); renderInv();
+}
+function toggleMobilePhoto(on){
+  prefs.mobilePhoto = !!on;
+  schedulePrefsSave();
+  renderColMenu(); renderInv();
+}
+
 /* --- Bascule de vue --- */
 function setInvView(v){
   if(typeof invResetScroll === 'function') invResetScroll();
@@ -155,6 +207,12 @@ function toggleCol(k, on){
   renderColMenu();
   renderInv();
 }
+function resetMobileCols(){
+  prefs.invColsMobile = MOBILE_DEFAULT_COLS.slice();
+  prefs.mobilePhoto = true;
+  schedulePrefsSave();
+  renderColMenu(); renderInv();
+}
 function resetCols(){
   prefs.invCols = INV_DEFAULT_COLS.slice();
   prefs.invView = null;
@@ -175,6 +233,25 @@ function renderColMenu(){
   const m = document.getElementById('colMenu');
   if(!m) return;
   if(!prefs) loadPrefsLocal();
+
+  // Sur mobile, ce menu règle la ligne de repères, pas des colonnes.
+  if(typeof isMobileView === 'function' && isMobileView()){
+    const dispo = INV_COLUMNS.filter(c=>MOBILE_COLS.includes(c.k))
+      .filter(c=>!(c.admin && typeof canSeeValue === 'function' && !canSeeValue()));
+    m.innerHTML = `<div class="colmenu-head">Shown under the name
+        <span class="muted">${prefs.invColsMobile.length}/${MOBILE_MAX_COLS}</span></div>`
+      + `<label><input type="checkbox" ${prefs.mobilePhoto?'checked':''}
+             onchange="toggleMobilePhoto(this.checked)"> Photo</label>`
+      + dispo.map(c=>{
+          const on = prefs.invColsMobile.includes(c.k);
+          return `<label><input type="checkbox" ${on?'checked':''}
+                   onchange="toggleMobileCol('${c.k}',this.checked)"> ${esc(c.label)}</label>`;
+        }).join("")
+      + `<div class="colmenu-foot">
+           <button class="btn sec small" onclick="resetMobileCols()">Reset</button></div>`;
+    return;
+  }
+
   const rows = INV_COLUMNS
     .filter(c=>!(c.admin && typeof canSeeValue === 'function' && !canSeeValue()))
     .map(c=>{
