@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.16.2] — 2026-10-06
+
+### Corrigé
+
+- **La vignette d'un item sans photo redevient carrée.** Elle s'affichait
+  en rectangle de 36 × 96 px, ce qui faisait grandir la carte de moitié et
+  coûtait un item visible à l'écran sur deux. Le substitut portait la
+  classe `empty`, déjà utilisée depuis les premières versions pour les
+  messages de liste vide — et porteuse d'un `padding:30px 0` qui
+  s'ajoutait silencieusement aux 36 px de hauteur. Il porte désormais un
+  nom qui n'appartient qu'à lui, et la règle de la vignette neutralise
+  tout padding hérité. Trois contrôles automatiques interdisent la
+  rechute.
+
+### Nettoyé
+
+- **`css/styles.css` perd 148 lignes sans qu'un seul pixel bouge** : le
+  bloc « v1.3 — Photos carrées » y figurait **trois fois à l'identique**,
+  et le bloc v1.9.1 était intégralement repris par le v1.9.2 qui le suit.
+  Sur les deux en-têtes concernés, la consigne « À COLLER À LA FIN de
+  css/styles.css » disparaît : elle s'adressait à un collage manuel, que
+  le dépôt rend caduc. Les onze autres restent à nettoyer.
+
+### Note technique
+
+L'incident et les 148 lignes mortes ont la même cause : une feuille de
+style construite par empilement de blocs successifs. Chaque bloc était
+écrit sans relire les précédents, d'où les doublons — et d'où la collision
+de noms, un nom générique comme `empty` ayant toutes les chances d'avoir
+déjà été pris. Les classes du rendu mobile sont préfixées `m` pour cette
+raison ; `empty` était la seule exception, et c'est elle qui a cassé.
+
+---
+
 ## [1.16.1] — 2026-10-06
 
 ### Modifié

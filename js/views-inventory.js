@@ -292,7 +292,7 @@ function mobileCard(i, isChild){
       <input type="checkbox" ${sel.has(i.id)?'checked':''} onchange="toggleSel('${i.id}',this.checked)"></label>
     ${prefs.mobilePhoto ? (i.photo
         ? `<img class="mthumb" loading="lazy" src="${i.photo}">`
-        : '<span class="mthumb empty"></span>') : ''}
+        : '<span class="mthumb mnophoto"></span>') : ''}
     <div class="mbody">
       <div class="mtitle">${itemTitle(i)}</div>
       <div class="mmeta">${mobileMeta(i)}</div>
@@ -312,7 +312,7 @@ function mobileGroupCard(key, items, open){
       <input type="checkbox" ${allSel?'checked':''} onchange="selectGroup(${k},this.checked)"></label>
     ${prefs.mobilePhoto ? (photos.length===1 && photos[0]
         ? `<img class="mthumb" loading="lazy" src="${photos[0]}">`
-        : '<span class="mthumb empty"></span>') : ''}
+        : '<span class="mthumb mnophoto"></span>') : ''}
     <div class="mbody">
       <div class="mtitle"><span class="chev">${open?'▾':'▸'}</span>
         ${marques.length===1 && marques[0] ? `<b>${esc(marques[0])}</b> ` : ''}${esc(key)}</div>
