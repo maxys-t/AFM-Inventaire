@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.15.2';
+const APP_VERSION = '1.16.0';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','rep','settings'];
@@ -41,6 +41,63 @@ function syncInvHeight(){
 function syncStickyOffset(){ syncInvHeight(); }   // ancien nom, conservé
 window.addEventListener('resize', syncInvHeight);
 window.addEventListener('load', syncInvHeight);
+
+/* Franchir le seuil téléphone / bureau change de rendu : on redessine.
+   On n'écoute pas « resize », qui se déclenche en continu — seulement
+   le changement d'état de la requête média. */
+try{
+  const mq = window.matchMedia('(max-width:700px)');
+  const relire = ()=>{ if(curView() === 'inv') renderInv(); };
+  if(mq.addEventListener) mq.addEventListener('change', relire);
+  else if(mq.addListener) mq.addListener(relire);
+}catch(e){}
+
+/* ============================================================
+   INFOBULLES
+   Les infobulles natives du navigateur (attribut title) mettent une
+   seconde à venir et n'existent pas au tactile. Celles-ci répondent
+   tout de suite à la souris et à l'appui long — c'est ce qui les
+   rend utiles sur la tablette, cible principale du projet.
+   ============================================================ */
+let tipTimer = null;
+function showTip(el){
+  const txt = el.getAttribute('data-tip');
+  if(!txt) return;
+  let t = document.getElementById('tipbox');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'tipbox';
+    document.body.appendChild(t);
+  }
+  t.textContent = txt;
+  t.classList.add('on');
+  const r = el.getBoundingClientRect();
+  const w = t.offsetWidth, h = t.offsetHeight;
+  // On place au-dessus si le bas manque de place, et on borne les côtés.
+  const bas = r.bottom + 8 + h < window.innerHeight;
+  t.style.top  = Math.round(bas ? r.bottom + 8 : r.top - h - 8) + 'px';
+  t.style.left = Math.round(Math.min(Math.max(8, r.left + r.width/2 - w/2),
+                                     window.innerWidth - w - 8)) + 'px';
+}
+function hideTip(){
+  clearTimeout(tipTimer);
+  const t = document.getElementById('tipbox');
+  if(t) t.classList.remove('on');
+}
+document.addEventListener('mouseover', e=>{
+  const el = e.target.closest('[data-tip]');
+  if(el) showTip(el); else hideTip();
+});
+document.addEventListener('mouseout', e=>{ if(e.target.closest('[data-tip]')) hideTip(); });
+document.addEventListener('touchstart', e=>{
+  const el = e.target.closest('[data-tip]');
+  if(!el) return;
+  clearTimeout(tipTimer);
+  // Appui long : 450 ms, sans empêcher le geste normal.
+  tipTimer = setTimeout(()=>showTip(el), 450);
+}, {passive:true});
+document.addEventListener('touchend', hideTip, {passive:true});
+document.addEventListener('scroll', hideTip, {passive:true, capture:true});
 function curView(){ const b = document.querySelector('nav button.active'); return b?b.dataset.v:'dash'; }
 function render(){
   if(typeof updateTrashBadge==='function') updateTrashBadge();
