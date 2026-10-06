@@ -1,5 +1,142 @@
 # Changelog
 
+## [1.16.1] — 2026-10-06
+
+### Modifié
+
+- **Deux repères par défaut sur la carte mobile** au lieu de trois :
+  identifiant et statut. Sur un téléphone de 390 px, une fois la case à
+  cocher, la photo et le bouton posés, il reste environ 160 px pour cette
+  ligne — le troisième champ s'affichait tronqué, prenant de la place sans
+  rien apprendre. L'emplacement restait illisible : autant ne pas le
+  promettre. Les deux repères supplémentaires restent ajoutables à la main
+  dans le menu « Columns ».
+
+### Corrigé
+
+- **Seul le dernier repère se tronque**, les précédents restent entiers.
+  « Acce… » occupait la place d'une information sans en être une.
+
+### Note technique
+
+`sql/015-peaux-consommables.sql` et `supabase/functions/invite-user/index.ts`
+rejoignent le dépôt : déployés en production depuis la v1.12 et la v1.15.1,
+ils n'y avaient jamais été versionnés.
+
+---
+
+## [1.16.0] — 2026-10-06
+
+### Ajouté
+
+- **Affichage mobile en cartes.** En dessous de 700 px, l'inventaire
+  abandonne le tableau pour des cartes de deux lignes : nom et marque,
+  puis une ligne de repères. Le tableau redimensionné ne tenait pas sur un
+  téléphone : les blocs « libellé : valeur » faisaient trois écrans par
+  catégorie.
+- **Jeu de colonnes propre au mobile**, indépendant du bureau et plafonné à
+  quatre champs. Le mobile héritait jusqu'ici des quinze colonnes du
+  bureau — le problème était structurel, pas cosmétique.
+- **Infobulles maison** sur les commandes dont le rôle n'est pas évident :
+  « Home location », le voyant de sauvegarde, les menus d'en-tête. Appui
+  long de 450 ms sur écran tactile.
+
+### Modifié
+
+- **Cibles tactiles agrandies** et réglage propre à la tablette
+  (701–1024 px), qui gardait jusqu'ici la mise en page du bureau.
+
+---
+
+## [1.15.2] — 2026-10-05
+
+### Corrigé
+
+- **La position de défilement est préservée** quand on déplie une ligne
+  d'item en plusieurs exemplaires. Régression du cadre à défilement
+  introduit en v1.13.1 : `renderInv()` le reconstruit, ce qui renvoyait en
+  haut de liste. Le défilement est désormais relevé puis rétabli — et
+  délibérément remis à zéro sur un tri, un filtre, une recherche ou un
+  changement de vue, où revenir en haut est le comportement attendu.
+
+---
+
+## [1.15.1] — 2026-10-04
+
+### Modifié
+
+- **Les peaux de batterie deviennent « Instrument consumables »**,
+  sous-catégorie d'Instruments. Les cinq tailles fusionnent en une :
+  les seize noms portent déjà leur taille, aucune information n'est perdue.
+  16 items renumérotés (`sql/015-peaux-consommables.sql`). La famille
+  Consumables est conservée, vide, pour la suite.
+
+### Corrigé
+
+- Le libellé affiché restait `consommable_inst` : la migration n'était
+  qu'à moitié déployée, `subLabel()` retombant sur la clé brute.
+- Numéro de version de `index.html` oublié : un changement de `config.js`
+  reste invisible sans un nouveau `?v=`. Règle désormais systématique.
+
+---
+
+## [1.15.0] — 2026-10-03
+
+### Ajouté
+
+- **Tri et filtres passent dans les en-têtes de colonne.** Un clic trie,
+  un menu par en-tête filtre sur les valeurs présentes. Tri sur plusieurs
+  niveaux.
+- **Bandeau des filtres actifs**, retirables un par un.
+- L'état des tris et des filtres est enregistré dans les préférences.
+
+### Modifié
+
+- **L'en-tête de catégorie joue le rôle de séparateur** : plus grand, plus
+  visible.
+- La barre de sept menus déroulants disparaît, remplacée par les menus
+  d'en-tête.
+
+---
+
+## [1.14.0] — 2026-10-02
+
+### Modifié
+
+- **Ordre d'affichage des familles** revu pour suivre la logique du studio
+  plutôt que l'ordre alphabétique.
+- **Les supports sont éclatés** entre pieds de micro, pieds de clavier et
+  mobilier ; le K&M 42020, rack 19", rejoint une nouvelle sous-catégorie
+  « Studio racks » du mobilier. 59 items renumérotés
+  (`sql/014-rangement-familles.sql`).
+
+### Note technique
+
+Un changement de famille ne touche pas aux identifiants, qui dérivent du
+code de sous-catégorie : seules les étiquettes QR des 59 items renumérotés
+sont à refaire. La migration a été simulée sur l'export réel de 648 items
+avant déploiement : 0 collision, numérotation continue.
+
+---
+
+## [1.13.1] — 2026-10-01
+
+### Ajouté
+
+- **Choix explicite sur les items abîmés d'une sortie groupée.** L'app
+  annonce les items concernés et propose de les retirer du lot — option
+  mise en avant — ou de les sortir quand même.
+
+### Corrigé
+
+- **Mise en page cassée par la v1.13** : retirer `overflow` de `.invwrap`
+  laissait le tableau déborder du panneau et décaler la page vers la
+  droite. `.invwrap` redevient un cadre à défilement de hauteur bornée,
+  calculée par `syncInvHeight()`.
+- L'application occupe désormais toute la largeur du bureau.
+
+---
+
 ## [1.13.0] — 2026-09-30
  
 ### Ajouté

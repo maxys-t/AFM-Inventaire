@@ -902,6 +902,10 @@ button[data-tip],label[data-tip]{cursor:pointer}
 .mmeta{display:flex;align-items:center;gap:5px;margin-top:1px;line-height:1.3;
   font-size:11.5px;color:var(--muted);overflow:hidden;white-space:nowrap}
 .mmeta .tag{font-size:11px;padding:1px 7px}
+/* Seul le DERNIER repère se tronque : les précédents restent entiers.
+   « Acce… » occupait la place d'une information sans en être une. */
+.mmeta > *{flex-shrink:0}
+.mmeta > *:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .mmeta .mono{font-size:12px}
 .msep{opacity:.45}
 

@@ -50,7 +50,12 @@ const INV_DEFAULT_COLS = ['photo','item','id','cat','status','loc','cond'];
 
    Ici elles ne décrivent qu'une chose : ce qui tient sur la ligne de
    repères sous le titre. Le titre et l'action sont toujours là. */
-const MOBILE_DEFAULT_COLS = ['id','status','loc'];
+/* Deux repères, pas trois. Sur un téléphone de 390 px, une fois la
+   case, la photo et le bouton posés, il reste environ 160 px pour
+   cette ligne : l'identifiant et la pastille de statut la remplissent
+   déjà. Un troisième champ s'affichait tronqué — il prenait de la
+   place sans rien apprendre. Reste ajoutable à la main. */
+const MOBILE_DEFAULT_COLS = ['id','status'];
 /* Au-delà de quatre, la ligne déborde et la carte redevient illisible. */
 const MOBILE_MAX_COLS = 4;
 /* Un libellé long n'a pas sa place sur une ligne de repères. */
