@@ -35,13 +35,20 @@ let headerMenuCol = null;
 let invScrollReset = false;
 function invScrollSave(){
   const w = document.querySelector('#invList .invwrap');
-  return w ? {top:w.scrollTop, left:w.scrollLeft} : null;
+  // Sur mobile il n'y a pas de cadre à défilement : c'est la page.
+  if(!w) return {page:true, top: window.scrollY || 0, left:0};
+  return {top:w.scrollTop, left:w.scrollLeft};
 }
 function invScrollRestore(p){
   const w = document.querySelector('#invList .invwrap');
-  if(!w) return;
-  if(invScrollReset){ w.scrollTop = 0; invScrollReset = false; return; }
-  if(p){ w.scrollTop = p.top; w.scrollLeft = p.left; }
+  if(invScrollReset){
+    invScrollReset = false;
+    if(w) w.scrollTop = 0; else try{ window.scrollTo(0,0); }catch(e){}
+    return;
+  }
+  if(!p) return;
+  if(p.page){ try{ window.scrollTo(0, p.top); }catch(e){} return; }
+  if(w){ w.scrollTop = p.top; w.scrollLeft = p.left; }
 }
 /* Appelée par tout ce qui réordonne ou refiltre la liste. */
 function invResetScroll(){ invScrollReset = true; }
@@ -241,11 +248,80 @@ function sepFor(i, by){
   }
   return null;
 }
+function mobileSep(label){ return `<div class="msep-head">${esc(label)}</div>`; }
 function sepRow(label, span){
   return `<tr class="seprow"><td colspan="${span}">${esc(label)}</td></tr>`;
 }
 
 /* ---- en-tête du tableau, construit à partir des colonnes visibles ---- */
+/* ============================================================
+   RENDU MOBILE
+   Un tableau converti en blocs empilés donnait une ligne par
+   colonne : quatorze colonnes, quatorze lignes par item, et moins
+   d'un item visible à l'écran. On rend donc une carte conçue pour
+   le téléphone — titre, repères, action — au lieu de déguiser un
+   tableau.
+   ============================================================ */
+const MOBILE_BP = 700;
+function isMobileView(){
+  try{ return window.matchMedia('(max-width:' + MOBILE_BP + 'px)').matches; }
+  catch(e){ return false; }
+}
+
+/* Repères sous le titre : courts, séparés par des points médians.
+   Le statut et l'état gardent leur pastille, le reste est du texte. */
+function mobileMeta(i){
+  return mobileColDefs().map(c=>{
+    if(c.k === 'status') return statusTag(i);
+    if(c.k === 'cond')   return `<span class="tag ${i.cond}">${esc(CONDS[i.cond]||i.cond)}</span>`;
+    if(c.k === 'id')     return `<span class="mono">${esc(i.id)}</span>`;
+    const t = invCellText(c, i);
+    return t ? `<span>${esc(t)}</span>` : '';
+  }).filter(Boolean).join('<span class="msep">·</span>');
+}
+
+function mobileCard(i, isChild){
+  const why = checkoutBlockReason(i);
+  const action = i.status !== 'dispo'
+    ? `<button class="btn small ok mact" onclick="event.stopPropagation();openCheckin('${i.id}')">In</button>`
+    : why
+      ? `<button class="btn small warn mact" onclick="event.stopPropagation();openCheckout('${i.id}')">Out ⚠️</button>`
+      : `<button class="btn small mact" onclick="event.stopPropagation();openCheckout('${i.id}')">Out</button>`;
+  return `<div class="mcard${isChild?' mchild':''}${sel.has(i.id)?' msel':''}" onclick="openDetail('${i.id}')">
+    <label class="mcb" onclick="event.stopPropagation()">
+      <input type="checkbox" ${sel.has(i.id)?'checked':''} onchange="toggleSel('${i.id}',this.checked)"></label>
+    ${prefs.mobilePhoto ? (i.photo
+        ? `<img class="mthumb" loading="lazy" src="${i.photo}">`
+        : '<span class="mthumb empty"></span>') : ''}
+    <div class="mbody">
+      <div class="mtitle">${itemTitle(i)}</div>
+      <div class="mmeta">${mobileMeta(i)}</div>
+    </div>
+    ${can('checkout') ? action : ''}
+  </div>`;
+}
+
+function mobileGroupCard(key, items, open){
+  const dispo = items.filter(i=>i.status==='dispo').length;
+  const marques = [...new Set(items.map(i=>(i.brand||'').trim()))];
+  const photos = [...new Set(items.map(i=>i.photo||''))];
+  const k = JSON.stringify(key).replace(/"/g,'&quot;');
+  const allSel = items.every(i=>sel.has(i.id));
+  return `<div class="mcard mgroup${allSel?' msel':''}" onclick="toggleGroup(${k})">
+    <label class="mcb" onclick="event.stopPropagation()">
+      <input type="checkbox" ${allSel?'checked':''} onchange="selectGroup(${k},this.checked)"></label>
+    ${prefs.mobilePhoto ? (photos.length===1 && photos[0]
+        ? `<img class="mthumb" loading="lazy" src="${photos[0]}">`
+        : '<span class="mthumb empty"></span>') : ''}
+    <div class="mbody">
+      <div class="mtitle"><span class="chev">${open?'▾':'▸'}</span>
+        ${marques.length===1 && marques[0] ? `<b>${esc(marques[0])}</b> ` : ''}${esc(key)}</div>
+      <div class="mmeta"><span>${items.length} copies</span><span class="msep">·</span>
+        <span class="tag dispo">${dispo} available</span></div>
+    </div>
+  </div>`;
+}
+
 /* ---- en-tête : chaque colonne porte son menu ----
    Le rang de tri est affiché (1↑, 2↓) : sans lui, un tri à deux
    niveaux serait invisible et donnerait l'impression d'un classement
@@ -395,16 +471,20 @@ function renderInv(){
   const span = invColDefs().length + 2;
 
   // Un tri explicite affiche une liste à plat : regrouper masquerait le classement.
+  const mob = isMobileView();
+
   if(by){
     const allSelF = rows.length && rows.every(i=>sel.has(i.id));
     let body = "", lastSep = null;
     rows.forEach(i=>{
       const s = sepFor(i, by);
-      if(s !== null && s !== lastSep){ lastSep = s; body += sepRow(s, span); }
-      body += itemRow(i, false);
+      if(s !== null && s !== lastSep){ lastSep = s; body += mob ? mobileSep(s) : sepRow(s, span); }
+      body += mob ? mobileCard(i, false) : itemRow(i, false);
     });
-    wrap.innerHTML = `<div class="invwrap"><table class="invtable">
-      <thead>${invHeadHtml(allSelF)}</thead><tbody>${body}</tbody></table></div>`;
+    wrap.innerHTML = mob
+      ? `<div class="mlist">${body}</div>`
+      : `<div class="invwrap"><table class="invtable">
+          <thead>${invHeadHtml(allSelF)}</thead><tbody>${body}</tbody></table></div>`;
     renderBulkBar();
   if(typeof syncInvHeight === 'function') syncInvHeight();
   invScrollRestore(scroll); return;
@@ -437,20 +517,22 @@ function renderInv(){
       if(done.has(k)) return;
       done.add(k);
       const open = expanded.has(k) || searching;
-      ligne = groupRow(k, groups.get(k), open)
-            + (open ? groups.get(k).map(x=>itemRow(x, true)).join("") : "");
+      ligne = (mob ? mobileGroupCard(k, groups.get(k), open) : groupRow(k, groups.get(k), open))
+            + (open ? groups.get(k).map(x=>mob ? mobileCard(x, true) : itemRow(x, true)).join("") : "");
     }else{
-      ligne = itemRow(i, false);
+      ligne = mob ? mobileCard(i, false) : itemRow(i, false);
     }
     const fam = catLabel(i.cat) || '—';
-    if(fam !== derniereFamille){ derniereFamille = fam; body += sepRow(fam, span); }
+    if(fam !== derniereFamille){ derniereFamille = fam; body += mob ? mobileSep(fam) : sepRow(fam, span); }
     body += ligne;
   });
 
   const allIds = rows.map(i=>i.id);
   const allSel = allIds.length && allIds.every(id=>sel.has(id));
-  wrap.innerHTML = `<div class="invwrap"><table class="invtable">
-    <thead>${invHeadHtml(allSel)}</thead><tbody>${body}</tbody></table></div>`;
+  wrap.innerHTML = mob
+    ? `<div class="mlist">${body}</div>`
+    : `<div class="invwrap"><table class="invtable">
+        <thead>${invHeadHtml(allSel)}</thead><tbody>${body}</tbody></table></div>`;
   renderBulkBar();
   if(typeof syncInvHeight === 'function') syncInvHeight();
   invScrollRestore(scroll);
