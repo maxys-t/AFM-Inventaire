@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.18.1] — 2026-10-08
+
+### Corrigé
+
+- **Les photos HEIC ne marchaient pas** — et pas seulement dans les
+  réparations : la fiche d'un item et l'import en lot avaient le même
+  défaut depuis le début. HEIC est le format par défaut de l'iPhone, et
+  aucun navigateur sauf Safari ne sait le décoder. Le fichier était
+  accepté, envoyé, et ne s'affichait nulle part.
+
+  La parade tient en deux temps. Les champs n'annoncent plus que des
+  formats universels (JPEG, PNG, WebP), ce qui **pousse iOS à convertir
+  tout seul** au moment où l'on choisit la photo — c'est le cas courant,
+  et il est réglé sans rien demander. Si un HEIC passe quand même, par
+  glisser-déposer ou depuis un ordinateur, le message le nomme et
+  rappelle le réglage à changer sur l'iPhone, au lieu du « unreadable
+  image » d'avant.
+
+### Modifié
+
+- **Les photos sont redimensionnées à 1600 px avant l'envoi.** Une photo
+  d'iPhone pèse 3 à 5 Mo ; six d'un coup sur une connexion de tournée,
+  c'était une minute d'attente. Dix fois plus léger désormais, et bien
+  au-delà de ce qu'un écran affiche. Cela répond à la réserve émise en
+  v1.18.0 sur la lenteur de validation.
+- Les trois chemins de photo de l'application — réparations, fiche
+  d'item, import en lot — passent par le même décodeur. Ils divergeaient,
+  et c'est pour ça que le même défaut existait en trois exemplaires.
+
+
 ## [1.18.0] — 2026-10-08
 
 ### Ajouté

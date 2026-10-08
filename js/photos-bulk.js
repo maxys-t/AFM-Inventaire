@@ -73,9 +73,14 @@ function photoMatch(levels, key){
 }
 
 /* Recadrage carré automatique, centré, réduit à PHOTO_SIZE */
-function squareFromFile(file){
+async function squareFromFile(file){
+  /* Passe par le décodeur commun : il lit ce que le navigateur sait
+     lire, et nomme le format quand il ne sait pas — un HEIC échouait
+     ici sous un « unreadable image » qui n'aidait personne. */
+  const prepared = await fileToJpeg(file, 2048);
   return new Promise((resolve, reject)=>{
-    const rd = new FileReader();
+    const rd = {onload:null, onerror:null,
+      readAsDataURL(){ this.onload({target:{result: prepared}}); }};
     rd.onload = e=>{
       const img = new Image();
       img.onload = ()=>{
@@ -88,10 +93,10 @@ function squareFromFile(file){
         ctx.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
         resolve(c.toDataURL('image/jpeg', 0.82));
       };
-      img.onerror = ()=> reject(new Error('unreadable image'));
+      img.onerror = ()=> reject(new Error(photoFormatMessage(file)));
       img.src = e.target.result;
     };
-    rd.onerror = ()=> reject(new Error('cannot read file'));
+    rd.onerror = ()=> reject(new Error(photoFormatMessage(file)));
     rd.readAsDataURL(file);
   });
 }

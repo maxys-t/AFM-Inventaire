@@ -816,13 +816,17 @@ let editingId = null;
 let pendingPhoto = null;    // photo recadrée en attente d'enregistrement
 
 /* Choix d'une photo → recadrage carré immédiat */
-function onPhotoChosen(input){
+async function onPhotoChosen(input){
   const f = input.files[0];
-  if(!f) return;
-  const rd = new FileReader();
-  rd.onload = e=> openCropper(e.target.result, d=>{ pendingPhoto = d; showPhotoPreview(d); });
-  rd.readAsDataURL(f);
   input.value = "";
+  if(!f) return;
+  /* Décodé et redimensionné avant le recadrage : un HEIC d'iPhone
+     arrivait jusqu'ici sans jamais pouvoir s'afficher, et le cadreur
+     restait vide sans rien dire. */
+  try{
+    const d = await fileToJpeg(f);
+    openCropper(d, x=>{ pendingPhoto = x; showPhotoPreview(x); });
+  }catch(e){ toast(e.message, 'error'); }
 }
 function recropPhoto(){
   const cur = pendingPhoto || (editingId && item(editingId) ? item(editingId).photo : null);

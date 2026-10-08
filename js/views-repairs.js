@@ -273,23 +273,24 @@ function photoZone(key){
     : `<label class="photobtn${list.length?' compact':''}">
          <span class="pi">📷</span>
          <span>${list.length ? 'Add another' : 'Take or choose photos'}</span>
-         <input type="file" accept="image/*" capture="environment" multiple
+         <input type="file" accept="${PHOTO_ACCEPT}" capture="environment" multiple
                 style="display:none" onchange="takePhoto('${key}', this)">
        </label>`;
   el.innerHTML = `<div class="phgrid">${tiles}</div>${add}`;
 }
 
-function takePhoto(key, inp){
+async function takePhoto(key, inp){
   const files = [...(inp.files||[])];
   inp.value = '';
   if(!files.length) return;
   const room = PHOTO_MAX - photoBuf[key].length;
   if(files.length > room) toast(`Only ${room} more photo(s) fit.`, 'error');
-  files.slice(0, room).forEach(f=>{
-    const fr = new FileReader();
-    fr.onload = () => { photoBuf[key].push(fr.result); photoZone(key); };
-    fr.readAsDataURL(f);
-  });
+  for(const f of files.slice(0, room)){
+    try{
+      photoBuf[key].push(await fileToJpeg(f));
+      photoZone(key);
+    }catch(e){ toast(e.message, 'error'); }
+  }
 }
 function dropPhoto(key, n){ photoBuf[key].splice(n, 1); photoZone(key); }
 

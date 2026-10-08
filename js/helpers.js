@@ -225,6 +225,64 @@ function inLocFilter(sel,name){
 
 /* --- Formatage des lignes d'historique --- */
 function histIcon(t){ return {create:"➕",out:"📤",in:"📥",move:"📍",edit:"✏️",repair:"🔧"}[t]||"•"; }
+/* ---- Lecture d'une photo (v1.18.1) ----
+
+   Deux problèmes, une seule réponse.
+
+   HEIC : c'est le format par défaut de l'iPhone, et aucun navigateur
+   sauf Safari ne sait le décoder. Jusqu'ici le fichier était accepté,
+   envoyé tel quel, et ne s'affichait nulle part. La parade tient en
+   deux temps : `accept` ne mentionne QUE des formats universels, ce
+   qui pousse iOS à convertir tout seul en JPEG au moment du choix ;
+   et si un HEIC passe quand même (glisser-déposer, navigateur laxiste),
+   on le dit clairement au lieu de stocker un fichier illisible.
+
+   Poids : une photo d'iPhone fait 3 à 5 Mo. Six d'un coup sur une
+   connexion de tournée, c'est une minute d'attente. On redimensionne
+   à 1600 px avant l'envoi — bien au-delà de ce qu'un écran affiche,
+   et dix fois plus léger. */
+const PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp';
+const PHOTO_MAXPX = 1600;
+
+async function decodeImage(file){
+  /* createImageBitmap est le chemin rapide, et le seul qui lise le
+     HEIC là où le système le sait (Safari). */
+  if(typeof createImageBitmap === 'function'){
+    try{ return await createImageBitmap(file); }catch(e){}
+  }
+  const url = URL.createObjectURL(file);
+  try{
+    return await new Promise((res, rej)=>{
+      const im = new Image();
+      im.onload = ()=>res(im);
+      im.onerror = ()=>rej(new Error('decode'));
+      im.src = url;
+    });
+  } finally { setTimeout(()=>URL.revokeObjectURL(url), 1000); }
+}
+
+function photoFormatMessage(file){
+  const n = (file && file.name || '').toLowerCase();
+  return /\.(heic|heif)$/.test(n) || /heic|heif/.test(file && file.type || '')
+    ? `${file.name} is a HEIC photo, which browsers cannot display. On an iPhone: Settings → Camera → Formats → Most Compatible, or export the photo as JPEG.`
+    : `${(file && file.name) || 'This file'} could not be read as an image.`;
+}
+
+/* Renvoie un data URL JPEG, redimensionné. Lève une erreur parlante. */
+async function fileToJpeg(file, maxPx){
+  let src;
+  try{ src = await decodeImage(file); }
+  catch(e){ throw new Error(photoFormatMessage(file)); }
+  const max = maxPx || PHOTO_MAXPX;
+  const w0 = src.width, h0 = src.height;
+  const k = Math.min(1, max / Math.max(w0, h0));
+  const c = document.createElement('canvas');
+  c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  if(src.close) src.close();
+  return c.toDataURL('image/jpeg', 0.85);
+}
+
 /* ---- Réparations (v1.17) ----
    Un item n'a qu'un dossier ouvert à la fois : la base l'impose par
    un index unique, donc find() suffit ici. */
