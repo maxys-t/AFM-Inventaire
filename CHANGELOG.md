@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.17.1] — 2026-10-08
+
+### Corrigé
+
+- **Les zones de texte des fenêtres faisaient la hauteur d'un écran.**
+  Faute de hauteur explicite, l'attribut `rows="2"` ne suffisait pas : le
+  champ s'étirait et repoussait les boutons hors de vue. Deux lignes
+  désormais, agrandissables à la main.
+
+### Modifié
+
+- **Plus d'encadré dans un encadré.** Une fenêtre est déjà une boîte ; en
+  remettre à l'intérieur hiérarchisait à faux et brouillait la lecture.
+  Les sections sont séparées par un simple filet, et la comparaison
+  « état documenté / état constaté » par un filet vertical plutôt que par
+  deux cadres qui isolaient les deux moitiés au lieu de les confronter.
+- **Les flèches des menus déroulants étaient invisibles** — 10 px de large
+  dans un gris à peine distinct du fond. Elles passent à 16 px, mieux
+  contrastées, et s'éclaircissent au survol ; la cible fait 40 px de haut.
+  Les chevrons de repli suivent. Ça vaut pour toute l'application, pas
+  seulement les réparations.
+- **L'ajout de photo devient une vraie commande** : un bouton pleine
+  largeur plutôt qu'un petit carré, l'appareil photo ouvert directement
+  sur tablette et téléphone (`capture`), un aperçu de 78 px et un bouton
+  pour retirer ou remplacer. Une photo peut aussi être prise **au
+  retour** : les deux se répondent.
+- Les pastilles de choix passent à 42 px de haut, au-dessus du seuil de
+  confort tactile.
+
+### Corrigé aussi
+
+- L'aperçu de la photo restait affiché d'un signalement à l'autre : la
+  fenêtre repart maintenant à zéro à chaque ouverture.
+
+
 ## [1.17.0] — 2026-10-08
 
 ### Ajouté

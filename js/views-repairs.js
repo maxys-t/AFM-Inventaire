@@ -197,11 +197,12 @@ function repJournal(){
    documenté au départ. Sans lui, le contrôle au retour ne compare
    rien, et une bosse constatée au retour n'est imputable à personne.
    ============================================================ */
-let reportItemId = null, reportFault = null, reportCond = 'bon', reportPhoto = null;
+let reportItemId = null, reportFault = null, reportCond = 'bon';
 
 function openReport(id){
   reportItemId = id || null;
-  reportFault = null; reportCond = 'bon'; reportPhoto = null;
+  reportFault = null; reportCond = 'bon';
+  photoBuf.rp = null; photoZone('rp');
   document.getElementById('rp-note').value = '';
   const picker = document.getElementById('rp-pickwrap');
   const pick = document.getElementById('rp-pick');
@@ -248,22 +249,42 @@ function renderReport(){
   warn.style.display = dup ? '' : 'none';
 }
 
-/* La photo de départ n'est pas un ornement : c'est elle qui rend la
-   comparaison au retour opposable. On la lit en local et on ne
-   l'envoie qu'à l'ouverture effective du dossier, pour ne rien
-   déposer dans le stockage si l'on annule. */
-function pickReportPhoto(inp){
+/* La photo n'est pas un ornement : c'est elle qui rend la comparaison
+   au retour opposable. Un seul mécanisme sert les deux fenêtres.
+   `capture` ouvre directement l'appareil photo sur tablette et
+   téléphone — en studio, c'est le geste attendu. */
+let photoBuf = {rp:null, rc:null};
+
+function photoZone(key){
+  const el = document.getElementById(key + '-photozone');
+  if(!el) return;
+  const d = photoBuf[key];
+  el.innerHTML = d
+    ? `<div class="photopick">
+         <img class="photoprev" src="${d}">
+         <div class="photoacts">
+           <label class="btn sec small">Replace
+             <input type="file" accept="image/*" capture="environment"
+                    style="display:none" onchange="takePhoto('${key}', this)"></label>
+           <button class="btn sec small" onclick="dropPhoto('${key}')">Remove</button>
+         </div>
+       </div>`
+    : `<label class="photobtn">
+         <span class="pi">📷</span>
+         <span>Take or choose a photo</span>
+         <input type="file" accept="image/*" capture="environment"
+                style="display:none" onchange="takePhoto('${key}', this)">
+       </label>`;
+}
+function takePhoto(key, inp){
   const f = inp.files && inp.files[0];
+  inp.value = '';
   if(!f) return;
   const fr = new FileReader();
-  fr.onload = () => {
-    reportPhoto = fr.result;
-    document.getElementById('rp-thumb').outerHTML =
-      `<img class="repthumb" id="rp-thumb" src="${reportPhoto}">`;
-  };
+  fr.onload = () => { photoBuf[key] = fr.result; photoZone(key); };
   fr.readAsDataURL(f);
-  inp.value = '';
 }
+function dropPhoto(key){ photoBuf[key] = null; photoZone(key); }
 
 async function doReport(){
   const i = reportItemId ? item(reportItemId) : null;
@@ -274,7 +295,7 @@ async function doReport(){
 
   try{
     let photo = null;
-    if(reportPhoto) photo = await apiUploadPhoto(reportPhoto, `repairs/${i.id}-${Date.now()}.jpg`);
+    if(photoBuf.rp) photo = await apiUploadPhoto(photoBuf.rp, `repairs/${i.id}-open-${Date.now()}.jpg`);
     const row = {
       item_id: i.id, fault: reportFault, description: note || null,
       cond_at_open: reportCond, photo_open: photo,
@@ -349,10 +370,11 @@ async function doSend(){
    L'état constaté et la destination sont deux questions séparées :
    un item peut revenir réparé et être quand même mis de côté.
    ============================================================ */
-let recvRepairId = null, recvOutcome = null, recvDest = 'service', recvPhoto = null;
+let recvRepairId = null, recvOutcome = null, recvDest = 'service';
 
 function openReceive(rid){
-  recvRepairId = rid; recvOutcome = null; recvDest = 'service'; recvPhoto = null;
+  recvRepairId = rid; recvOutcome = null; recvDest = 'service';
+  photoBuf.rc = null; photoZone('rc');
   const r = (db.repairs||[]).find(x=>x.id === rid);
   const i = r && repItem(r);
   if(!r || !i){ toast('Incident not found.', 'error'); return; }
@@ -366,8 +388,9 @@ function openReceive(rid){
   document.getElementById('rc-cond0').textContent = condLabel(r.cond_at_open);
   document.getElementById('rc-desc').textContent = r.description || '';
   const ph = document.getElementById('rc-photo0');
-  ph.innerHTML = r.photo_open ? `<img class="repthumb big" src="${r.photo_open}">`
-                              : '<span class="repthumb big rnophoto"></span>';
+  ph.innerHTML = r.photo_open
+    ? `<img class="photoprev" src="${r.photo_open}">`
+    : '<div class="hintline">No photo was taken.</div>';
   document.getElementById('rc-work').value = '';
   renderReceive();
   open_('ovRecv');
@@ -399,11 +422,14 @@ async function doReceive(){
   const nowIso = new Date().toISOString();
 
   try{
+    let backPhoto = null;
+    if(photoBuf.rc) backPhoto = await apiUploadPhoto(photoBuf.rc, `repairs/${i.id}-back-${Date.now()}.jpg`);
     if(recvDest === 'repair'){
       /* Toujours en panne : le dossier reste ouvert et repart à zéro
          côté prestataire, plutôt que d'en ouvrir un second. */
       await apiUpdateRepair(r.id, {
         received_at: nowIso, outcome: recvOutcome, work_done: work || null,
+        photo_return: backPhoto,
         provider_id: null, tracking_ref: null, sent_at: null, status: 'open'
       });
       await apiUpdateItem(i.id, {status:'dispo', out:null, loc: i.home});
@@ -414,6 +440,7 @@ async function doReceive(){
                  : (recvOutcome === 'repaired' ? 'bon' : 'use');
       await apiUpdateRepair(r.id, {
         received_at: nowIso, outcome: recvOutcome, work_done: work || null,
+        photo_return: backPhoto,
         closed_at: nowIso, destination: recvDest, status: 'closed'
       });
       await apiUpdateItem(i.id, {status:'dispo', out:null, loc: i.home, cond});

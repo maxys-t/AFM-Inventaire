@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.17.0">
+<link rel="stylesheet" href="css/styles.css?v=1.17.1">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -242,23 +242,26 @@
     <datalist id="rp-list"></datalist>
   </div>
 
-  <div class="fieldlbl">What is wrong</div>
-  <div class="chiprow" id="rp-faults"></div>
+  <div class="modsec first">
+    <div class="fieldlbl">What is wrong</div>
+    <div class="chiprow" id="rp-faults"></div>
+  </div>
 
-  <div class="fieldlbl">What happens, exactly</div>
-  <textarea id="rp-note" rows="2" placeholder="Cuts out after about twenty minutes, comes back when cold."></textarea>
-  <div class="hintline">This is what the repairer will read first.</div>
+  <div class="modsec">
+    <div class="fieldlbl">What happens, exactly</div>
+    <textarea id="rp-note" rows="2" placeholder="Cuts out after about twenty minutes, comes back when cold."></textarea>
+    <div class="hintline">This is what the repairer will read first.</div>
+  </div>
 
-  <div class="subpanel">
-    <div class="fieldlbl" style="margin-top:0">Condition right now</div>
+  <div class="modsec">
+    <div class="fieldlbl">Condition right now</div>
     <div class="chiprow" id="rp-conds"></div>
-    <div class="photoline">
-      <span class="repthumb" id="rp-thumb"></span>
-      <label class="photoadd">+ photo
-        <input type="file" accept="image/*" style="display:none" onchange="pickReportPhoto(this)">
-      </label>
-      <span class="hintline">Photographed now, compared on return.</span>
-    </div>
+  </div>
+
+  <div class="modsec">
+    <div class="fieldlbl">Photo of the item, as it is now</div>
+    <div id="rp-photozone"></div>
+    <div class="hintline">Compared with the one taken when it comes back. This is what settles a dispute.</div>
   </div>
 
   <div class="infoband" id="rp-outband" style="display:none">
@@ -296,25 +299,32 @@
   <h3>Check on return</h3>
   <div class="submuted"><span id="rc-item"></span> · <span id="rc-from"></span></div>
 
-  <div class="cmp">
+  <div class="modsec first cmp">
     <div class="cmpcol">
-      <div class="cmplbl">Documented <span id="rc-when"></span></div>
-      <div id="rc-fault" class="cmpmain"></div>
+      <div class="fieldlbl">Documented <span id="rc-when"></span></div>
+      <div class="cmpmain" id="rc-fault"></div>
       <div id="rc-photo0"></div>
       <div class="hintline" id="rc-cond0"></div>
       <div class="hintline" id="rc-desc"></div>
     </div>
-    <div class="cmpcol now">
-      <div class="cmplbl acc">Condition now</div>
+    <div class="cmpcol">
+      <div class="fieldlbl acc">Condition now</div>
       <div class="chipcol" id="rc-outcomes"></div>
     </div>
   </div>
 
-  <div class="fieldlbl">What was done</div>
-  <textarea id="rc-work" rows="2" placeholder="Capsule cleaned, FET replaced."></textarea>
+  <div class="modsec">
+    <div class="fieldlbl">What was done</div>
+    <textarea id="rc-work" rows="2" placeholder="Capsule cleaned, FET replaced."></textarea>
+  </div>
 
-  <div class="subpanel">
-    <div class="fieldlbl" style="margin-top:0">Where it goes next</div>
+  <div class="modsec">
+    <div class="fieldlbl">Photo on return <span class="opt">optional</span></div>
+    <div id="rc-photozone"></div>
+  </div>
+
+  <div class="modsec">
+    <div class="fieldlbl">Where it goes next</div>
     <div class="chiprow" id="rc-dests"></div>
   </div>
 
@@ -460,23 +470,23 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.17.0"></script>
-<script src="js/auth.js?v=1.17.0"></script>
-<script src="js/helpers.js?v=1.17.0"></script>
-<script src="js/crop.js?v=1.17.0"></script>
-<script src="js/prefs.js?v=1.17.0"></script>
-<script src="js/db.js?v=1.17.0"></script>
-<script src="js/views-dashboard.js?v=1.17.0"></script>
-<script src="js/views-inventory.js?v=1.17.0"></script>
-<script src="js/views-projects.js?v=1.17.0"></script>
-<script src="js/views-out.js?v=1.17.0"></script>
-<script src="js/views-repairs.js?v=1.17.0"></script>
-<script src="js/views-people-loc.js?v=1.17.0"></script>
-<script src="js/views-trash.js?v=1.17.0"></script>
-<script src="js/views-users.js?v=1.17.0"></script>
-<script src="js/views-settings.js?v=1.17.0"></script>
-<script src="js/import-csv.js?v=1.17.0"></script>
-<script src="js/photos-bulk.js?v=1.17.0"></script>
-<script src="js/app.js?v=1.17.0"></script>
+<script src="js/config.js?v=1.17.1"></script>
+<script src="js/auth.js?v=1.17.1"></script>
+<script src="js/helpers.js?v=1.17.1"></script>
+<script src="js/crop.js?v=1.17.1"></script>
+<script src="js/prefs.js?v=1.17.1"></script>
+<script src="js/db.js?v=1.17.1"></script>
+<script src="js/views-dashboard.js?v=1.17.1"></script>
+<script src="js/views-inventory.js?v=1.17.1"></script>
+<script src="js/views-projects.js?v=1.17.1"></script>
+<script src="js/views-out.js?v=1.17.1"></script>
+<script src="js/views-repairs.js?v=1.17.1"></script>
+<script src="js/views-people-loc.js?v=1.17.1"></script>
+<script src="js/views-trash.js?v=1.17.1"></script>
+<script src="js/views-users.js?v=1.17.1"></script>
+<script src="js/views-settings.js?v=1.17.1"></script>
+<script src="js/import-csv.js?v=1.17.1"></script>
+<script src="js/photos-bulk.js?v=1.17.1"></script>
+<script src="js/app.js?v=1.17.1"></script>
 </body>
 </html>
