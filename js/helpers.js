@@ -225,6 +225,56 @@ function inLocFilter(sel,name){
 
 /* --- Formatage des lignes d'historique --- */
 function histIcon(t){ return {create:"➕",out:"📤",in:"📥",move:"📍",edit:"✏️",repair:"🔧"}[t]||"•"; }
+/* ---- Poids (v1.19) ----
+
+   Stocké en grammes entiers, affiché en grammes sous le kilo et en
+   kilos au-dessus. Personne n'écrit « 0,284 kg » pour un SM57.
+
+   `parseWeight` accepte ce que les gens écrivent vraiment : virgule
+   ou point, unité collée ou non, « env ». C'est exactement ce qui
+   m'avait fait lire un tableau à moitié vide alors qu'il était
+   rempli — l'indulgence du lecteur n'est pas du confort, c'est ce
+   qui évite de perdre des données en silence. */
+function parseWeight(v){
+  if(v === null || v === undefined) return null;
+  let s = String(v).toLowerCase().replace(/env|environ|~|≈/g,'').trim();
+  if(!s) return null;
+  const enGrammes = /\d\s*g\b/.test(s) && !/\d\s*kg/.test(s);
+  s = s.replace(/kgs?\b|grammes?\b|g\b/g,'').trim().replace(',', '.');
+  s = s.replace(/[^0-9.]/g,'');
+  if(!s || s === '.') return null;
+  const x = parseFloat(s);
+  if(!isFinite(x) || x <= 0) return null;
+  return Math.round(enGrammes ? x : x * 1000);
+}
+
+function fweight(g){
+  if(g === null || g === undefined || g === '') return '';
+  if(g < 1000) return `${Math.round(g)} g`;
+  const kg = g / 1000;
+  return `${(kg < 10 ? kg.toFixed(2) : kg.toFixed(1)).replace(/\.?0+$/,'')} kg`;
+}
+
+/* Le total d'un lot, et ce qu'il vaut. Un total muet sur ses trous
+   laisse croire à une précision qu'il n'a pas. */
+function weighLot(items){
+  let g = 0, pesés = 0, estimés = 0, sans = 0, gEst = 0;
+  items.forEach(i=>{
+    if(i.weight_g){
+      g += i.weight_g; pesés++;
+      if(i.weight_est){ estimés++; gEst += i.weight_g; }
+    } else sans++;
+  });
+  return {g, pesés, estimés, sans, gEst, total: items.length};
+}
+function lotLabel(w){
+  if(!w.pesés) return `no weight on ${w.total} item${w.total>1?'s':''}`;
+  let t = fweight(w.g);
+  if(w.sans)    t += ` · ${w.sans} without a weight`;
+  if(w.estimés) t += ` · ${fweight(w.gEst)} estimated`;
+  return t;
+}
+
 /* ---- Lecture d'une photo (v1.18.1) ----
 
    Deux problèmes, une seule réponse.

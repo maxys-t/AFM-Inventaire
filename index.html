@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.18.1">
+<link rel="stylesheet" href="css/styles.css?v=1.19.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -172,6 +172,10 @@
     <div class="field"><label>Provider</label><input id="i-provider" placeholder="e.g. Thomann"></div>
     <div class="field"><label>Purchase price (€)</label><input id="i-price" inputmode="decimal" placeholder="e.g. 1200"></div>
     <div class="field"><label>Sales order #</label><input id="i-order" placeholder="e.g. SO-2024-118"></div>
+    <div class="field"><label data-tip="Grams below a kilo, kilos above. Write it how you like: 480 g, 0,48 kg, 0.48 — all are read.">Weight ⓘ</label>
+      <input id="i-weight" placeholder="e.g. 3,2 kg"></div>
+    <div class="field"><label>&nbsp;</label>
+      <label class="checkline"><input type="checkbox" id="i-westim"> Estimated, not weighed</label></div>
     <div class="field"><label>Purchase date</label><input type="date" id="i-date"></div>
     <div class="field" id="qtyField"><label>Quantity</label><input type="number" id="i-qty" min="1" value="1"></div>
     <div class="field"><label>Condition</label><select id="i-cond">
@@ -357,6 +361,16 @@
   </div>
 </div>
 
+<div class="overlay" id="ovWeightImp"><div class="modal wide">
+  <h3>Import weights</h3>
+  <div class="submuted">Matched on brand and model, never on ID. Safe to run again.</div>
+  <div id="wi-body"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovWeightImp')">Close</button>
+    <button class="btn" id="wi-go" onclick="wiApply()" style="display:none"></button>
+  </div>
+</div></div>
+
 <div class="hdrmenu" id="hdrMenu"></div>
 <div id="tipbox"></div>
 
@@ -484,23 +498,24 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.18.1"></script>
-<script src="js/auth.js?v=1.18.1"></script>
-<script src="js/helpers.js?v=1.18.1"></script>
-<script src="js/crop.js?v=1.18.1"></script>
-<script src="js/prefs.js?v=1.18.1"></script>
-<script src="js/db.js?v=1.18.1"></script>
-<script src="js/views-dashboard.js?v=1.18.1"></script>
-<script src="js/views-inventory.js?v=1.18.1"></script>
-<script src="js/views-projects.js?v=1.18.1"></script>
-<script src="js/views-out.js?v=1.18.1"></script>
-<script src="js/views-repairs.js?v=1.18.1"></script>
-<script src="js/views-people-loc.js?v=1.18.1"></script>
-<script src="js/views-trash.js?v=1.18.1"></script>
-<script src="js/views-users.js?v=1.18.1"></script>
-<script src="js/views-settings.js?v=1.18.1"></script>
-<script src="js/import-csv.js?v=1.18.1"></script>
-<script src="js/photos-bulk.js?v=1.18.1"></script>
-<script src="js/app.js?v=1.18.1"></script>
+<script src="js/config.js?v=1.19.0"></script>
+<script src="js/auth.js?v=1.19.0"></script>
+<script src="js/helpers.js?v=1.19.0"></script>
+<script src="js/crop.js?v=1.19.0"></script>
+<script src="js/prefs.js?v=1.19.0"></script>
+<script src="js/db.js?v=1.19.0"></script>
+<script src="js/views-dashboard.js?v=1.19.0"></script>
+<script src="js/views-inventory.js?v=1.19.0"></script>
+<script src="js/views-projects.js?v=1.19.0"></script>
+<script src="js/views-out.js?v=1.19.0"></script>
+<script src="js/views-repairs.js?v=1.19.0"></script>
+<script src="js/views-people-loc.js?v=1.19.0"></script>
+<script src="js/views-trash.js?v=1.19.0"></script>
+<script src="js/views-users.js?v=1.19.0"></script>
+<script src="js/views-settings.js?v=1.19.0"></script>
+<script src="js/import-csv.js?v=1.19.0"></script>
+<script src="js/import-weights.js?v=1.19.0"></script>
+<script src="js/photos-bulk.js?v=1.19.0"></script>
+<script src="js/app.js?v=1.19.0"></script>
 </body>
 </html>

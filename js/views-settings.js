@@ -97,6 +97,12 @@ function paneData(){
         <p class="muted">Add or update many items at once from a spreadsheet.</p>
       </div>
       <div>
+        <h4>Weights</h4>
+        <button class="btn sec small" onclick="openWeightImport()">Import weights</button>
+        <p class="muted">${db.items.filter(i=>i.weight_g).length} of ${db.items.length} items weighed —
+          ${fweight(db.items.reduce((t,i)=>t+(i.weight_g||0),0))} in total.</p>
+      </div>
+      <div>
         <h4>Photos</h4>
         <button class="btn sec small" onclick="openPhotoImport()">Import photos</button>
         <p class="muted">${withPhoto} of ${db.items.length} items have a photo.</p>

@@ -947,3 +947,25 @@ button[data-tip],label[data-tip]{cursor:pointer}
   .repbar-act{width:100%}
   .repbar-act select{flex:1;min-width:0}
 }
+/* ============================================================
+   v1.19 — Poids
+   ============================================================ */
+
+/* Un poids estimé reste lisible mais se distingue d'une pesée :
+   il compte dans les totaux, et on doit savoir ce qu'il vaut. */
+.west{color:var(--muted)}
+.tag.wtag{background:rgba(110,110,115,.16);color:#b0b0b6}
+.invtable .col-weight{text-align:right;white-space:nowrap}
+.invtable th.col-weight{text-align:right}
+
+/* Le poids de la sélection, à côté du compteur : c'est l'information
+   qu'on cherche en préparant un coffre, bien avant les caisses. */
+.lotw{color:var(--muted);font-size:12.5px;margin-left:2px}
+
+/* --- Import des poids --- */
+.wigrid{display:flex;flex-direction:column;gap:7px;margin-top:14px}
+.wirow{display:flex;align-items:baseline;gap:10px;font-size:13.5px}
+.wirow b{min-width:48px;text-align:right;font-size:17px;font-weight:600;color:var(--muted)}
+.wirow.ok b{color:var(--ok)}
+.wirow.warn b{color:var(--warn)}
+.wilist{font-size:12.5px;color:var(--muted);line-height:1.6;max-height:160px;overflow:auto}

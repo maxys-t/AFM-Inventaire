@@ -1,5 +1,56 @@
 # Changelog
 
+## [1.19.0] — 2026-10-08
+
+### Ajouté
+
+- **Poids des items.** Colonne triable et filtrable par tranches, champ
+  dans la fiche, et surtout **le total d'une sélection**, affiché dès
+  qu'on coche des items. C'est l'information qu'on cherche en préparant
+  un coffre de voiture, bien avant les caisses et les packs.
+- **Un poids peut être déclaré estimé**, et le total le dit :
+  « 2 930 kg · 18 sans poids · 11 kg estimés ». Un total muet sur ses
+  trous laisse croire à une précision qu'il n'a pas — et c'est le genre
+  de chiffre qu'on lit face à une limite de transporteur.
+- **Import des poids depuis un tableur** (Settings → Data). L'appariement
+  se fait sur **marque + modèle**, jamais sur l'identifiant : les
+  identifiants ont changé deux fois, les noms non. Le rapport s'affiche
+  avant toute écriture, avec les lignes du fichier qui ne correspondent
+  à rien et les items qui resteront sans poids. L'import est rejouable :
+  on complète le tableau, on recharge, seules les nouveautés sont
+  écrites.
+
+### Note technique
+
+Le poids est stocké en **grammes entiers**. En kilos flottants, une
+somme de six cents items produit tôt ou tard un total du genre
+2930,0000000004 ; l'entier ne ment pas et l'affichage convertit.
+
+Le lecteur de poids accepte ce que les gens écrivent vraiment —
+`10Kg`, `5.4 kg`, `0,612`, `env 100Kg`. Ce n'est pas du confort : en
+lisant le tableau source avec un convertisseur strict, j'avais conclu
+qu'un tiers du parc n'était pas pesé alors que les trois quarts de ce
+« trou » étaient des cellules parfaitement remplies. Un lecteur sévère
+ne protège de rien, il perd des données en silence.
+
+### Corrigé
+
+- **Un nom contenant un pouce cassait la lecture d'un CSV.**
+  `Ambassador Coated 14"` ouvrait une citation jamais refermée, qui
+  avalait la fin de la ligne. Un guillemet n'ouvre désormais un champ
+  cité que s'il en est le premier caractère. Trouvé par les tests, et
+  pas par relecture.
+- Les harnais vérifiaient un numéro de version écrit en dur, ce qui les
+  cassait à chaque livraison. Ils comparent maintenant les étiquettes
+  des scripts à `APP_VERSION` — un test qu'on rafistole à chaque fois
+  finit par être ajusté sans être lu.
+
+### Base de données
+
+`sql/018-poids.sql` : colonnes `weight_g` et `weight_est` sur `items`.
+Purement additif, aucune donnée existante touchée.
+
+
 ## [1.18.1] — 2026-10-08
 
 ### Corrigé

@@ -62,6 +62,7 @@ function filterText(c, i){
     case 'status': return i.status === 'sorti' ? 'Checked out' : 'Available';
     case 'cond':   return CONDS[i.cond] || i.cond;
     case 'photo':  return i.photo ? 'With photo' : 'No photo';
+    case 'weight': return i.weight_g ? fweight(i.weight_g) : 'No weight';
   }
   return (invCellText(c, i) || '').trim() || '(empty)';
 }
@@ -110,6 +111,7 @@ function sortKey(c, i){
     case 'status': return i.status === 'sorti' ? 1 : 0;
     case 'cond':   return ['bon','use','hs'].indexOf(i.cond);
     case 'price':  return (i.price == null || i.price === '') ? null : Number(i.price);
+    case 'weight': return i.weight_g || null;
     case 'pdate':  return i.purchase_date || null;    // « aaaa-mm-jj » se compare tel quel
     case 'photo':  return i.photo ? 0 : 1;
   }
@@ -223,12 +225,21 @@ function sepFor(i, by){
     case 'status': return i.status === 'sorti' ? 'Checked out' : 'Available';
     case 'loc':    return (i.status==='sorti' ? i.loc : locLabel(i.loc)) || 'No location';
     case 'home':   return locLabel(i.home) || 'No home';
-    case 'cond':   return CONDS[i.cond] || i.cond;
+    case 'cond':   return condLabel(i.cond);
     case 'owner':  return (i.owner||'').trim() || 'No owner';
     case 'prov':   return (i.provider||'').trim() || 'No provider';
     case 'photo':  return i.photo ? 'With photo' : 'No photo';
     case 'serial': return (i.serial||'').trim() ? 'With serial number' : 'No serial number';
     case 'so':     return (i.sales_order||'').trim() || 'No sales order';
+    case 'weight': {
+      const g = i.weight_g;
+      if(!g)          return 'No weight';
+      if(g < 500)     return 'Under 500 g';
+      if(g < 2000)    return '500 g – 2 kg';
+      if(g < 10000)   return '2 – 10 kg';
+      if(g < 30000)   return '10 – 30 kg';
+      return '30 kg and above';
+    }
     case 'price': {
       if(i.price==null || i.price==='') return 'No price';
       const p = Number(i.price);
@@ -567,6 +578,7 @@ function invCellText(c, i){
     case 'owner':  return i.owner || '';
     case 'prov':   return i.provider || '';
     case 'price':  return (i.price==null || i.price==='') ? '' : fprice(Number(i.price));
+    case 'weight': return fweight(i.weight_g);
     case 'pdate':  return i.purchase_date ? fdateOnly(i.purchase_date) : '';
     case 'so':     return i.sales_order || '';
     case 'serial': return i.serial || '';
@@ -583,6 +595,11 @@ function invCell(c, i){
     case 'cond':   return `<span class="tag ${i.cond}">${esc(CONDS[i.cond]||i.cond)}</span>`;
     // Un item qui n'est pas à sa place se repère d'un coup d'œil.
     case 'home':   return `<span class="${i.loc!==i.home?'awayhome':''}">${esc(invCellText(c,i))}</span>`;
+    /* Un poids estimé porte une marque discrète : il compte dans les
+       totaux, mais on doit pouvoir le distinguer d'une pesée. */
+    case 'weight': return i.weight_g
+      ? `<span class="${i.weight_est?'west':''}">${esc(fweight(i.weight_g))}${i.weight_est?' ~':''}</span>`
+      : '<span class="muted">—</span>';
     default:       return esc(invCellText(c,i));
   }
 }
@@ -715,8 +732,12 @@ function renderBulkBar(){
   const nDispo = its.filter(i=>i.status==='dispo').length;
   const nSortis = its.length - nDispo;
   bar.style.display = '';
+  /* Le poids d'une sélection est utile bien avant les caisses :
+     c'est ce qu'on veut savoir en préparant un coffre de voiture. */
+  const w = weighLot(its);
   bar.innerHTML = `
     <span class="count"><b>${n}</b> selected</span>
+    <span class="lotw" data-tip="Total of the selection. Items without a weight are not counted.">${esc(lotLabel(w))}</span>
     ${nDispo?`<button class="btn small" onclick="openBulkCheckout()">Check out (${nDispo})</button>`:''}
     ${nSortis?`<button class="btn small ok" onclick="openBulkCheckin()">Check in (${nSortis})</button>`:''}
     ${can('edit')?`<button class="btn small sec" onclick="openBulkMove()">Move</button>`:''}
@@ -860,6 +881,8 @@ function openItemForm(id){
   document.getElementById('i-provider').value = i?(i.provider||""):"";
   document.getElementById('i-price').value = (i && i.price!=null)?String(i.price).replace('.',','):"";
   document.getElementById('i-order').value = i?(i.sales_order||""):"";
+  document.getElementById('i-weight').value = (i && i.weight_g) ? fweight(i.weight_g) : "";
+  document.getElementById('i-westim').checked = !!(i && i.weight_est);
   document.getElementById('i-date').value = i?(i.purchase_date||""):"";
   document.getElementById('i-cond').value = i?i.cond:"bon";
   if(i) document.getElementById('i-home').value = i.home;
@@ -896,8 +919,13 @@ function saveItem(){
     owner:document.getElementById('i-owner').value.trim(), provider:document.getElementById('i-provider').value.trim(),
     price:parsePrice(document.getElementById('i-price').value),
     sales_order:document.getElementById('i-order').value.trim(),
-    purchase_date:document.getElementById('i-date').value || null
+    purchase_date:document.getElementById('i-date').value || null,
+    weight_g: parseWeight(document.getElementById('i-weight').value),
+    weight_est: document.getElementById('i-westim').checked
   };
+  /* Un champ vidé efface le poids, mais ne doit pas laisser traîner
+     la case « estimé » cochée sur un item qui n'a plus de poids. */
+  if(vals.weight_g === null) vals.weight_est = false;
   const finish = async (photo)=>{
     // Une photo fraîchement recadrée part dans le stockage ; on ne garde que son lien.
     const uploadIfNeeded = async (dataUrl, id)=>{
@@ -1170,7 +1198,8 @@ function openDetail(id){
     <h3>${itemTitle(i)} <span class="mono">${i.id}</span></h3>
     ${i.photo?`<img class="itemphoto" loading="lazy" src="${i.photo}">`:""}
     <p style="margin-bottom:10px">
-      <span class="tag cat">${esc(catPath(i))}</span> ${statusTag(i)} <span class="tag ${i.cond}">${condLabel(i.cond)}</span>${repairTag(i)}
+      <span class="tag cat">${esc(catPath(i))}</span> ${statusTag(i)} <span class="tag ${i.cond}">${condLabel(i.cond)}</span>${repairTag(i)}${
+      i.weight_g ? ` <span class="tag wtag">${esc(fweight(i.weight_g))}${i.weight_est?' ~':''}</span>` : ''}
     </p>
     ${outInfo}
     <p class="muted" style="margin-bottom:4px">
