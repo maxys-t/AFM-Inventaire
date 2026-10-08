@@ -148,14 +148,44 @@ const CATS = {
 };
 
 
-/* --- Condition --- */
-const CONDS = {bon:"Good", attente:"Needs repair", reparation:"In repair", hs:"Out of service"};
-const REPACT = {
-  reparation:"sent for repair",
-  attente:"flagged as needing repair",
-  bon:"repaired / back in service",
-  hs:"marked out of service"
+/* --- Condition physique (v1.17) ---
+   Ce champ ne dit plus QUE l'état de l'objet. L'étape de réparation
+   — signalé, chez un prestataire — vit dans un dossier à part. Les
+   deux étaient confondus jusqu'ici, ce qui rendait impossible de
+   dire « revenu réparé mais reste fragile ». */
+const CONDS = {bon:"Good", use:"Marked / worn", hs:"Out of service"};
+
+/* Les valeurs d'avant la v1.17, gardées pour relire l'historique
+   déjà écrit. Ne jamais les proposer à la saisie. */
+const CONDS_LEGACY = {attente:"Needs repair", reparation:"In repair", reparer:"Needs repair"};
+
+/* --- Catégories de pannes (v1.17) ---
+   Liste courte et universelle, valable pour un câble comme pour un
+   synthé. C'est ce qui rend les pannes comptables un jour : le texte
+   libre seul ne se compte pas. Modifiable ici sans migration. */
+const FAULTS = {
+  connector:    "Connector / jack",
+  power:        "Power",
+  noise:        "Noise / hiss",
+  intermittent: "Intermittent fault",
+  damage:       "Physical damage",
+  wear:         "Normal wear",
+  electronic:   "Electronic",
+  software:     "Software / firmware",
+  other:        "Other"
 };
+
+/* Ce qu'on constate au retour, et où part l'item ensuite. Deux
+   questions séparées : un item peut revenir réparé et être quand
+   même mis de côté. */
+const OUTCOMES = {repaired:"Repaired", partial:"Partly repaired",
+                  unchanged:"Unchanged", new_damage:"New damage"};
+const DESTINATIONS = {service:"Back in service", repair:"Still needs repair",
+                      hs:"Out of service"};
+
+/* Au-delà, un dossier est signalé comme traînant. Un matériel oublié
+   chez un réparateur est un matériel perdu. */
+const REPAIR_STALE_DAYS = 30;
 
 /* --- Project status --- */
 const PSTAT = {inactif:"Idle", preparation:"Packing", show:"On show"};

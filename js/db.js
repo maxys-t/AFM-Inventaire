@@ -6,6 +6,7 @@
 
 let sb = null;
 let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:false,
+          repairs:[],providers:[],repairsSupported:true,
           trash:[],trashSupported:true,profiles:[]};
 let syncState = 'off';   // 'ok' | 'off' | 'error'
 
@@ -102,7 +103,14 @@ async function startSession(){
   touchLastSeen();
   if(typeof consumePendingItem === 'function') consumePendingItem();
 }
-function normCond(c){ return c==='reparer' ? 'attente' : (c||'bon'); }
+/* Avant la v1.17, `cond` mélangeait état physique et étape de
+   réparation. Si la migration 016 n'est pas encore passée, on replie
+   les anciennes valeurs sur l'état physique le plus prudent plutôt
+   que d'afficher une étape qui n'existe plus. */
+function normCond(c){
+  if(c === 'attente' || c === 'reparation' || c === 'reparer') return 'use';
+  return c || 'bon';
+}
 async function loadAll(){
   const [it,pe,lo,hi] = await Promise.all([
     sb.from('items').select('*').order('id'),
@@ -146,6 +154,17 @@ async function loadAll(){
   const pf = await sb.from('profiles').select('*').order('email');
   db.profiles = pf.error ? [] : pf.data;
 
+  /* Réparations et prestataires (migration 016). Tolérants à son
+     absence : sans eux l'application tourne, l'onglet Repairs est
+     simplement vide. Un écran en moins vaut mieux qu'un écran blanc. */
+  const [rp, pv] = await Promise.all([
+    sb.from('repairs').select('*').order('opened_at',{ascending:false}),
+    sb.from('repair_providers').select('*').order('name')
+  ]);
+  db.repairsSupported = !rp.error;
+  db.repairs = rp.error ? [] : rp.data.map(r=>({...r, item_id:r.item_id}));
+  db.providers = pv.error ? [] : pv.data;
+
   // Préférences d'affichage : une seule fois par session, sans bloquer
   // le chargement si la migration 011 n'est pas encore passée.
   if(typeof loadPrefsRemote === 'function') await loadPrefsRemote();
@@ -179,7 +198,8 @@ async function refresh(){
 /* On s'abonne table par table, et non à tout le schéma : sinon
    le moindre enregistrement de préférence d'affichage déclencherait
    un rechargement complet de l'inventaire à chaque case cochée. */
-const SYNC_TABLES = ['items','people','locations','history','projects','profiles'];
+const SYNC_TABLES = ['items','people','locations','history','projects','profiles',
+                     'repairs','repair_providers'];
 function subscribe(){
   let t = null;
   try{
@@ -266,9 +286,13 @@ function item(id){ return db.items.find(i=>i.id===id); }
 function project(id){ return db.projects.find(p=>p.id===id); }
 function userName(id){ const u = db.users.find(u=>u.id===id); return u?u.name:"?"; }
 function outBy(i){
+  /* Un atelier n'est pas un emprunteur : il n'a ni échéance ni
+     responsabilité d'usage. On le nomme, sans le compter comme tel. */
+  if(i.out && i.out.repairId) return "🔧 " + (i.out.reason || "Repair shop");
   if(i.out && i.out.projectId){ const p = project(i.out.projectId); return "🎪 " + (p?p.name:"Project"); }
   return i.out ? userName(i.out.userId) : "";
 }
+function outForRepair(i){ return !!(i.out && i.out.repairId); }
 function projItems(p){ return (p.item_ids||[]).map(id=>item(id)).filter(Boolean); }
 function projProgress(p){
   const its = projItems(p);
@@ -367,6 +391,28 @@ async function apiUpdateProject(id, fields){ await run(sb.from('projects').updat
 async function apiDeleteProject(id){ await run(sb.from('projects').delete().eq('id', id)); }
 
 /* --- comptes (réservé aux administrateurs par les règles de la base) --- */
+/* ---------------- Réparations (v1.17) ----------------
+   Le dossier est la source de vérité de l'étape ; items.cond ne
+   porte plus que l'état physique. Les deux ne sont écrits ensemble
+   que lorsque l'état physique change vraiment. */
+async function apiOpenRepair(row){
+  const {data,error} = await sb.from('repairs').insert(row).select().single();
+  if(error) throw error;
+  return data;
+}
+async function apiUpdateRepair(id, fields){
+  await run(sb.from('repairs').update(fields).eq('id', id));
+}
+async function apiDeleteRepair(id){ await run(sb.from('repairs').delete().eq('id', id)); }
+
+async function apiInsertProvider(p){ await run(sb.from('repair_providers').insert(p)); }
+async function apiUpdateProvider(id, fields){
+  await run(sb.from('repair_providers').update(fields).eq('id', id));
+}
+async function apiDeleteProvider(id){
+  await run(sb.from('repair_providers').delete().eq('id', id));
+}
+
 async function apiInsertProfile(p){ await run(sb.from('profiles').insert(p)); }
 async function apiUpdateProfile(id, fields){ await run(sb.from('profiles').update(fields).eq('id', id)); }
 async function apiDeleteProfile(id){ await run(sb.from('profiles').delete().eq('id', id)); }

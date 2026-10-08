@@ -113,8 +113,11 @@ function resolveCond(v){
   for(const [k,l] of Object.entries(CONDS)) if(k===n || norm(l)===n) return k;
   if(n.startsWith('bon') || n==='ok' || n==='ras') return 'bon';
   if(n.includes('hs') || n.includes('hors service')) return 'hs';
-  if(n.includes('en repar') || n.includes('chez ')) return 'reparation';
-  if(n.includes('attente') || n.includes('repar') || n.includes('a revoir')) return 'attente';
+  /* Un fichier importé ne peut pas ouvrir un dossier de réparation :
+     il n'y a ni panne décrite ni état documenté. On retient donc
+     l'état physique, et le signalement se fait dans l'application. */
+  if(n.includes('en repar') || n.includes('chez ')
+     || n.includes('attente') || n.includes('repar') || n.includes('a revoir')) return 'use';
   return null;
 }
 function resolveLoc(v){

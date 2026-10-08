@@ -39,7 +39,10 @@ function renderOutList(){
       <td data-l="Duration"><span class="${(!i.out.due && d>=ALERT_DAYS)?'days-late':''}">${d}d</span></td>
       <td data-l="Due back">${i.out.due?`<span class="${od?'days-late':''}">${fdateD(i.out.due)}${od?' ⚠️':''}</span>`:'<span class="muted">—</span>'}</td>
       <td data-l="Raison">${esc(i.out.reason)}</td>
-      <td onclick="event.stopPropagation()"><button class="btn small ok" onclick="openCheckin('${i.id}')">Check-in</button></td>
+      <td onclick="event.stopPropagation()">${outForRepair(i)
+        ? `<button class="btn small" onclick="openReceive('${i.out.repairId}')"
+             data-tip="Coming back from a repair goes through the return check.">Receive</button>`
+        : `<button class="btn small ok" onclick="openCheckin('${i.id}')">Check-in</button>`}</td>
     </tr>`;}).join("") + "</tbody></table>"
   : '<div class="empty">Rien ne correspond — ou tout est au studio 🎉</div>';
 }

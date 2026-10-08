@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.16.2">
+<link rel="stylesheet" href="css/styles.css?v=1.17.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -175,8 +175,8 @@
     <div class="field"><label>Purchase date</label><input type="date" id="i-date"></div>
     <div class="field" id="qtyField"><label>Quantity</label><input type="number" id="i-qty" min="1" value="1"></div>
     <div class="field"><label>Condition</label><select id="i-cond">
-      <option value="bon">Good</option><option value="attente">Needs repair</option>
-      <option value="reparation">In repair</option><option value="hs">Out of service</option>
+      <option value="bon">Good</option><option value="use">Marked / worn</option>
+      <option value="hs">Out of service</option>
     </select></div>
     <div class="field full">
       <label data-tip="Where this item is stored when it is not in use. Different from its current location, which changes when you check it out.">Home location * ⓘ</label>
@@ -219,25 +219,117 @@
   <h3>Check in — <span id="in-item"></span></h3>
   <div class="form-grid">
     <div class="field"><label>Condition on return</label><select id="in-cond">
-      <option value="bon">Good</option><option value="attente">Needs repair</option>
-      <option value="reparation">In repair</option><option value="hs">Out of service</option>
+      <option value="bon">Good</option><option value="use">Marked / worn</option>
+      <option value="hs">Out of service</option>
     </select></div>
     <div class="field full"><label>Note (optional)</label><input id="in-note" placeholder="e.g. damaged jack"></div>
   </div>
+  <div class="infoband" id="in-repband" style="display:none"><b>ⓘ</b><span></span></div>
   <div class="modal-actions">
     <button class="btn sec" onclick="close_('ovIn')">Cancel</button>
     <button class="btn ok" onclick="doCheckin()">Check in</button>
   </div>
 </div></div>
 
-<div class="overlay" id="ovRep"><div class="modal">
-  <h3 id="rep-title"></h3>
+<div class="overlay" id="ovReport"><div class="modal">
+  <h3>Report a fault</h3>
+  <div class="submuted"><span id="rp-item">—</span></div>
+
+  <div class="field full" id="rp-pickwrap" style="display:none">
+    <label>Which item</label>
+    <input id="rp-pick" list="rp-list" placeholder="Type a name or an ID"
+           onchange="pickReportItem(this.value)" oninput="pickReportItem(this.value)">
+    <datalist id="rp-list"></datalist>
+  </div>
+
+  <div class="fieldlbl">What is wrong</div>
+  <div class="chiprow" id="rp-faults"></div>
+
+  <div class="fieldlbl">What happens, exactly</div>
+  <textarea id="rp-note" rows="2" placeholder="Cuts out after about twenty minutes, comes back when cold."></textarea>
+  <div class="hintline">This is what the repairer will read first.</div>
+
+  <div class="subpanel">
+    <div class="fieldlbl" style="margin-top:0">Condition right now</div>
+    <div class="chiprow" id="rp-conds"></div>
+    <div class="photoline">
+      <span class="repthumb" id="rp-thumb"></span>
+      <label class="photoadd">+ photo
+        <input type="file" accept="image/*" style="display:none" onchange="pickReportPhoto(this)">
+      </label>
+      <span class="hintline">Photographed now, compared on return.</span>
+    </div>
+  </div>
+
+  <div class="infoband" id="rp-outband" style="display:none">
+    <b>ⓘ</b> <span></span>
+  </div>
+  <div class="infoband bad" id="rp-dup" style="display:none">
+    <b>⚠</b> <span>This item already has an open incident.</span>
+  </div>
+
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovReport')">Cancel</button>
+    <button class="btn" onclick="doReport()">Open incident</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="ovSend"><div class="modal">
+  <h3>Send out for repair</h3>
+  <div class="submuted"><span id="sd-item"></span> · <span id="sd-fault"></span></div>
   <div class="form-grid">
-    <div class="field full"><label id="rep-notelbl">Note (optional)</label><input id="rep-note"></div>
+    <div class="field full"><label>Repair shop</label>
+      <select id="sd-prov"></select></div>
+    <div class="field full"><label>Tracking reference (optional)</label>
+      <input id="sd-ref" placeholder="e.g. AS-4471"></div>
+  </div>
+  <div class="infoband bad" id="sd-none" style="display:none">
+    <b>⚠</b> <span>No repair shop recorded yet. Add one in Settings → Repair providers.</span>
   </div>
   <div class="modal-actions">
-    <button class="btn sec" onclick="close_('ovRep')">Cancel</button>
-    <button class="btn" onclick="doRepair()">Apply</button>
+    <button class="btn sec" onclick="close_('ovSend')">Cancel</button>
+    <button class="btn" onclick="doSend()">Send out</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="ovRecv"><div class="modal wide">
+  <h3>Check on return</h3>
+  <div class="submuted"><span id="rc-item"></span> · <span id="rc-from"></span></div>
+
+  <div class="cmp">
+    <div class="cmpcol">
+      <div class="cmplbl">Documented <span id="rc-when"></span></div>
+      <div id="rc-fault" class="cmpmain"></div>
+      <div id="rc-photo0"></div>
+      <div class="hintline" id="rc-cond0"></div>
+      <div class="hintline" id="rc-desc"></div>
+    </div>
+    <div class="cmpcol now">
+      <div class="cmplbl acc">Condition now</div>
+      <div class="chipcol" id="rc-outcomes"></div>
+    </div>
+  </div>
+
+  <div class="fieldlbl">What was done</div>
+  <textarea id="rc-work" rows="2" placeholder="Capsule cleaned, FET replaced."></textarea>
+
+  <div class="subpanel">
+    <div class="fieldlbl" style="margin-top:0">Where it goes next</div>
+    <div class="chiprow" id="rc-dests"></div>
+  </div>
+
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovRecv')">Cancel</button>
+    <button class="btn ok" onclick="doReceive()">Close incident</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="ovProv"><div class="modal">
+  <h3 id="provFormTitle"></h3>
+  <div id="provFormBody"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovProv')">Cancel</button>
+    <button class="btn" onclick="saveProvider()">Save</button>
   </div>
 </div></div>
 
@@ -368,23 +460,23 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.16.2"></script>
-<script src="js/auth.js?v=1.16.2"></script>
-<script src="js/helpers.js?v=1.16.2"></script>
-<script src="js/crop.js?v=1.16.2"></script>
-<script src="js/prefs.js?v=1.16.2"></script>
-<script src="js/db.js?v=1.16.2"></script>
-<script src="js/views-dashboard.js?v=1.16.2"></script>
-<script src="js/views-inventory.js?v=1.16.2"></script>
-<script src="js/views-projects.js?v=1.16.2"></script>
-<script src="js/views-out.js?v=1.16.2"></script>
-<script src="js/views-repairs.js?v=1.16.2"></script>
-<script src="js/views-people-loc.js?v=1.16.2"></script>
-<script src="js/views-trash.js?v=1.16.2"></script>
-<script src="js/views-users.js?v=1.16.2"></script>
-<script src="js/views-settings.js?v=1.16.2"></script>
-<script src="js/import-csv.js?v=1.16.2"></script>
-<script src="js/photos-bulk.js?v=1.16.2"></script>
-<script src="js/app.js?v=1.16.2"></script>
+<script src="js/config.js?v=1.17.0"></script>
+<script src="js/auth.js?v=1.17.0"></script>
+<script src="js/helpers.js?v=1.17.0"></script>
+<script src="js/crop.js?v=1.17.0"></script>
+<script src="js/prefs.js?v=1.17.0"></script>
+<script src="js/db.js?v=1.17.0"></script>
+<script src="js/views-dashboard.js?v=1.17.0"></script>
+<script src="js/views-inventory.js?v=1.17.0"></script>
+<script src="js/views-projects.js?v=1.17.0"></script>
+<script src="js/views-out.js?v=1.17.0"></script>
+<script src="js/views-repairs.js?v=1.17.0"></script>
+<script src="js/views-people-loc.js?v=1.17.0"></script>
+<script src="js/views-trash.js?v=1.17.0"></script>
+<script src="js/views-users.js?v=1.17.0"></script>
+<script src="js/views-settings.js?v=1.17.0"></script>
+<script src="js/import-csv.js?v=1.17.0"></script>
+<script src="js/photos-bulk.js?v=1.17.0"></script>
+<script src="js/app.js?v=1.17.0"></script>
 </body>
 </html>

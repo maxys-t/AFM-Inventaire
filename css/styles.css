@@ -807,3 +807,99 @@ button[data-tip],label[data-tip]{cursor:pointer}
 
 
 
+/* ============================================================
+   v1.17 — Réparations
+   ============================================================ */
+
+/* L'état physique « marqué, usé » : ni bon, ni hors service. */
+.tag.use{background:rgba(255,159,10,.13);color:var(--warn)}
+.tag.ropen{background:rgba(255,159,10,.14);color:var(--warn)}
+.tag.rsent{background:rgba(10,132,255,.14);color:var(--accent2)}
+.tag.rout{background:rgba(10,132,255,.10);color:var(--accent2)}
+
+.repbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;margin-bottom:14px}
+.repbar-act{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.repbar-act select{min-height:36px}
+
+.repstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.repstat{background:var(--panel);border-radius:12px;padding:10px 13px}
+.repstat .k{color:var(--muted);font-size:12px}
+.repstat .n{font-size:23px;font-weight:600;letter-spacing:-.02em}
+.repstat .warnv{color:var(--warn)}
+.repstat .accv{color:var(--accent)}
+
+.reppanel{padding:13px}
+.rephead{font-size:15px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+.rephead.warn{color:var(--warn)}
+.rephead.acc{color:var(--accent)}
+.rephead .muted{font-weight:400}
+.reppanel .small{font-size:12px}
+
+.reprow{display:flex;align-items:flex-start;gap:11px;padding:10px 0;
+  border-top:1px solid var(--border)}
+.reprow:first-of-type{border-top:0}
+.repthumb{width:36px;height:36px;box-sizing:border-box;padding:0;object-fit:cover;
+  border-radius:8px;background:var(--panel2);flex-shrink:0;display:block}
+.repthumb.big{width:52px;height:52px;margin:5px 0}
+.repbody{flex:1;min-width:0}
+.reptitle{font-size:14.5px}
+.repmeta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:3px;
+  font-size:12px;color:var(--muted)}
+/* Un dossier qui traîne se voit : un matériel oublié chez un
+   réparateur est un matériel perdu. */
+.repmeta.late{color:var(--warn)}
+.repnote{font-size:12px;color:var(--muted);margin-top:3px}
+
+.repgroup{margin-top:10px;border-top:1px solid var(--border);padding-top:9px}
+.repgrouphead{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:2px}
+.repgrouphead .muted{font-size:12px}
+
+.repfold{display:flex;align-items:center;gap:9px;cursor:pointer;padding:11px 13px}
+.repfold:hover{background:var(--panel2)}
+.repfold .foldnote{margin-left:auto;font-size:12px}
+
+/* ---- Fenêtres ---- */
+.modal.wide{max-width:620px}
+.submuted{color:var(--muted);font-size:13px;margin:-4px 0 12px}
+.fieldlbl{color:var(--muted);font-size:12px;margin:12px 0 6px}
+.hintline{color:var(--muted);font-size:12px;margin-top:4px}
+.subpanel{background:var(--bg);border:1px solid var(--border);border-radius:10px;
+  padding:11px 12px;margin-top:12px}
+
+/* Des pastilles plutôt qu'un menu déroulant : sur l'iPad, en studio,
+   c'est une frappe au lieu de trois. */
+.chiprow{display:flex;flex-wrap:wrap;gap:6px}
+.chipcol{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.chipbtn{background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:980px;padding:6px 12px;font-size:12.5px;cursor:pointer;
+  min-height:34px;font-family:inherit}
+.chipbtn.sq{border-radius:9px}
+.chipbtn:hover{border-color:var(--border2);color:var(--txt)}
+.chipbtn.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+
+.photoline{display:flex;align-items:center;gap:9px;margin-top:9px}
+.photoadd{border:1px dashed var(--border);border-radius:8px;padding:8px 11px;
+  font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.photoadd:hover{border-color:var(--accent);color:var(--txt)}
+
+.infoband{display:flex;align-items:flex-start;gap:8px;background:rgba(10,132,255,.10);
+  color:var(--accent2);border-radius:9px;padding:9px 11px;font-size:12.5px;margin-top:12px}
+.infoband.bad{background:rgba(255,59,48,.10);color:var(--bad)}
+
+/* L'état documenté et l'état constaté côte à côte : c'est la
+   comparaison qui fait foi, pas l'un ou l'autre pris seul. */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px}
+.cmpcol{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:10px}
+.cmpcol.now{border-color:var(--accent)}
+.cmplbl{color:var(--muted);font-size:11.5px;margin-bottom:6px}
+.cmplbl.acc{color:var(--accent2)}
+.cmpmain{font-size:13px}
+
+@media(max-width:700px){
+  .repstats{grid-template-columns:1fr 1fr}
+  .repstats .repstat:last-child{display:none}
+  .cmp{grid-template-columns:1fr}
+  .repbar-act{width:100%}
+  .repbar-act select{flex:1;min-width:0}
+}

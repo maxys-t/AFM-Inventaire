@@ -225,11 +225,28 @@ function inLocFilter(sel,name){
 
 /* --- Formatage des lignes d'historique --- */
 function histIcon(t){ return {create:"➕",out:"📤",in:"📥",move:"📍",edit:"✏️",repair:"🔧"}[t]||"•"; }
+/* ---- Réparations (v1.17) ----
+   Un item n'a qu'un dossier ouvert à la fois : la base l'impose par
+   un index unique, donc find() suffit ici. */
+function repairOf(id){
+  return (db.repairs||[]).find(r=>r.item_id === id && r.status !== 'closed') || null;
+}
+function repairStage(id){ const r = repairOf(id); return r ? r.status : null; }
+function providerOf(pid){ return (db.providers||[]).find(p=>p.id === pid) || null; }
+function providerName(pid){ const p = providerOf(pid); return p ? p.name : '—'; }
+function repairDays(r){ return daysSince(r.sent_at || r.opened_at); }
+function repairStale(r){ return repairDays(r) >= REPAIR_STALE_DAYS; }
+
+/* Relit un état physique, y compris les valeurs d'avant la v1.17
+   encore présentes dans l'historique déjà écrit. */
+function condLabel(c){ return CONDS[c] || CONDS_LEGACY[c] || c || ''; }
+function faultLabel(f){ return FAULTS[f] || f || ''; }
+
 function histBy(h){ return h.actorName ? ` <span class="muted">· by ${esc(h.actorName)}</span>` : ""; }
 function histText(h){
   const u = h.userId ? " — " + esc(userName(h.userId)) : "";
   if(h.type==='out') return `checked out${u} (${esc(h.detail)})`;
-  if(h.type==='in') return `returned${u}${h.cond?` — condition: ${CONDS[h.cond]||h.cond}`:""}${h.detail?` (${esc(h.detail)})`:""}`;
+  if(h.type==='in') return `returned${u}${h.cond?` — condition: ${condLabel(h.cond)}`:""}${h.detail?` (${esc(h.detail)})`:""}`;
   if(h.type==='move') return `moved: ${esc(h.detail)}`;
   if(h.type==='edit') return `edited${h.detail?` (${esc(h.detail)})`:""}`;
   if(h.type==='repair') return esc(h.detail);

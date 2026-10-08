@@ -108,7 +108,7 @@ function sortKey(c, i){
     case 'cat':    return catIndex(i.cat) * 1000 + subIndex(i.cat, i.subcat);
     case 'family': return catIndex(i.cat);
     case 'status': return i.status === 'sorti' ? 1 : 0;
-    case 'cond':   return ['bon','attente','reparation','hs'].indexOf(i.cond);
+    case 'cond':   return ['bon','use','hs'].indexOf(i.cond);
     case 'price':  return (i.price == null || i.price === '') ? null : Number(i.price);
     case 'pdate':  return i.purchase_date || null;    // « aaaa-mm-jj » se compare tel quel
     case 'photo':  return i.photo ? 0 : 1;
@@ -673,9 +673,12 @@ function statusTag(i){
    son état. */
 function checkoutBlockReason(i){
   if(i.status !== 'dispo') return null;
-  if(i.cond === 'attente')    return "flagged as needing repair";
-  if(i.cond === 'reparation') return "currently at the repair shop";
-  if(i.cond === 'hs')         return "marked out of service";
+  /* L'étape de réparation vient du dossier, plus de l'état physique :
+     depuis la v1.17 les deux sont séparés. */
+  const r = repairOf(i.id);
+  if(r && r.status === 'sent') return "currently at the repair shop";
+  if(r)                        return "flagged as needing repair";
+  if(i.cond === 'hs')          return "marked out of service";
   return null;
 }
 function canCheckout(i){ return i.status === 'dispo' && !checkoutBlockReason(i); }
@@ -788,9 +791,9 @@ async function doBulkCond(cond){
   if(!targets.length) return;
   targets.forEach(i=>i.cond = cond);
   await apiUpdateItemsIn(targets.map(i=>i.id), {cond});
-  await histMany(targets.map(i=>({itemId:i.id, type:'repair', detail:REPACT[cond]||`condition: ${CONDS[cond]}`, cond})));
+  await histMany(targets.map(i=>({itemId:i.id, type:'repair', detail:`condition set to ${condLabel(cond)}`, cond})));
   clearSel(); render();
-  toast(`${targets.length} item(s) : ${CONDS[cond]}.`, 'ok');
+  toast(`${targets.length} item(s) : ${condLabel(cond)}.`, 'ok');
 }
 
 async function bulkTrash(){
@@ -906,7 +909,7 @@ function saveItem(){
       if(i.status==='dispo' && movedHome) i.loc = vals.home;
       await apiUpdateItem(i.id, {...vals, photo:i.photo, loc:i.loc});
       if(movedHome && i.status==='dispo') await hist(i.id,'move',`new home location: ${locLabel(vals.home)}`);
-      if(condChanged) await hist(i.id,'repair',REPACT[vals.cond]||`condition: ${CONDS[vals.cond]}`,null,vals.cond);
+      if(condChanged) await hist(i.id,'repair',`condition set to ${condLabel(vals.cond)}`,null,vals.cond);
       else await hist(i.id,'edit');
     }else{
       const qty = Math.max(1, Math.min(200, parseInt(document.getElementById('i-qty').value)||1));
@@ -1075,11 +1078,29 @@ async function doCheckout(){
 let checkinTargets = null;
 
 function openCheckin(id){
+  const i0 = item(id);
+  /* Un item revenant de réparation ne rentre pas en rayon : il passe
+     par la clôture de l'incident, qui compare l'état constaté à
+     l'état documenté au départ. Sans ce détour, un clic un peu rapide
+     sur « In » effacerait la seule trace de l'état de départ. */
+  if(i0 && outForRepair(i0)){ openReceive(i0.out.repairId); return; }
   actionId = id; bulkMode = false; checkinTargets = null;
   const i = item(id);
   document.getElementById('in-item').textContent = i.name;
   document.getElementById('in-cond').value = i.cond;
   document.getElementById('in-note').value = "";
+  /* Un incident ouvert pendant la sortie ne se referme pas tout seul
+     au retour : l'item rentre, mais rejoint la file de réparation et
+     reste insortable. Le dire ici évite la surprise au prochain
+     check-out, trois jours plus tard. */
+  const band = document.getElementById('in-repband');
+  const pending = repairOf(id);
+  if(band){
+    band.style.display = pending ? '' : 'none';
+    if(pending) band.querySelector('span').textContent =
+      ` A fault was reported while it was out (${faultLabel(pending.fault)}). ` +
+      `It goes back to the repair queue, not on the shelf, and cannot go out again.`;
+  }
   open_('ovIn');
 }
 function openBulkCheckin(){
@@ -1135,14 +1156,17 @@ function openDetail(id){
     `<li>${histIcon(h.type)} ${histText(h)}<div class="when">${fdate(h.date)}${histBy(h)}</div></li>`).join("");
   const outInfo = i.status==='sorti'
     ? `<div class="alert ${overdue(i)?'bad':''}">📤 Out since <b>${fdate(i.out.date)}</b> (${daysSince(i.out.date)}d) — <b>${esc(outBy(i))}</b> · ${esc(i.out.reason)}${i.out.due?`<br>Due back <b>${fdateD(i.out.due)}</b>${overdue(i)?` — <span class="days-late">${daysLate(i)}d overdue</span>`:''}`:''}</div>` : "";
-  const repBtns = i.cond==='bon'
-    ? `<button class="btn sec small" onclick="openRepair('${i.id}','attente')">Flag for repair</button>`
-    : `<button class="btn small ok" onclick="openRepair('${i.id}','bon')">Mark repaired</button>`;
+  /* Un seul bouton, et il dépend du dossier et non de l'état physique :
+     un item « marqué, usé » sans panne déclarée n'a rien à réparer. */
+  const openRep = repairOf(i.id);
+  const repBtns = openRep
+    ? `<button class="btn small ok" onclick="openReceive('${openRep.id}')">Close the incident</button>`
+    : `<button class="btn sec small" onclick="openReport('${i.id}')">Report a fault</button>`;
   document.getElementById('detailBody').innerHTML = `
     <h3>${itemTitle(i)} <span class="mono">${i.id}</span></h3>
     ${i.photo?`<img class="itemphoto" loading="lazy" src="${i.photo}">`:""}
     <p style="margin-bottom:10px">
-      <span class="tag cat">${esc(catPath(i))}</span> ${statusTag(i)} <span class="tag ${i.cond}">${CONDS[i.cond]||i.cond}</span>
+      <span class="tag cat">${esc(catPath(i))}</span> ${statusTag(i)} <span class="tag ${i.cond}">${condLabel(i.cond)}</span>${repairTag(i)}
     </p>
     ${outInfo}
     <p class="muted" style="margin-bottom:4px">

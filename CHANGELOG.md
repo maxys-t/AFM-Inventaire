@@ -1,5 +1,64 @@
 # Changelog
 
+## [1.17.0] — 2026-10-08
+
+### Ajouté
+
+- **Chaîne de réparation complète**, du signalement au retour. Un dossier
+  n'existe qu'à partir d'un incident : les 600 items qui n'ont jamais rien
+  eu n'ont pas d'historique de réparation vide.
+- **Catégories de pannes** — neuf entrées, une seule liste valable pour un
+  câble comme pour un synthé, dans `config.js` donc modifiable sans
+  migration. Le texte libre reste, en complément : il se lit, mais il ne
+  se compte pas.
+- **Prestataires de réparation** (Settings → Repair shops) : coordonnées,
+  spécialité, et filtre « tout ce qui est chez X ». Le matériel sorti est
+  groupé par atelier plutôt que listé à plat — voir que deux micros
+  dorment au même endroit, c'est un coup de fil au lieu de deux.
+- **Contrôle au retour** : l'état documenté au départ et l'état constaté
+  côte à côte, photo comprise. C'est ce qui permet de dire « la bosse y
+  était déjà », et ce qui protège en cas de litige.
+- **Une panne peut être signalée sur un item encore sorti.** La réparation
+  démarre à son retour, et l'item ne peut pas repartir entre-temps. Au
+  check-in, un bandeau rappelle l'incident ouvert.
+- **Délai moyen de retour** sur le tableau des réparations — la seule
+  statistique utile dès la première année, contrairement aux taux de
+  panne. Un dossier dépassant 30 jours passe en orange.
+
+### Modifié
+
+- **`items.cond` ne décrit plus que l'état physique** : `Good`,
+  `Marked / worn`, `Out of service`. « En attente » et « en réparation »
+  n'en sont plus des valeurs — ce sont des dossiers ouverts.
+- **« Out of service » quitte le flux de réparation** : c'est une fin, pas
+  une étape. Replié en bas d'écran, consultable d'un clic.
+- **Un item parti en réparation est compté comme dehors**, mais hors de
+  l'onglet Borrowers et hors de « Check in all » : un atelier n'est pas un
+  emprunteur. Son retour passe obligatoirement par la clôture de
+  l'incident.
+- Un stagiaire peut ouvrir un incident — c'est lui qui constate la panne
+  en session — mais pas le clore ni gérer les prestataires. La règle est
+  dans la base, pas seulement dans l'écran.
+
+### Base de données
+
+`sql/016-reparations.sql` : tables `repairs` et `repair_providers`, index
+unique interdisant deux dossiers ouverts sur un même item, contrainte sur
+les valeurs de `cond`, politiques RLS et garde-fou de clôture. Les items
+déjà marqués « en attente » ou « en réparation » deviennent des dossiers
+ouverts. Sur l'export du 30 septembre, les 648 items sont en « Good » :
+la reprise ne touche rien.
+
+### Note technique
+
+Un troisième statut d'item (`repair`) aurait été le choix évident, et il
+touchait 44 endroits du code — projets, emprunteurs, compteurs, filtres.
+Une réparation est donc une sortie ordinaire portant un `repairId`, ce qui
+réutilise toute la mécanique existante et ne demande qu'une exception là
+où elle compte : la liste des emprunteurs. Le risque de régression est
+sans commune mesure.
+
+
 ## [1.16.2] — 2026-10-06
 
 ### Corrigé

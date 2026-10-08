@@ -12,6 +12,7 @@ const SET_TABS = [
   {k:'account',  label:'Account',   icon:'👤'},
   {k:'data',     label:'Data',      icon:'🗂', admin:true},
   {k:'locations',label:'Locations', icon:'📍'},
+  {k:'providers',label:'Repair shops', icon:'🔧', admin:true},
   {k:'users',    label:'Users',     icon:'🔑', admin:true},
   {k:'activity', label:'Activity',  icon:'🕘'},
   {k:'about',    label:'About',     icon:'ℹ️'}
@@ -43,6 +44,7 @@ function renderSettings(){
   if(settingsTab === 'account')   body.innerHTML = paneAccount();
   if(settingsTab === 'data')      body.innerHTML = paneData();
   if(settingsTab === 'locations'){ body.innerHTML = paneLocations(); renderLoc(); }
+  if(settingsTab === 'providers'){ body.innerHTML = paneProviders(); renderProviders(); }
   if(settingsTab === 'users'){     body.innerHTML = '<div class="panel"><div id="usersBox"></div></div>'; renderUsers(); }
   if(settingsTab === 'activity'){  body.innerHTML = paneActivity(); renderActivity(); }
   if(settingsTab === 'about')     body.innerHTML = paneAbout();
@@ -181,4 +183,97 @@ function renderActivity(){
       <div class="when">${fdate(h.date)}${histBy(h)}</div></li>`;
   }).join("");
   el.innerHTML = rows || '<li class="muted">No activity yet.</li>';
+}
+
+
+/* ============================================================
+   Prestataires de réparation (v1.17)
+   Une table à part, et non un emplacement « off-site » : un atelier
+   a une spécialité et un délai, qu'un lieu de tournée n'a pas.
+   ============================================================ */
+function paneProviders(){
+  return `<div class="panel">
+    <h2>Repair shops</h2>
+    <div class="viewintro">Who repairs what, and how to reach them. Used when sending an item out.</div>
+    <div id="provBox"></div>
+  </div>`;
+}
+
+function renderProviders(){
+  const box = document.getElementById('provBox');
+  if(!box) return;
+  if(db.repairsSupported === false){
+    box.innerHTML = `<div class="muted">Run <span class="mono">sql/016-reparations.sql</span> first.</div>`;
+    return;
+  }
+  const rows = (db.providers||[]).slice()
+    .sort((a,b)=>(a.archived?1:0)-(b.archived?1:0) || a.name.localeCompare(b.name));
+
+  const busy = pid => (db.repairs||[]).filter(r=>r.provider_id===pid && r.status==='sent').length;
+
+  box.innerHTML = `
+    <table><thead><tr>
+      <th>Name</th><th>Specialty</th><th>Contact</th><th>There now</th><th></th>
+    </tr></thead><tbody>
+    ${rows.map(p=>`<tr class="${p.archived?'muted':''}">
+      <td data-l="Name"><b>${esc(p.name)}</b>${p.archived?' <span class="tag">archived</span>':''}</td>
+      <td data-l="Specialty">${esc(p.specialty||'—')}</td>
+      <td data-l="Contact">${[p.contact,p.phone,p.email].filter(Boolean).map(esc).join('<br>')||'—'}</td>
+      <td data-l="There now">${busy(p.id) || '—'}</td>
+      <td>
+        <button class="btn small sec" onclick="editProvider('${p.id}')">Edit</button>
+        <button class="btn small sec" onclick="toggleProviderArchive('${p.id}')">${p.archived?'Restore':'Archive'}</button>
+      </td></tr>`).join('') || '<tr><td colspan="5" class="muted">No repair shop yet.</td></tr>'}
+    </tbody></table>
+    <div style="margin-top:10px"><button class="btn" onclick="editProvider()">+ Add a repair shop</button></div>`;
+}
+
+let editingProvider = null;
+function editProvider(id){
+  editingProvider = id || null;
+  const p = id ? providerOf(id) : null;
+  const v = k => (p && p[k]) || '';
+  const body = document.getElementById('provFormBody');
+  body.innerHTML = `
+    <div class="form-grid">
+      <div class="field full"><label>Name *</label><input id="pv-name" value="${esc(v('name'))}"></div>
+      <div class="field"><label>Specialty</label><input id="pv-spec" value="${esc(v('specialty'))}" placeholder="microphones, keyboards…"></div>
+      <div class="field"><label>Contact</label><input id="pv-contact" value="${esc(v('contact'))}"></div>
+      <div class="field"><label>Phone</label><input id="pv-phone" value="${esc(v('phone'))}"></div>
+      <div class="field"><label>Email</label><input id="pv-email" value="${esc(v('email'))}"></div>
+      <div class="field full"><label>Street</label><input id="pv-street" value="${esc(v('addr_line1'))}"></div>
+      <div class="field"><label>Postcode</label><input id="pv-zip" value="${esc(v('addr_zip'))}"></div>
+      <div class="field"><label>City</label><input id="pv-city" value="${esc(v('addr_city'))}"></div>
+      <div class="field full"><label>Notes</label><input id="pv-notes" value="${esc(v('notes'))}"></div>
+    </div>`;
+  document.getElementById('provFormTitle').textContent = p ? 'Edit repair shop' : 'Add a repair shop';
+  open_('ovProv');
+}
+
+async function saveProvider(){
+  const g = k => (document.getElementById('pv-'+k).value||'').trim();
+  const name = g('name');
+  if(!name){ toast('A name is required.', 'error'); return; }
+  const row = {name, specialty:g('spec')||null, contact:g('contact')||null,
+               phone:g('phone')||null, email:g('email')||null,
+               addr_line1:g('street')||null, addr_zip:g('zip')||null,
+               addr_city:g('city')||null, notes:g('notes')||null};
+  try{
+    if(editingProvider) await apiUpdateProvider(editingProvider, row);
+    else                await apiInsertProvider(row);
+    close_('ovProv');
+    await refresh();
+    toast('Saved.', 'ok');
+  }catch(e){ toast('Could not save: ' + (e.message||e), 'error'); }
+}
+
+async function toggleProviderArchive(id){
+  const p = providerOf(id); if(!p) return;
+  /* On archive au lieu de supprimer : un atelier retiré ferait
+     disparaître le nom sur les réparations déjà closes. */
+  if(!p.archived && (db.repairs||[]).some(r=>r.provider_id===id && r.status==='sent')){
+    toast('Items are still there. Receive them first.', 'error'); return;
+  }
+  try{ await apiUpdateProvider(id, {archived: !p.archived}); await refresh(); }
+  catch(e){ toast('Could not change it: ' + (e.message||e), 'error'); }
 }

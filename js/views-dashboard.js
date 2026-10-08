@@ -24,7 +24,11 @@ function renderDash(){
         — ${esc(outBy(i))} (${esc(o.reason)})</div>`);
   });
   rep.forEach(i=>{
-    alerts.push(`<div class="alert ${i.cond==='hs'?'bad':''}">🔧 ${itemTitle(i)} — ${CONDS[i.cond]}
+    const r = repairOf(i.id);
+    const what = r
+      ? `${faultLabel(r.fault)} — ${r.status==='sent' ? `at ${esc(providerName(r.provider_id))}` : 'needs repair'}`
+      : condLabel(i.cond);
+    alerts.push(`<div class="alert ${i.cond==='hs'||(r&&repairStale(r))?'bad':''}">🔧 ${itemTitle(i)} — ${what}
       <button class="btn sec small" onclick="openDetail('${i.id}')">Open</button></div>`);
   });
 
