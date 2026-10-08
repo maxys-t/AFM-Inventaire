@@ -422,4 +422,6 @@ async function apiUpsertLocations(rows){ await run(sb.from('locations').upsert(r
 async function apiUpsertPeople(rows){ await run(sb.from('people').upsert(rows)); }
 async function apiUpsertItems(rows){ await run(sb.from('items').upsert(rows)); }
 async function apiUpsertProjects(rows){ await run(sb.from('projects').upsert(rows)); }
+async function apiUpsertRepairs(rows){ await run(sb.from('repairs').upsert(rows)); }
+async function apiUpsertProviders(rows){ await run(sb.from('repair_providers').upsert(rows)); }
 async function apiInsertHistoryRows(rows){ await run(sb.from('history').insert(rows)); }

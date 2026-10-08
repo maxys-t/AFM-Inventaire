@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.17.1';
+const APP_VERSION = '1.18.0';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','rep','settings'];
@@ -177,6 +177,7 @@ function exportJSON(){
   // pour que l'export soit une image complète de la base.
   const out = {...db, items:[...db.items, ...db.trash]};
   delete out.trash; delete out.trashSupported; delete out.projectsError;
+  delete out.repairsSupported;
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));
   a.download = 'afm-inventory-' + new Date().toISOString().slice(0,10) + '.json';
@@ -219,7 +220,32 @@ function normalizeImport(d){
     actorName: h.actorName || h.actor_name || null
   })).filter(h=>h.itemId && h.type);
 
-  return {items:d.items||[], users, locations, history, projects:d.projects||[]};
+  /* Réparations et prestataires (v1.17). Les oublier ici rendrait une
+     restauration silencieusement incomplète : l'inventaire reviendrait
+     entier, mais sans aucun historique de panne — et sans les photos
+     qui documentent l'état au départ. C'est la même omission qu'en
+     v1.12.2, sur une autre table. */
+  const providers = (d.providers || d.repair_providers || []).filter(p=>p && p.name);
+  const asList = v => Array.isArray(v) ? v : (v ? [v] : []);
+  const repairs = (d.repairs||[]).map(r=>({
+    id: r.id, item_id: r.item_id || r.itemId,
+    fault: r.fault || 'other', description: r.description || null,
+    cond_at_open: r.cond_at_open || null,
+    // `photo_open` au singulier : sauvegardes antérieures à la v1.18.
+    photos_open: asList(r.photos_open || r.photo_open),
+    opened_at: r.opened_at || null, opened_by: r.opened_by || null,
+    opened_by_name: r.opened_by_name || null,
+    provider_id: r.provider_id || null, tracking_ref: r.tracking_ref || null,
+    sent_at: r.sent_at || null, received_at: r.received_at || null,
+    outcome: r.outcome || null, work_done: r.work_done || null,
+    photos_return: asList(r.photos_return || r.photo_return),
+    cost: r.cost ?? null, under_warranty: r.under_warranty ?? null,
+    closed_at: r.closed_at || null, closed_by: r.closed_by || null,
+    destination: r.destination || null, status: r.status || 'open'
+  })).filter(r=>r.item_id && r.id);
+
+  return {items:d.items||[], users, locations, history, projects:d.projects||[],
+          repairs, providers};
 }
 function importJSON(inp){
   const f = inp.files[0]; if(!f) return;
@@ -234,7 +260,7 @@ function importJSON(inp){
       toast("Invalid file — this is not an inventory export.", 'error');
       inp.value = ""; return;
     }
-    if(!confirm(`Import ${d.items.length} item(s), ${d.users.length} borrower(s), ${d.projects.length} project(s) and ${d.history.length} history entries?\n\nExisting items with the same ID will be overwritten.`)){ inp.value=""; return; }
+    if(!confirm(`Import ${d.items.length} item(s), ${d.users.length} borrower(s), ${d.projects.length} project(s), ${d.repairs.length} repair record(s) and ${d.history.length} history entries?\n\nExisting items with the same ID will be overwritten.`)){ inp.value=""; return; }
     try{
       if(d.locations.length) await apiUpsertLocations(d.locations);
       if(d.users.length) await apiUpsertPeople(d.users);
@@ -243,6 +269,8 @@ function importJSON(inp){
         notes:i.notes||"",photo:i.photo||null,owner:i.owner||"",provider:i.provider||"",price:i.price??null,sales_order:i.sales_order||"",purchase_date:i.purchase_date||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null,
         ...(db.trashSupported ? {deleted_at:i.deleted_at||null} : {})
       })));
+      if(d.providers.length) await apiUpsertProviders(d.providers);
+      if(d.repairs.length)   await apiUpsertRepairs(d.repairs);
       if(d.projects.length) await apiUpsertProjects(d.projects.map(p=>({
         id:p.id,name:p.name,description:p.description||"",status:p.status||'inactif',
         item_ids:p.item_ids||[],prep:p.prep||{},last_used:p.last_used||null,

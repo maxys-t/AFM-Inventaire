@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.18.0] — 2026-10-08
+
+### Ajouté
+
+- **Plusieurs photos par dossier de réparation**, jusqu'à six au
+  signalement et six au retour. Une panne se documente rarement en une
+  image : le connecteur arraché, la trace sur le flanc et l'écran éteint
+  sont trois choses à montrer. Chaque vignette porte sa croix — retirer
+  la troisième n'oblige pas à tout reprendre.
+- **Visualiseur plein écran** : une vignette de 78 px ne montre pas une
+  rayure. Un clic agrandit, les flèches passent d'une photo à l'autre.
+  Vaut pour les photos en cours de saisie comme pour celles déjà au
+  dossier.
+
+### Corrigé
+
+- **La sauvegarde JSON ignorait les réparations et les prestataires.**
+  Une restauration aurait rendu l'inventaire entier mais sans aucun
+  historique de panne, et sans les photos documentant l'état au départ —
+  exactement l'omission corrigée en v1.12.2, sur une autre table. Les
+  sauvegardes antérieures restent lisibles : une photo unique devient une
+  liste d'une photo.
+
+### Base de données
+
+`sql/017-photos-multiples.sql` : `photo_open` et `photo_return` laissent
+la place à `photos_open` et `photos_return`, deux listes. Les photos déjà
+enregistrées sont reprises, vérifiées, puis les anciennes colonnes
+supprimées dans la même transaction — garder les deux aurait garanti
+qu'elles finissent par diverger. La migration peut être relancée sans
+dupliquer les images.
+
+
 ## [1.17.1] — 2026-10-08
 
 ### Corrigé

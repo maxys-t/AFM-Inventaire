@@ -899,13 +899,32 @@ button[data-tip],label[data-tip]{cursor:pointer}
 .photobtn{display:flex;align-items:center;justify-content:center;gap:10px;
   border:1px dashed var(--border2);border-radius:12px;padding:16px;
   color:var(--txt);font-size:14px;cursor:pointer;min-height:58px}
+.photobtn.compact{padding:11px;min-height:46px;font-size:13px}
 .photobtn:hover{border-color:var(--accent);background:rgba(10,132,255,.06)}
 .photobtn .pi{font-size:19px;line-height:1}
-.photopick{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+
+/* Une panne se documente rarement en une image. Les vignettes
+   s'alignent, chacune avec sa croix — retirer la troisième ne doit
+   pas obliger à tout refaire. */
+.phgrid{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:10px}
+.phgrid:empty{display:none}
+.phtile{position:relative}
 .photoprev{width:78px;height:78px;object-fit:cover;border-radius:10px;
-  background:var(--panel2);display:block}
-.photoacts{display:flex;gap:8px;flex-wrap:wrap}
-.photoacts .btn{min-height:40px;display:inline-flex;align-items:center}
+  background:var(--panel2);display:block;cursor:zoom-in}
+.phdrop{position:absolute;top:-6px;right:-6px;width:24px;height:24px;
+  border-radius:50%;border:1px solid var(--border2);background:var(--panel);
+  color:var(--txt);font-size:12px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;padding:0}
+.phdrop:hover{background:var(--bad);border-color:var(--bad);color:#fff}
+
+/* Une vignette de 78 px ne montre pas une rayure. */
+.overlay.photoview{align-items:center;background:rgba(0,0,0,.72)}
+.pvbox{max-width:min(92vw,900px);display:flex;flex-direction:column;gap:10px}
+.pvbox img{max-width:100%;max-height:76vh;object-fit:contain;border-radius:12px;
+  background:#000;display:block;margin:0 auto}
+.pvbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pvbar #pv-nav{display:flex;align-items:center;gap:10px}
+.pvbar .btn{min-height:40px;min-width:44px}
 
 .infoband{display:flex;align-items:flex-start;gap:8px;background:rgba(10,132,255,.10);
   color:var(--accent2);border-radius:10px;padding:10px 12px;font-size:12.5px;margin-top:16px}
