@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.19.1] — 2026-10-08
+
+### Corrigé
+
+- **Un micro de 544 kg est passé sans un mot.** La cellule du tableau
+  source disait `5;44 kg` — un point-virgule tapé à la place de la
+  virgule. Le nettoyage retirait le caractère et 5,44 devenait 544. Un
+  point-virgule ou deux-points entre deux chiffres sont désormais lus
+  comme une virgule décimale.
+
+### Ajouté
+
+- **L'import signale les poids qui ne ressemblent pas à ce qu'ils
+  décrivent.** Chaque valeur est comparée à la médiane de sa
+  sous-catégorie : un facteur vingt dans un sens ou dans l'autre, et la
+  ligne s'affiche avant écriture. Pas pour la refuser — un piano à
+  210 kg est aberrant dans l'absolu et normal entre pianos — mais pour
+  qu'elle soit vue.
+
+  C'est ce qui manquait : rien ne confrontait le chiffre à son objet,
+  donc une faute de frappe traversait toute la chaîne en silence. Le
+  balayage complet du tableau n'a trouvé qu'une seule valeur de ce
+  genre, mais une seule suffit à fausser un total de caisse.
+
+
 ## [1.19.0] — 2026-10-08
 
 ### Ajouté

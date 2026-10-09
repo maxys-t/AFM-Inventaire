@@ -67,6 +67,34 @@ function wiSplit(line, sep){
   return out.map(x=>x.trim());
 }
 
+/* Une valeur absurde doit se voir AVANT d'être écrite. Un micro à
+   544 kg est passé sans un mot parce que rien ne comparait le chiffre
+   à ce qu'il décrit. On compare donc chaque poids à la médiane de sa
+   sous-catégorie : pas pour refuser, pour montrer. Un piano à 210 kg
+   est aberrant dans l'absolu et parfaitement normal entre pianos. */
+function wiSuspects(maj){
+  const parSub = new Map();
+  db.items.forEach(i=>{
+    if(!i.weight_g) return;
+    if(!parSub.has(i.subcat)) parSub.set(i.subcat, []);
+    parSub.get(i.subcat).push(i.weight_g);
+  });
+  const médiane = arr => {
+    const a = arr.slice().sort((x,y)=>x-y);
+    return a.length ? a[Math.floor(a.length/2)] : 0;
+  };
+  const out = [];
+  maj.forEach(m=>{
+    const réf = médiane((parSub.get(m.i.subcat) || []).filter(g=>g !== m.i.weight_g));
+    /* Pas de plafond absolu : un piano à 210 kg est parfaitement
+       normal, et une alerte qui sonne à chaque import cesse d'être
+       lue. La seule comparaison qui ait du sens est celle avec les
+       objets de même nature. */
+    if(réf && (m.g / réf > 20 || réf / m.g > 20)) out.push({...m, réf});
+  });
+  return out;
+}
+
 function wiParse(text){
   const lines = text.split(/\r?\n/).filter(l=>l.trim());
   if(!lines.length) throw new Error('The file is empty.');
@@ -83,7 +111,10 @@ function wiParse(text){
   const rows = [];
   for(let n = 1; n < lines.length; n++){
     const c = wiSplit(lines[n], sep);
-    const g = parseWeight(c[iW]);
+    /* « 5;44 kg » : un point-virgule entre deux chiffres est une
+       virgule mal tapée. Sans ça, le nettoyage le supprime et 5,44
+       devient 544. */
+    const g = parseWeight(String(c[iW]||'').replace(/(\d)\s*[;:]\s*(\d)/, '$1,$2'));
     if(g === null) continue;
     const est = iE >= 0 && /estim|approx|env/i.test(c[iE] || '');
     rows.push({brand: iB>=0 ? c[iB] : '', model: c[iM], g, est});
@@ -109,7 +140,8 @@ function wiBuildPlan(){
   const orphelines = wiRows.filter(r => !vus.has(normModel(r.brand)+'|'+normModel(r.model)));
   const restants = db.items.filter(i => !byKey.get(itemModelKey(i)) && !i.weight_g);
 
-  wiPlan = {maj, inchangés, orphelines, restants};
+  const suspects = wiSuspects(maj);
+  wiPlan = {maj, inchangés, orphelines, restants, suspects};
 
   const apres = db.items.filter(i => i.weight_g).length
               + maj.filter(m => !m.i.weight_g).length;
@@ -122,7 +154,17 @@ function wiBuildPlan(){
       ${ligne(inchangés.length, 'already have exactly this weight — untouched')}
       ${ligne(orphelines.length, 'rows in the file match no item', orphelines.length?'warn':'')}
       ${ligne(restants.length, 'items will still have no weight', restants.length?'warn':'')}
+      ${suspects.length ? ligne(suspects.length, 'weights look wrong for what they describe', 'bad') : ''}
     </div>
+    ${suspects.length ? `<div class="modsec">
+      <div class="fieldlbl bad">Check these before applying</div>
+      <div class="wilist">${suspects.map(x=>
+        `<div><b>${esc(fweight(x.g))}</b> — ${esc(itemTitleText(x.i))}
+         ${x.réf ? `<span class="muted">· others in ${esc(subLabel(x.i.cat,x.i.subcat))} are around ${esc(fweight(x.réf))}</span>` : ''}</div>`
+      ).join('')}</div>
+      <div class="hintline">A semicolon typed instead of a comma turns 5,44 kg into 544 kg.
+        These will be written as shown unless you fix the file first.</div>
+    </div>` : ''}
     <div class="modsec">
       <div class="fieldlbl">After the import</div>
       <div>${apres} of ${db.items.length} items weighed
