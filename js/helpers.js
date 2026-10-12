@@ -248,11 +248,15 @@ function parseWeight(v){
   return Math.round(enGrammes ? x : x * 1000);
 }
 
+/* Toujours en kilos, jamais en grammes. Une colonne qui alterne
+   « 284 g » et « 16.7 kg » ne se compare pas d'un coup d'œil : il
+   faut convertir de tête à chaque ligne. Deux décimales fixes et la
+   même unité partout, et la colonne se lit comme une colonne.
+   Format français, comme les prix de l'application. */
 function fweight(g){
   if(g === null || g === undefined || g === '') return '';
-  if(g < 1000) return `${Math.round(g)} g`;
-  const kg = g / 1000;
-  return `${(kg < 10 ? kg.toFixed(2) : kg.toFixed(1)).replace(/\.?0+$/,'')} kg`;
+  return (g / 1000).toLocaleString('fr-FR',
+    {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' kg';
 }
 
 /* Le total d'un lot, et ce qu'il vaut. Un total muet sur ses trous

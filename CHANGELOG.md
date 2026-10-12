@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.19.2] — 2026-10-12
+
+### Modifié
+
+- **Les poids s'affichent toujours en kilos**, avec deux décimales et la
+  virgule française : 850 g devient `0,85 kg`. Une colonne qui alterne
+  « 284 g » et « 16.7 kg » oblige à convertir de tête à chaque ligne
+  pour comparer deux valeurs — à l'usage, c'est l'unité unique qui rend
+  la colonne lisible.
+- **Le champ de saisie annonce son unité** : « Weight (kg) » au lieu de
+  « Weight ». Il acceptait déjà `480 g` aussi bien que `0,48`, mais rien
+  ne disait laquelle des deux était attendue — et devant un champ muet,
+  on écrit le chiffre qu'on a en tête. La saisie reste indulgente :
+  `0,48`, `0.48` et `480 g` sont tous lus, et réaffichés en kilos.
+
+### Note sur une piste écartée
+
+Une saisie contrainte façon terminal de paiement — les chiffres se
+remplissant depuis les décimales — a été envisagée puis abandonnée.
+Elle imposait un pas de 10 g, ce qui rendait insaisissables les
+adaptateurs de 10 g et aurait arrondi un SM57 de 284 à 280 g : la
+précision que l'import venait d'apporter, perdue à la première
+correction manuelle. Elle n'aurait rien empêché non plus — la faute de
+frappe du CM7 venait du tableur, pas du champ.
+
 ## [1.19.1] — 2026-10-08
 
 ### Corrigé
