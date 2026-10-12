@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.19.2';
+const APP_VERSION = '1.19.3';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','rep','settings'];
@@ -290,6 +290,74 @@ function importJSON(inp){
   };
   r.readAsText(f);
 }
+
+/* ============================================================
+   NOUVELLE VERSION EN LIGNE
+
+   Le `?v=` sur les scripts protège les scripts, mais rien ne protège
+   `index.html` lui-même : un navigateur qui le garde en cache réclame
+   les anciennes adresses, qu'il a aussi en cache, et reste sur une
+   version périmée sans qu'une seule requête n'atteigne le serveur.
+   Seul un rechargement forcé en sort — et personne n'y pense.
+
+   On relit donc `index.html` sans cache et on y lit la version que le
+   serveur annonce. Pas de fichier de version à maintenir à côté :
+   index.html porte déjà le numéro dans ses balises, et une source
+   unique ne peut pas se désynchroniser.
+   ============================================================ */
+const VERSION_CHECK_MS = 20 * 60 * 1000;
+let versionSignalée = null;
+
+async function checkVersion(){
+  try{
+    const r = await fetch('index.html?_=' + Date.now(), {cache: 'no-store'});
+    if(!r.ok) return;
+    const m = (await r.text()).match(/js\/app\.js\?v=([\d.]+)/);
+    if(!m) return;
+    const enLigne = m[1];
+    if(enLigne !== APP_VERSION && enLigne !== versionSignalée){
+      versionSignalée = enLigne;
+      showUpdateBanner(enLigne);
+    }
+  }catch(e){ /* hors ligne : rien à signaler */ }
+}
+
+function showUpdateBanner(v){
+  if(document.getElementById('updbar')) return;
+  const b = document.createElement('div');
+  b.id = 'updbar';
+  b.innerHTML = `<span>Version <b></b> is online — you are running ${APP_VERSION}.</span>
+    <button class="btn small" id="updgo">Reload</button>
+    <button class="cl" id="updno" aria-label="Dismiss">✕</button>`;
+  b.querySelector('b').textContent = v;
+  document.body.appendChild(b);
+  b.querySelector('#updgo').onclick = reloadFresh;
+  b.querySelector('#updno').onclick = ()=>b.remove();
+}
+
+/* Un rechargement ordinaire peut resservir le même index.html caché.
+   Une adresse jamais vue, elle, force une vraie requête. */
+function reloadFresh(){
+  const u = new URL(location.href);
+  u.searchParams.set('_r', Date.now());
+  location.replace(u.toString());
+}
+
+/* …et on efface aussitôt le paramètre, pour ne pas le laisser traîner
+   dans une adresse que quelqu'un mettrait en favori. */
+try{
+  if(new URL(location.href).searchParams.has('_r')){
+    const u = new URL(location.href);
+    u.searchParams.delete('_r');
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+  }
+}catch(e){}
+
+setTimeout(checkVersion, 4000);
+setInterval(checkVersion, VERSION_CHECK_MS);
+/* Au retour sur l'onglet : c'est le moment où une version a pu sortir
+   pendant qu'on faisait autre chose. */
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkVersion(); });
 
 /* ---- textes configurables + démarrage ---- */
 function applyLabels(){

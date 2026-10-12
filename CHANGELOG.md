@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.19.3] — 2026-10-12
+
+### Ajouté
+
+- **L'application prévient quand une nouvelle version est en ligne.**
+  Un bandeau discret en bas d'écran annonce la version disponible et
+  propose de recharger.
+
+  Le `?v=` sur les scripts protège les scripts, mais rien ne protège
+  `index.html` lui-même. Un navigateur qui le garde en cache réclame
+  les anciennes adresses — qu'il a également en cache — et reste sur
+  une version périmée sans qu'une seule requête n'atteigne le serveur.
+  Seul un rechargement forcé en sort, et personne n'y pense. Le défaut
+  est passé inaperçu tant qu'une seule personne utilisait l'app ; à
+  plusieurs, chacun serait resté sur sa version.
+
+  La vérification relit `index.html` sans cache et y lit le numéro que
+  le serveur annonce. Pas de fichier de version à maintenir à côté :
+  `index.html` porte déjà le numéro dans ses balises, et une source
+  unique ne peut pas se désynchroniser. Contrôle au démarrage, toutes
+  les vingt minutes, et au retour sur l'onglet. Hors ligne, il se tait.
+
+  Le bouton « Reload » passe par une adresse jamais vue plutôt que par
+  un rechargement ordinaire, qui pourrait resservir le même
+  `index.html` caché — et le paramètre est effacé de la barre
+  d'adresse aussitôt après.
+
+
 ## [1.19.2] — 2026-10-12
 
 ### Modifié
