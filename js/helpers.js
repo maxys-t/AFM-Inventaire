@@ -75,6 +75,19 @@ function uid(cat, sub){
   return code + "-" + String(max+1).padStart(3,"0");
 }
 
+/* --- Code périmé (v1.20.3) ---
+   Changer la sous-catégorie d'un item ne renumérote pas son
+   identifiant, et c'est voulu : un identifiant qui change tout seul
+   rend une étiquette fausse sans prévenir. Mais l'écart doit se voir,
+   sinon il s'accumule en silence — quatre cas étaient déjà là. */
+function codeStale(i){
+  if(!i || !i.id) return false;
+  const attendu = codeFor(i.cat, i.subcat);
+  const actuel = String(i.id).split('-')[0];
+  return !!actuel && !!attendu && actuel !== attendu;
+}
+function staleItems(){ return (db.items||[]).filter(codeStale); }
+
 /* --- Affichage d'un item : « Manufacturer » en gras puis le modèle --- */
 function itemTitle(i){
   const b = (i.brand||'').trim();

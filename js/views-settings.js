@@ -97,6 +97,13 @@ function paneData(){
         <p class="muted">Add or update many items at once from a spreadsheet.</p>
       </div>
       <div>
+        <h4>Item codes</h4>
+        ${staleItems().length
+          ? `<button class="btn sec small" onclick="openStaleCodes()">${staleItems().length} code(s) out of date</button>
+             <p class="muted">Their sub-category changed, their ID did not. Harmless until you print labels.</p>`
+          : `<p class="muted">Every ID matches its sub-category.</p>`}
+      </div>
+      <div>
         <h4>Weights</h4>
         <button class="btn sec small" onclick="openWeightImport()">Import weights</button>
         <p class="muted">${db.items.filter(i=>i.weight_g).length} of ${db.items.length} items weighed —
@@ -282,4 +289,27 @@ async function toggleProviderArchive(id){
   }
   try{ await apiUpdateProvider(id, {archived: !p.archived}); await refresh(); }
   catch(e){ toast('Could not change it: ' + (e.message||e), 'error'); }
+}
+
+
+/* Les identifiants qui ne correspondent plus à leur sous-catégorie.
+   On montre, on ne corrige pas : renuméroter se décide en connaissance
+   de cause, parce que ça rend une étiquette déjà collée inexacte. */
+function openStaleCodes(){
+  const rows = staleItems();
+  document.getElementById('scBody').innerHTML = rows.length ? `
+    <div class="hintline" style="margin-bottom:10px">Their sub-category was changed after they were created.
+      Nothing is broken — but a printed label would show the old code.</div>
+    <div class="pklist">${rows.map(i=>`
+      <div class="pkline">
+        <div class="repbody">
+          <div>${itemTitle(i)} <span class="mono">${esc(i.id)}</span></div>
+          <div class="repmeta">${esc(subLabel(i.cat, i.subcat))} · expects
+            <b>${esc(codeFor(i.cat, i.subcat))}-…</b></div>
+        </div>
+      </div>`).join('')}</div>
+    <div class="hintline" style="margin-top:10px">Renumbering is a migration, not a click:
+      the IDs appear in the history and in projects. Ask me when you want it done.</div>`
+    : '<div class="muted">Nothing to report.</div>';
+  open_('ovStale');
 }

@@ -226,6 +226,14 @@ function renderPackDetail(){
    seul code pour la souris et le tactile.
    ============================================================ */
 let drag = null;
+/* Un glissement se termine par un « clic » que le navigateur envoie
+   de toute façon. Sans ce garde-fou, déposer un pack ouvre sa fiche
+   dans la foulée — on a bougé quelque chose, et une fenêtre s'ouvre
+   par-dessus le résultat qu'on voulait voir. */
+let dragFini = 0;
+document.addEventListener('click', e=>{
+  if(Date.now() - dragFini < 350){ e.stopPropagation(); e.preventDefault(); }
+}, true);
 
 function packDragStart(e, type, id){
   if(!can('edit')) return;
@@ -249,6 +257,7 @@ function packDragMove(e){
   if(!drag.actif){
     drag.actif = true;
     document.body.classList.add('dragging');
+    packOutBar(true);
     drag.fantome = document.createElement('div');
     drag.fantome.className = 'dragghost';
     drag.fantome.innerHTML = packDragLabel();
@@ -264,12 +273,46 @@ function packDragMove(e){
   document.querySelectorAll('.dropok,.dropno').forEach(x=>x.classList.remove('dropok','dropno'));
   drag.cible = cible;
   if(!cible) return;
+  if(cible === '__out'){
+    zone.classList.add('dropok');
+    drag.boucle = false;
+    const par = packDragParent();
+    drag.fantome.innerHTML = packDragLabel() +
+      `<span class="ok">↥ out of ${esc(par ? par.name : '')}</span>`;
+    return;
+  }
   const boucle = drag.type === 'item' && packWouldLoop(cible, drag.id);
   zone.classList.add(boucle ? 'dropno' : 'dropok');
   drag.boucle = boucle;
   /* On annonce le résultat AVANT la dépose : le poids et le compte
      qu'on obtiendra, ou la raison du refus. */
   drag.fantome.innerHTML = packDragLabel(cible, boucle);
+}
+
+/* La zone de sortie n'apparaît que pendant un glissement, et
+   seulement si l'objet est effectivement rangé quelque part. Une
+   cible permanente inviterait à des dépôts accidentels. */
+function packOutBar(montrer){
+  let b = document.getElementById('packout');
+  if(!montrer){ if(b) b.remove(); return; }
+  if(b) return;
+  const parent = packDragParent();
+  if(!parent) return;
+  b = document.createElement('div');
+  b.id = 'packout';
+  b.setAttribute('data-drop', '__out');
+  b.innerHTML = `↥ Take out of <b>${esc(parent.name)}</b>`;
+  document.body.appendChild(b);
+}
+/* Le pack dont l'objet glissé sort, s'il est rangé quelque part. */
+function packDragParent(){
+  if(!drag) return null;
+  if(drag.type === 'pack'){
+    const p = pack(drag.id);
+    return p ? packParent(p) : null;
+  }
+  const i = item(drag.id);
+  return i && i.in_pack_id ? pack(i.in_pack_id) : null;
 }
 
 function packDragLabel(cibleId, boucle){
@@ -287,12 +330,19 @@ function packDragLabel(cibleId, boucle){
 
 async function packDragEnd(e){
   const d = drag; drag = null;
+  if(d && d.actif) dragFini = Date.now();
+  packOutBar(false);
   document.body.classList.remove('dragging');
   document.querySelectorAll('.dropok,.dropno').forEach(x=>x.classList.remove('dropok','dropno'));
   if(d && d.fantome) d.fantome.remove();
   if(!d || !d.actif || !d.cible) return;
   if(d.boucle){ toast('That would put a pack inside itself.', 'error'); return; }
 
+  if(d.cible === '__out'){
+    const itemId = d.type === 'pack' ? (pack(d.id) || {}).container_id : d.id;
+    if(itemId) await packTakeOut(itemId);
+    return;
+  }
   const cible = pack(d.cible);
   if(!cible) return;
   /* Déposer un pack, c'est déposer son contenant : c'est lui l'objet
@@ -350,6 +400,30 @@ async function packUndoMove(packId, avant){
     if(packShown) renderPackDetail();
     toast('Reverted.', 'ok');
   }catch(err){ toast('Could not undo: ' + (err.message||err), 'error'); }
+}
+
+/* Sortir un objet de son pack : il quitte le plan de celui qui le
+   contenait et n'est plus rangé nulle part. Ses autres appartenances
+   ne bougent pas — on le sort d'une boîte, on ne l'efface pas. */
+async function packTakeOut(itemId){
+  const i = item(itemId);
+  const parentId = i ? i.in_pack_id : null;
+  if(!parentId){ toast('This is not inside a pack.', 'error'); return; }
+  const p = pack(parentId);
+  const appartenait = packsOfItem(itemId).some(x=>x.id === parentId);
+  try{
+    if(appartenait) await apiRemovePackItems(parentId, [itemId]);
+    await apiSetItemsPack([itemId], null);
+    await refresh(); renderPacks();
+    if(packShown) renderPackDetail();
+    toast(`Taken out of ${p ? p.name : 'its pack'}.`, 'ok', 'Undo', async ()=>{
+      if(appartenait) await apiAddPackItems(parentId, [itemId]);
+      await apiSetItemsPack([itemId], parentId);
+      await refresh(); renderPacks();
+      if(packShown) renderPackDetail();
+      toast('Reverted.', 'ok');
+    }, 10000);
+  }catch(err){ toast(String(err.message||err), 'error'); }
 }
 
 async function packRemove(packId, itemId){

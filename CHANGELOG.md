@@ -1,5 +1,44 @@
 # Changelog
 
+## [1.20.2] — 2026-10-12
+
+### Corrigé
+
+- **Déposer un pack dans un autre ouvrait sa fiche dans la foulée.**
+  Un glissement se termine par un clic que le navigateur envoie de
+  toute façon : on venait de déplacer quelque chose, et une fenêtre
+  s'ouvrait par-dessus le résultat qu'on voulait voir. Le clic qui suit
+  immédiatement un glissement est désormais ignoré, partout.
+
+### Ajouté
+
+- **Sortir un objet de son pack en le glissant.** Une zone « ↥ Take out
+  of … » apparaît en haut de l'écran pendant le geste, et seulement si
+  l'objet est effectivement rangé quelque part — une cible permanente
+  inviterait aux dépôts accidentels. L'objet quitte le plan du pack qui
+  le contenait et n'est plus rangé nulle part ; ses autres
+  appartenances ne bougent pas. Annulable dix secondes, comme les
+  autres déplacements.
+- **Les identifiants qui ne correspondent plus à leur sous-catégorie
+  sont signalés** : un repère sur la fiche de l'item, et un compte dans
+  Settings → Data qui ouvre la liste.
+
+  Changer la sous-catégorie ne renumérote pas l'identifiant, et c'est
+  délibéré : un identifiant qui change tout seul rendrait fausse une
+  étiquette déjà collée, sans prévenir. Mais sans signalement l'écart
+  s'accumule en silence — quatre cas s'étaient déjà installés, dont le
+  WES Audio Titan en `CMP-007` alors qu'il est rangé en 500 series rack
+  depuis un moment. L'application montre, elle ne corrige pas :
+  renuméroter reste une migration, décidée en connaissance de cause.
+
+### Note sur les tests
+
+Deux contrôles du harnais ont dû être réécrits, pour la même raison :
+ils vérifiaient du vocabulaire au lieu d'un comportement. L'un cherchait
+le mot « renumbering » dans un fichier où il figure… dans le texte
+explicatif de la fenêtre. Un test qui échoue sur sa propre documentation
+ne teste rien.
+
 ## [1.20.1] — 2026-10-12
 
 ### Corrigé

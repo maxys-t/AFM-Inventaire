@@ -1195,7 +1195,8 @@ function openDetail(id){
     ? `<button class="btn small ok" onclick="openReceive('${openRep.id}')">Close the incident</button>`
     : `<button class="btn sec small" onclick="openReport('${i.id}')">Report a fault</button>`;
   document.getElementById('detailBody').innerHTML = `
-    <h3>${itemTitle(i)} <span class="mono">${i.id}</span></h3>
+    <h3>${itemTitle(i)} <span class="mono">${i.id}</span>${codeStale(i)
+      ? ` <span class="tag stale" data-tip="This ID starts with ${esc(String(i.id).split('-')[0])}, but the sub-category now expects ${esc(codeFor(i.cat,i.subcat))}. Harmless until you print labels.">code ${esc(codeFor(i.cat,i.subcat))}?</span>` : ''}</h3>
     ${i.photo?`<img class="itemphoto" loading="lazy" src="${i.photo}">`:""}
     <p style="margin-bottom:10px">
       <span class="tag cat">${esc(catPath(i))}</span> ${statusTag(i)} <span class="tag ${i.cond}">${condLabel(i.cond)}</span>${repairTag(i)}${
