@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.20.1] — 2026-10-12
+
+### Corrigé
+
+- **« Container not found » sur un contenant pourtant choisi dans la
+  liste.** Le formulaire relisait le texte sélectionné avec une
+  expression régulière qui attendait des lettres avant le tiret de
+  l'identifiant — un code de sous-catégorie commençant par un chiffre,
+  comme `500-001` pour le rack 500 series, n'y entrait pas.
+
+  La correction tient moins au motif qu'à la méthode : l'application
+  devinait le sens d'une chaîne qu'elle venait elle-même de fabriquer.
+  Elle garde désormais la correspondance entre ce que la liste propose
+  et l'item visé. La lecture approximative ne sert plus que pour une
+  saisie tapée à la main, et accepte alors les codes numériques, les
+  identifiants seuls et le nom complet.
+
+
 ## [1.20.0] — 2026-10-12
 
 ### Ajouté

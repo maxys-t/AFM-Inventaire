@@ -371,6 +371,11 @@ async function packRemove(packId, itemId){
    CRÉER, MODIFIER, REMPLIR
    ============================================================ */
 let packEditing = null;
+/* Ce que la liste propose, et à quel item ça correspond. On relisait
+   le texte choisi avec une expression régulière — autant dire qu'on
+   devinait ce qu'on venait soi-même d'écrire. Un identifiant commençant
+   par un chiffre (« 500-001 ») suffisait à tout faire échouer. */
+let packContChoix = new Map();
 
 function openPackForm(id){
   packEditing = id || null;
@@ -382,6 +387,10 @@ function openPackForm(id){
     const d = packOfContainer(i.id);
     return !d || (p && d.id === p.id);
   });
+  packContChoix = new Map();
+  const étiquette = i => `${itemTitleText(i)} · ${i.id}`;
+  libres.forEach(i=>packContChoix.set(étiquette(i).toLowerCase(), i.id));
+
   document.getElementById('pfTitle').textContent = p ? 'Edit pack' : 'New pack';
   document.getElementById('pfBody').innerHTML = `
     <div class="form-grid">
@@ -390,9 +399,9 @@ function openPackForm(id){
       <div class="field full">
         <label data-tip="The box, rack or device that holds the others. Its own weight counts in the total, and its photo becomes the pack's.">Container ⓘ</label>
         <input id="pf-cont" list="pf-list" placeholder="Type a name or an ID — leave empty for a grouping without a box"
-               value="${p && p.container_id ? esc(itemTitleText(item(p.container_id)) + ' · ' + p.container_id) : ''}">
+               value="${p && p.container_id ? esc(étiquette(item(p.container_id))) : ''}">
         <datalist id="pf-list">${libres.map(i=>
-          `<option value="${esc(itemTitleText(i))} · ${esc(i.id)}">`).join('')}</datalist></div>
+          `<option value="${esc(étiquette(i))}">`).join('')}</datalist></div>
       <div class="field full"><label>Notes</label>
         <input id="pf-notes" value="${esc(p ? (p.notes||'') : '')}"></div>
     </div>
@@ -401,12 +410,21 @@ function openPackForm(id){
   open_('ovPackForm');
 }
 
-/* « Roland Juno-106 · SYN-001 » → SYN-001 */
+/* « Roland Juno-106 · SYN-001 » → SYN-001.
+   D'abord la correspondance exacte de ce que la liste proposait ;
+   ensuite seulement on essaie de deviner, pour la frappe à la main. */
 function packPickId(v){
-  const m = String(v||'').trim().match(/([A-Za-z]+-\d+)\s*$/);
+  const t = String(v||'').trim();
+  if(!t) return null;
+  const connu = packContChoix.get(t.toLowerCase());
+  if(connu) return connu;
+  if(item(t)) return t;
+  /* Le code d'une sous-catégorie peut contenir des chiffres. */
+  const m = t.match(/([A-Za-z0-9]+-\d+)\s*$/);
   if(m && item(m[1])) return m[1];
-  const direct = item(String(v||'').trim());
-  return direct ? direct.id : null;
+  /* Dernier recours : le nom complet, sans l'identifiant. */
+  const parNom = db.items.find(i=>itemTitleText(i).toLowerCase() === t.toLowerCase());
+  return parNom ? parNom.id : null;
 }
 
 async function packSave(){
