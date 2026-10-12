@@ -205,6 +205,7 @@ const LABELS = {
     people:    "Borrowers",
     proj:      "Projects",
     out:       "Checked out",
+    packs:     "Packs",
     rep:       "Repairs",
     settings:  "⚙ Settings"
   },
@@ -214,6 +215,7 @@ const LABELS = {
     people:   "Everyone who borrows gear, and what they currently hold.",
     proj:     "Build a gear list for a session or a tour, then tick it off as you pack.",
     out:      "Everything that has left the studio — who has it and since when.",
+    packs:    "What travels together: racks, cases, and the gear inside them.",
     rep:      "Gear that is damaged, waiting for repair, or at the shop.",
     settings: "Accounts, locations, import and export, activity log."
   }

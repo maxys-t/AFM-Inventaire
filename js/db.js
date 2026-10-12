@@ -7,6 +7,7 @@
 let sb = null;
 let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:false,
           repairs:[],providers:[],repairsSupported:true,
+          packs:[],packItems:[],packsSupported:true,
           trash:[],trashSupported:true,profiles:[]};
 let syncState = 'off';   // 'ok' | 'off' | 'error'
 
@@ -161,6 +162,16 @@ async function loadAll(){
     sb.from('repairs').select('*').order('opened_at',{ascending:false}),
     sb.from('repair_providers').select('*').order('name')
   ]);
+  /* Packs (migration 019). Tolérant à son absence, comme les
+     réparations : sans eux l'onglet est vide, l'app tourne. */
+  const [pk, pit] = await Promise.all([
+    sb.from('packs').select('*').order('name'),
+    sb.from('pack_items').select('*')
+  ]);
+  db.packsSupported = !pk.error;
+  db.packs = pk.error ? [] : pk.data;
+  db.packItems = pit.error ? [] : pit.data;
+
   db.repairsSupported = !rp.error;
   db.repairs = rp.error ? [] : rp.data.map(r=>({...r, item_id:r.item_id}));
   db.providers = pv.error ? [] : pv.data;
@@ -199,7 +210,7 @@ async function refresh(){
    le moindre enregistrement de préférence d'affichage déclencherait
    un rechargement complet de l'inventaire à chaque case cochée. */
 const SYNC_TABLES = ['items','people','locations','history','projects','profiles',
-                     'repairs','repair_providers'];
+                     'repairs','repair_providers','packs','pack_items'];
 function subscribe(){
   let t = null;
   try{
@@ -422,6 +433,34 @@ async function apiUpsertLocations(rows){ await run(sb.from('locations').upsert(r
 async function apiUpsertPeople(rows){ await run(sb.from('people').upsert(rows)); }
 async function apiUpsertItems(rows){ await run(sb.from('items').upsert(rows)); }
 async function apiUpsertProjects(rows){ await run(sb.from('projects').upsert(rows)); }
+/* ---------------- Packs (v1.20) ---------------- */
+async function apiInsertPack(p){
+  const {data,error} = await sb.from('packs').insert(p).select().single();
+  if(error) throw error;
+  return data;
+}
+async function apiUpdatePack(id, f){ await run(sb.from('packs').update(f).eq('id', id)); }
+async function apiDeletePack(id){ await run(sb.from('packs').delete().eq('id', id)); }
+
+/* L'appartenance. L'erreur de boucle vient du déclencheur de la base :
+   on la laisse remonter telle quelle, son message est déjà lisible. */
+async function apiAddPackItems(packId, itemIds){
+  const rows = itemIds.map(id=>({pack_id:packId, item_id:id}));
+  const {error} = await sb.from('pack_items').upsert(rows, {onConflict:'pack_id,item_id'});
+  if(error) throw error;
+}
+async function apiRemovePackItems(packId, itemIds){
+  await run(sb.from('pack_items').delete().eq('pack_id', packId).in('item_id', itemIds));
+}
+/* La position : dans quel pack l'item se trouve réellement. */
+async function apiSetItemsPack(itemIds, packId){
+  await run(sb.from('items').update({in_pack_id: packId}).in('id', itemIds));
+}
+async function apiUpsertPacks(rows){ await run(sb.from('packs').upsert(rows)); }
+async function apiUpsertPackItems(rows){
+  await run(sb.from('pack_items').upsert(rows, {onConflict:'pack_id,item_id'}));
+}
+
 async function apiUpsertRepairs(rows){ await run(sb.from('repairs').upsert(rows)); }
 async function apiUpsertProviders(rows){ await run(sb.from('repair_providers').upsert(rows)); }
 async function apiInsertHistoryRows(rows){ await run(sb.from('history').insert(rows)); }

@@ -4,10 +4,10 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.19.3';
+const APP_VERSION = '1.20.0';
 
 /* ---- navigation entre onglets ---- */
-const VIEWS = ['dash','inv','people','proj','out','rep','settings'];
+const VIEWS = ['dash','inv','people','proj','out','packs','rep','settings'];
 function show(v){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
   VIEWS.forEach(x=>{ const el = document.getElementById('v-'+x); if(el) el.style.display = x===v?'':'none'; });
@@ -106,6 +106,7 @@ function render(){
   if(v==='inv'){ fillFilters(); renderInv(); }
   if(v==='proj') renderProj();
   if(v==='out') renderOut();
+  if(v==='packs') renderPacks();
   if(v==='rep') renderRep();
   if(v==='people') renderPeople();
   if(v==='settings') renderSettings();
@@ -177,7 +178,7 @@ function exportJSON(){
   // pour que l'export soit une image complète de la base.
   const out = {...db, items:[...db.items, ...db.trash]};
   delete out.trash; delete out.trashSupported; delete out.projectsError;
-  delete out.repairsSupported;
+  delete out.repairsSupported; delete out.packsSupported;
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));
   a.download = 'afm-inventory-' + new Date().toISOString().slice(0,10) + '.json';
@@ -244,8 +245,19 @@ function normalizeImport(d){
     destination: r.destination || null, status: r.status || 'open'
   })).filter(r=>r.item_id && r.id);
 
+  /* Packs (v1.20). Même piège qu'en v1.12.2 et v1.18 : sans ces deux
+     lignes, une restauration rendrait l'inventaire entier mais aurait
+     oublié comment il était rangé. */
+  const packs = (d.packs||[]).filter(p=>p && p.id && p.name).map(p=>({
+    id:p.id, name:p.name, notes:p.notes||null,
+    container_id:p.container_id||null, archived:!!p.archived
+  }));
+  const packItems = (d.packItems || d.pack_items || [])
+    .map(l=>({pack_id:l.pack_id, item_id:l.item_id}))
+    .filter(l=>l.pack_id && l.item_id);
+
   return {items:d.items||[], users, locations, history, projects:d.projects||[],
-          repairs, providers};
+          repairs, providers, packs, packItems};
 }
 function importJSON(inp){
   const f = inp.files[0]; if(!f) return;
@@ -266,9 +278,11 @@ function importJSON(inp){
       if(d.users.length) await apiUpsertPeople(d.users);
       if(d.items.length) await apiUpsertItems(d.items.map(i=>({
         id:i.id,name:i.name,cat:i.cat||'divers',subcat:i.subcat||'autre',brand:i.brand||"",serial:i.serial||"",cond:normCond(i.cond),
-        notes:i.notes||"",photo:i.photo||null,owner:i.owner||"",provider:i.provider||"",price:i.price??null,sales_order:i.sales_order||"",purchase_date:i.purchase_date||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null,
+        notes:i.notes||"",photo:i.photo||null,owner:i.owner||"",provider:i.provider||"",price:i.price??null,sales_order:i.sales_order||"",purchase_date:i.purchase_date||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null,weight_g:i.weight_g??null,weight_est:!!i.weight_est,in_pack_id:i.in_pack_id||null,
         ...(db.trashSupported ? {deleted_at:i.deleted_at||null} : {})
       })));
+      if(d.packs.length) await apiUpsertPacks(d.packs);
+      if(d.packItems.length) await apiUpsertPackItems(d.packItems);
       if(d.providers.length) await apiUpsertProviders(d.providers);
       if(d.repairs.length)   await apiUpsertRepairs(d.repairs);
       if(d.projects.length) await apiUpsertProjects(d.projects.map(p=>({

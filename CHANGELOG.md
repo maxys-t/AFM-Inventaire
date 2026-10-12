@@ -1,5 +1,68 @@
 # Changelog
 
+## [1.20.0] — 2026-10-12
+
+### Ajouté
+
+- **Les packs** : un onglet à part entière, pensé comme une session Pro
+  Tools — des items dans des dossiers, des dossiers dans des dossiers,
+  qu'on plie et qu'on déplie.
+- **Glisser-déposer** un item ou un pack dans un autre pack, à la souris
+  comme au doigt. La cible s'éclaire et **annonce le résultat avant la
+  dépose** — le nombre d'items et le poids qu'on obtiendra. Une boucle
+  interdite s'affiche en rouge plutôt que de laisser déposer puis
+  d'échouer.
+- **Annulation immédiate** après un déplacement : « 12 items → Pelicase
+  Clavier · Annuler », dix secondes.
+- Création, modification et suppression d'un pack ; ajout d'items en
+  lot ; sortie d'un pack d'un geste.
+
+### Le modèle, en deux relations
+
+Un pack porte **un plan** — ce qu'il devrait contenir — et chaque item
+porte **une position** — où il est vraiment. Garder les deux est ce qui
+permet de dire, au chargement : « il manque trois micros, ils sont dans
+le Rack B ». Avec le seul plan on ne sait jamais où est l'objet ; avec
+la seule position on ne sait pas qu'il manque quelque chose.
+
+Un item peut donc figurer au plan de plusieurs packs, mais n'être
+physiquement que dans un seul. Et la fiche distingue **« dans Pelicase
+Clavier »**, en gris, d'un **« manquant »** en orange : un item rangé
+dans un autre pack auquel il appartient aussi est à une de ses places.
+Sans cette nuance, un item partagé entre cinq packs en rendrait quatre
+orange en permanence — et une alerte permanente n'est plus lue.
+
+**L'imbrication ne demande aucune structure.** Un pack est représenté
+par son contenant, qui est un item ordinaire, donc membre possible d'un
+autre pack. Un lunchbox dans un rack, une console et ses cartes : même
+mécanisme, zéro table supplémentaire. Le poids remonte en cascade, et
+le total d'un écran ne somme que les racines pour ne pas compter deux
+fois le même matériel.
+
+### Note technique
+
+**Pas d'API de glisser-déposer HTML** : elle ne fonctionne pas au doigt,
+et l'iPad est la cible principale en studio. Des *pointer events* à la
+place, donc un seul comportement pour la souris et le tactile.
+
+**Pas d'undo global.** Une pile d'historique dans une application
+partagée en temps réel permet d'écraser le travail d'un collègue trois
+gestes plus tard. L'annulation ne porte que sur le geste qu'on vient de
+faire : tout de suite ou jamais.
+
+### Base de données
+
+`sql/019-packs.sql` : tables `packs` et `pack_items`, colonne
+`in_pack_id` sur les items, et deux déclencheurs qui refusent le rack
+rangé dans le lunchbox rangé dans le rack. Le refus arrive à l'écriture,
+là où l'on sait encore nommer le coupable — pas au calcul du poids, où
+l'on ne verrait qu'un écran figé.
+
+> La détection de boucle a d'abord été écrite à l'envers, des deux côtés
+> à la fois : elle remontait depuis l'item au lieu de partir de la cible,
+> et ne voyait donc que le cas trivial. Trouvée par les tests.
+
+
 ## [1.19.3] — 2026-10-12
 
 ### Ajouté

@@ -225,6 +225,139 @@ function inLocFilter(sel,name){
 
 /* --- Formatage des lignes d'historique --- */
 function histIcon(t){ return {create:"➕",out:"📤",in:"📥",move:"📍",edit:"✏️",repair:"🔧"}[t]||"•"; }
+/* ---- Packs (v1.20) ----
+
+   Deux relations à ne jamais confondre :
+     le PLAN      — ce que le pack devrait contenir (pack_items)
+     la POSITION  — où l'item se trouve vraiment (items.in_pack_id)
+
+   L'imbrication ne demande aucune structure : un pack est représenté
+   par son contenant, qui est un item ordinaire, donc membre possible
+   d'un autre pack. Tout ce qui suit se contente de lire ça.        */
+
+function pack(id){ return (db.packs||[]).find(p=>p.id === id) || null; }
+function packOfContainer(itemId){
+  return (db.packs||[]).find(p=>p.container_id === itemId) || null;
+}
+/* Le plan d'un pack. */
+function packPlan(id){
+  return (db.packItems||[]).filter(l=>l.pack_id === id)
+    .map(l=>item(l.item_id)).filter(Boolean);
+}
+/* Ce qui est réellement dedans. */
+function packInside(id){ return (db.items||[]).filter(i=>i.in_pack_id === id); }
+/* Les packs auxquels un item appartient. */
+function packsOfItem(itemId){
+  return (db.packItems||[]).filter(l=>l.item_id === itemId)
+    .map(l=>pack(l.pack_id)).filter(Boolean);
+}
+
+/* L'arbre. Un pack est enfant d'un autre si son contenant est membre
+   de celui-là. Les packs sans contenant, ou dont le contenant n'est
+   rangé nulle part, sont à la racine. */
+function packParent(p){
+  if(!p.container_id) return null;
+  const l = (db.packItems||[]).find(x=>x.item_id === p.container_id);
+  return l ? pack(l.pack_id) : null;
+}
+function packChildren(id){
+  return (db.packs||[]).filter(p=>{ const par = packParent(p); return par && par.id === id; });
+}
+function packRoots(){
+  return (db.packs||[]).filter(p=>!p.archived && !packParent(p));
+}
+
+/* Poids effectif d'un item : le sien, plus celui du pack dont il est
+   le contenant. Un lunchbox « pèse » ses six modules.
+   `vus` coupe les boucles — la base les refuse, mais un calcul qui
+   tourne sans fin sur une donnée douteuse fige l'écran sans rien dire. */
+function itemWeightDeep(i, vus){
+  vus = vus || new Set();
+  if(!i || vus.has(i.id)) return 0;
+  vus.add(i.id);
+  let g = i.weight_g || 0;
+  const p = packOfContainer(i.id);
+  if(p && !vus.has('p:' + p.id)){
+    vus.add('p:' + p.id);
+    packPlan(p.id).forEach(m=>{ g += itemWeightDeep(m, vus); });
+  }
+  return g;
+}
+/* Poids d'un pack : son contenant (qui embarque déjà son contenu) ou,
+   à défaut de contenant, la somme de son plan. */
+function packWeight(p, vus){
+  vus = vus || new Set();
+  if(!p || vus.has('p:' + p.id)) return 0;
+  if(p.container_id){
+    const c = item(p.container_id);
+    if(c) return itemWeightDeep(c, vus);
+  }
+  vus.add('p:' + p.id);
+  return packPlan(p.id).reduce((t,m)=>t + itemWeightDeep(m, vus), 0);
+}
+/* Le détail, pour ne pas afficher un total qu'on ne sait pas expliquer. */
+function packWeightParts(p){
+  const c = p.container_id ? item(p.container_id) : null;
+  const plan = packPlan(p.id);
+  const sous = plan.filter(m=>packOfContainer(m.id));
+  return {
+    contenant: c ? (c.weight_g || 0) : 0,
+    sousPacks: sous.reduce((t,m)=>t + itemWeightDeep(m), 0),
+    autres: plan.filter(m=>!packOfContainer(m.id)).reduce((t,m)=>t + (m.weight_g||0), 0),
+    nSousPacks: sous.length
+  };
+}
+
+/* Complétude. On sépare ce qui demande une action de ce qui est
+   normal : un item rangé dans un AUTRE pack auquel il appartient
+   aussi est à une de ses places, pas égaré. Sans cette nuance, un
+   item partagé entre cinq packs en rendrait quatre orange en
+   permanence — et une alerte permanente n'est plus lue. */
+function packStatus(p){
+  const dedans = [], ailleurs = [], manquants = [];
+  packPlan(p.id).forEach(i=>{
+    if(i.in_pack_id === p.id){ dedans.push(i); return; }
+    const autre = i.in_pack_id ? pack(i.in_pack_id) : null;
+    const luiAppartient = autre && packsOfItem(i.id).some(x=>x.id === autre.id);
+    if(luiAppartient && i.status !== 'sorti') ailleurs.push({i, pack: autre});
+    else manquants.push({i, où: itemWhere(i)});
+  });
+  return {dedans, ailleurs, manquants, plan: dedans.length + ailleurs.length + manquants.length};
+}
+/* Où se trouve un item, en une phrase. */
+function itemWhere(i){
+  if(!i) return '';
+  if(i.status === 'sorti') return outForRepair(i)
+    ? `at ${i.out.reason}` : `checked out · ${i.out ? i.out.reason : ''}`;
+  if(i.in_pack_id){ const p = pack(i.in_pack_id); if(p) return `in ${p.name}`; }
+  return locLabel(i.loc) || '';
+}
+/* La photo d'un pack est celle de son contenant — on reconnaît une
+   Pelicase à la caisse, pas à une liste de noms. */
+function packPhoto(p){
+  const c = p.container_id ? item(p.container_id) : null;
+  if(c && c.photo) return c.photo;
+  const m = packPlan(p.id).find(x=>x.photo);
+  return m ? m.photo : null;
+}
+/* Déposer A dans B créerait-il une boucle ? La base refuse déjà, mais
+   l'écran doit le dire AVANT la dépose, pas après l'échec. */
+function packWouldLoop(packId, itemId){
+  /* Déposer l'item X dans le pack C ferme une boucle si C est déjà,
+     de près ou de loin, à l'intérieur du pack que X représente.
+     On part donc de la CIBLE et on remonte ses parents jusqu'au pack
+     de X — et non l'inverse, qui ne voyait que le cas trivial. */
+  const pX = packOfContainer(itemId);
+  if(!pX) return false;                 // X n'est le contenant de rien
+  if(pX.id === packId) return true;     // une caisse dans son propre pack
+  let p = pack(packId), n = 0;
+  while(p && n++ < 25){
+    if(p.id === pX.id) return true;
+    p = packParent(p);
+  }
+  return false;
+}
+
 /* ---- Poids (v1.19) ----
 
    Stocké en grammes entiers, affiché en grammes sous le kilo et en

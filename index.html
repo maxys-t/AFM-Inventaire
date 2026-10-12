@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.19.3">
+<link rel="stylesheet" href="css/styles.css?v=1.20.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -29,6 +29,7 @@
   <button data-v="people" onclick="show('people')">Borrowers</button>
   <button data-v="proj" onclick="show('proj')">Projects</button>
   <button data-v="out" onclick="show('out')">Checked out</button>
+  <button data-v="packs" onclick="show('packs')">Packs</button>
   <button data-v="rep" onclick="show('rep')">Repairs</button>
   <span class="navspace"></span>
   <button data-v="settings" onclick="show('settings')" class="navgear" title="Settings">⚙ Settings</button>
@@ -144,6 +145,7 @@
     <div class="panel"><div id="outList"></div></div>
   </section>
 
+  <section id="v-packs" style="display:none"></section>
   <section id="v-rep" style="display:none"></section>
 
   <section id="v-people" style="display:none">
@@ -371,6 +373,35 @@
   </div>
 </div></div>
 
+<div class="overlay" id="ovPack"><div class="modal wide">
+  <div id="packBody"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovPack')">Close</button>
+    <span id="packActs" style="display:contents"></span>
+  </div>
+</div></div>
+
+<div class="overlay" id="ovPackForm"><div class="modal">
+  <h3 id="pfTitle"></h3>
+  <div id="pfBody"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovPackForm')">Cancel</button>
+    <button class="btn" onclick="packSave()">Save</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="ovPackAdd"><div class="modal wide">
+  <h3>Add items to the pack</h3>
+  <div class="submuted">An item can belong to several packs. Only its position changes.</div>
+  <input id="pa-q" class="bigsearch" placeholder="Search by name or ID" oninput="packAddSearch()"
+         style="margin:12px 0 10px">
+  <div class="pklist" id="paList"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovPackAdd')">Cancel</button>
+    <button class="btn" id="paGo" onclick="packAddApply()">Add</button>
+  </div>
+</div></div>
+
 <div class="hdrmenu" id="hdrMenu"></div>
 <div id="tipbox"></div>
 
@@ -498,24 +529,25 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.19.3"></script>
-<script src="js/auth.js?v=1.19.3"></script>
-<script src="js/helpers.js?v=1.19.3"></script>
-<script src="js/crop.js?v=1.19.3"></script>
-<script src="js/prefs.js?v=1.19.3"></script>
-<script src="js/db.js?v=1.19.3"></script>
-<script src="js/views-dashboard.js?v=1.19.3"></script>
-<script src="js/views-inventory.js?v=1.19.3"></script>
-<script src="js/views-projects.js?v=1.19.3"></script>
-<script src="js/views-out.js?v=1.19.3"></script>
-<script src="js/views-repairs.js?v=1.19.3"></script>
-<script src="js/views-people-loc.js?v=1.19.3"></script>
-<script src="js/views-trash.js?v=1.19.3"></script>
-<script src="js/views-users.js?v=1.19.3"></script>
-<script src="js/views-settings.js?v=1.19.3"></script>
-<script src="js/import-csv.js?v=1.19.3"></script>
-<script src="js/import-weights.js?v=1.19.3"></script>
-<script src="js/photos-bulk.js?v=1.19.3"></script>
-<script src="js/app.js?v=1.19.3"></script>
+<script src="js/config.js?v=1.20.0"></script>
+<script src="js/auth.js?v=1.20.0"></script>
+<script src="js/helpers.js?v=1.20.0"></script>
+<script src="js/crop.js?v=1.20.0"></script>
+<script src="js/prefs.js?v=1.20.0"></script>
+<script src="js/db.js?v=1.20.0"></script>
+<script src="js/views-dashboard.js?v=1.20.0"></script>
+<script src="js/views-inventory.js?v=1.20.0"></script>
+<script src="js/views-projects.js?v=1.20.0"></script>
+<script src="js/views-out.js?v=1.20.0"></script>
+<script src="js/views-packs.js?v=1.20.0"></script>
+<script src="js/views-repairs.js?v=1.20.0"></script>
+<script src="js/views-people-loc.js?v=1.20.0"></script>
+<script src="js/views-trash.js?v=1.20.0"></script>
+<script src="js/views-users.js?v=1.20.0"></script>
+<script src="js/views-settings.js?v=1.20.0"></script>
+<script src="js/import-csv.js?v=1.20.0"></script>
+<script src="js/import-weights.js?v=1.20.0"></script>
+<script src="js/photos-bulk.js?v=1.20.0"></script>
+<script src="js/app.js?v=1.20.0"></script>
 </body>
 </html>

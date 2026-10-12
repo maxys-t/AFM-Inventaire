@@ -982,3 +982,55 @@ button[data-tip],label[data-tip]{cursor:pointer}
   padding:4px 2px;min-height:32px}
 #updbar .cl:hover{color:var(--txt)}
 @media(max-width:700px){ #updbar{left:12px;right:12px;transform:none;bottom:12px} }
+
+/* ============================================================
+   v1.20 — Packs
+   ============================================================ */
+.packtools{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.packtools .bigsearch{flex:1;min-width:0}
+.packpanel{padding:4px 12px 10px}
+
+.packrow{display:flex;align-items:center;gap:11px;padding:11px 0;
+  border-bottom:1px solid var(--border);cursor:pointer;touch-action:none}
+.packrow:last-child{border-bottom:0}
+.packrow:hover{background:var(--panel2)}
+.packrow .chev{width:13px;flex-shrink:0;cursor:pointer}
+.packrow .chev.ghost{opacity:.25;cursor:default}
+.pkcont{color:var(--muted);font-size:11.5px;margin-left:7px;font-weight:400}
+.pkright{text-align:right;flex-shrink:0;font-size:13.5px}
+.pkok{color:var(--ok);font-size:11.5px}
+.pkwarn{color:var(--warn);font-size:11.5px}
+
+.pkhead{display:flex;gap:13px;align-items:flex-start}
+.pkbig{width:62px;height:62px;object-fit:cover;border-radius:11px;
+  background:var(--panel2);flex-shrink:0;display:block}
+.pklist{max-height:46vh;overflow:auto;border:1px solid var(--border);
+  border-radius:10px;padding:3px 10px}
+.pkline{display:flex;align-items:center;gap:10px;padding:8px 0;
+  border-bottom:1px solid var(--border);font-size:13px;touch-action:none}
+.pkline:last-child{border-bottom:0}
+.pkline.sub{padding-left:26px;background:rgba(255,255,255,.02)}
+.pkline .repthumb.sm{width:28px;height:28px}
+.pkw{font-size:12px;white-space:nowrap}
+.pkst{width:112px;text-align:right;flex-shrink:0;font-size:11.5px}
+
+/* --- Glisser-déposer ---
+   `touch-action:none` sur les lignes est ce qui permet au doigt de
+   glisser sans que la page défile sous lui. Sans ça, le geste est
+   intercepté par le navigateur et rien ne bouge sur tablette. */
+body.dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
+.dragghost{position:fixed;z-index:120;pointer-events:none;
+  background:var(--panel2);border:1px solid var(--accent);border-radius:9px;
+  padding:8px 12px;font-size:12.5px;box-shadow:0 12px 28px rgba(0,0,0,.5);
+  transform:rotate(-1.5deg);max-width:min(80vw,340px)}
+.dragghost .ok{display:block;color:var(--accent2);margin-top:3px}
+.dragghost .no{display:block;color:var(--bad);margin-top:3px}
+.dropok{outline:2px dashed var(--accent);outline-offset:-2px;
+  background:rgba(10,132,255,.08);border-radius:9px}
+.dropno{outline:2px dashed var(--bad);outline-offset:-2px;
+  background:rgba(255,59,48,.07);border-radius:9px}
+
+@media(max-width:700px){
+  .pkst{width:auto}
+  .packtools{flex-wrap:wrap}
+}
