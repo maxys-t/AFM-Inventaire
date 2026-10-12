@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.20.5] — 2026-10-12
+
+### Corrigé
+
+- **Sortir un pack ne prenait ni son contenant, ni son contenu
+  imbriqué.** Seuls les membres directs étaient sélectionnés : la
+  Pelicase restait au studio pendant que son contenu partait, et sortir
+  un rack laissait sur place les modules du lunchbox rangé dedans.
+  L'inventaire décrivait un chargement qui n'avait jamais eu lieu.
+
+  La sortie couvre maintenant tout ce qui part physiquement — le
+  contenant, ses items, et le contenu des packs imbriqués, sur autant
+  de niveaux qu'il y en a. Ce qui est déjà sorti ou bloqué en
+  réparation en est exclu, et annoncé.
+
+
 ## [1.20.4] — 2026-10-12
 
 ### Modifié — simplification du modèle

@@ -553,18 +553,29 @@ async function packAddApply(){
    qu'un objet part alors qu'il est déjà ailleurs. */
 function packCheckout(id){
   const p = pack(id);
-  const st = packStatus(p);
-  const sortables = st.présents.filter(i=>i.status === 'dispo' && canCheckout(i));
-  const bloqués = st.présents.filter(i=>i.status === 'dispo' && !canCheckout(i));
-  if(!sortables.length){ toast('Nothing in this pack can be checked out.', 'error'); return; }
+  /* Tout ce qui part : le contenant, son contenu, et celui des packs
+     imbriqués. Pas seulement les membres directs. */
+  const tout = packAllItems(p);
+  const dehors   = tout.filter(i=>i.status === 'sorti');
+  const ici      = tout.filter(i=>i.status === 'dispo');
+  const sortables = ici.filter(canCheckout);
+  const bloqués   = ici.filter(i=>!canCheckout(i));
+
+  if(!sortables.length){
+    toast(dehors.length
+      ? 'Everything in this pack is already out.'
+      : 'Nothing in this pack can be checked out.', 'error');
+    return;
+  }
 
   sel = new Set(sortables.map(i=>i.id));
   close_('ovPack');
-  if(st.absents.length || bloqués.length){
+  show('inv');
+  renderBulkBar();
+  if(dehors.length || bloqués.length){
     toast(`${sortables.length} item(s) selected` +
-          (st.absents.length ? ` · ${st.absents.length} already out` : '') +
+          (dehors.length ? ` · ${dehors.length} already out` : '') +
           (bloqués.length ? ` · ${bloqués.length} blocked` : ''), 'info', null, null, 7000);
   }
-  show('inv');
   openBulkCheckout();
 }

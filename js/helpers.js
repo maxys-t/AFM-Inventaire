@@ -314,6 +314,25 @@ function packWeightParts(p){
   };
 }
 
+/* Tout ce qui part physiquement quand on sort un pack : le contenant
+   lui-même, ses items, et le contenu des packs imbriqués. Sortir un
+   rack sans son meuble, ou sans les modules du lunchbox qui est
+   dedans, décrirait un chargement qui n'a jamais eu lieu. */
+function packAllItems(p, vus){
+  vus = vus || new Set();
+  if(!p || vus.has('p:' + p.id)) return [];
+  vus.add('p:' + p.id);
+  const out = [];
+  const c = p.container_id ? item(p.container_id) : null;
+  if(c && !vus.has(c.id)){ vus.add(c.id); out.push(c); }
+  packItemsOf(p.id).forEach(i=>{
+    if(!vus.has(i.id)){ vus.add(i.id); out.push(i); }
+    const sous = packOfContainer(i.id);
+    if(sous) out.push(...packAllItems(sous, vus));
+  });
+  return out;
+}
+
 /* Ce qui est là, et ce qui n'y est pas. Un item « absent » n'est plus
    un item rangé ailleurs — c'est un item sorti ou en réparation. */
 function packStatus(p){
