@@ -21,7 +21,7 @@ function renderPacks(){
   }
 
   const tous = (db.packs||[]).filter(p=>!p.archived);
-  const incomplets = tous.filter(p=>packStatus(p).manquants.length).length;
+  const incomplets = tous.filter(p=>packStatus(p).absents.length).length;
   /* Le poids total ne somme que les racines : additionner un pack et
      celui qu'il contient compterait deux fois le même matériel. */
   const total = packRoots().reduce((t,p)=>t + packWeight(p), 0);
@@ -63,11 +63,11 @@ function packMatches(p){
   const q = packFilter.trim().toLowerCase();
   if(q){
     const dansLeNom = p.name.toLowerCase().includes(q);
-    const dansLeContenu = packPlan(p.id).some(i=>
+    const dansLeContenu = packItemsOf(p.id).some(i=>
       (itemTitleText(i) + ' ' + i.id).toLowerCase().includes(q));
     if(!dansLeNom && !dansLeContenu) return false;
   }
-  if(packOnlyIncomplete && !packStatus(p).manquants.length) return false;
+  if(packOnlyIncomplete && !packStatus(p).absents.length) return false;
   return true;
 }
 
@@ -99,9 +99,9 @@ function packRowHTML(p, niveau, aplati, nEnfants){
     ? `<span class="chev" onclick="event.stopPropagation();togglePack('${p.id}')">${packOpen.has(p.id)?'▾':'▸'}</span>`
     : '<span class="chev ghost">•</span>';
 
-  const etat = st.manquants.length
-    ? `<span class="pkwarn">${st.dedans.length + st.ailleurs.length} of ${st.plan}</span>`
-    : `<span class="pkok">complete</span>`;
+  const etat = st.absents.length
+    ? `<span class="pkwarn">${st.absents.length} out</span>`
+    : `<span class="pkok">all here</span>`;
 
   return `<div class="packrow" data-pack="${p.id}" data-drop="${p.id}"
        style="padding-left:${12 + niveau*26}px" onclick="openPackDetail('${p.id}')"
@@ -112,7 +112,7 @@ function packRowHTML(p, niveau, aplati, nEnfants){
     <div class="repbody">
       <div class="reptitle"><b>${esc(p.name)}</b>
         ${c ? `<span class="pkcont">▣ ${esc(itemTitleText(c))} · <span class="mono">${esc(c.id)}</span></span>` : ''}</div>
-      <div class="repmeta">${st.plan} item${st.plan>1?'s':''}
+      <div class="repmeta">${st.total} item${st.total>1?'s':''}
         ${aplati && parent ? `· in ${esc(parent.name)}` : (c ? `· ${esc(itemWhere(c))}` : '')}</div>
     </div>
     <div class="pkright">
@@ -150,33 +150,26 @@ function renderPackDetail(){
 
   const ligne = (i, sous) => {
     const sousPack = packOfContainer(i.id);
-    const dedans = i.in_pack_id === p.id;
-    const autre = i.in_pack_id ? pack(i.in_pack_id) : null;
-    const luiAppartient = autre && packsOfItem(i.id).some(x=>x.id === autre.id);
-    const etat = dedans
-      ? '<span class="pkok">✓ inside</span>'
-      : (luiAppartient && i.status !== 'sorti'
-          ? `<span class="muted">in ${esc(autre.name)}</span>`
-          : `<span class="pkwarn">⚠ ${esc(itemWhere(i)) || 'missing'}</span>`);
+    const dehors = i.status === 'sorti' || repairOf(i.id);
     return `<div class="pkline${sous?' sub':''}" data-item="${i.id}"
          onpointerdown="packDragStart(event,'item','${i.id}')">
       ${i.photo ? `<img class="repthumb sm" loading="lazy" src="${i.photo}">`
                 : '<span class="repthumb sm rnophoto"></span>'}
       <div class="repbody">
         <div>${itemTitle(i)} <span class="mono">${esc(i.id)}</span>
-          ${sousPack ? `<span class="tag rsent">pack · ${packStatus(sousPack).dedans.length} of ${packStatus(sousPack).plan}</span>` : ''}</div>
+          ${sousPack ? `<span class="tag rsent">pack · ${packStatus(sousPack).total} items</span>` : ''}</div>
       </div>
       <span class="muted pkw">${esc(fweight(sousPack ? itemWeightDeep(i) : i.weight_g))}</span>
-      <span class="pkst">${etat}</span>
+      <span class="pkst">${dehors ? `<span class="pkwarn">⚠ ${esc(itemWhere(i))}</span>` : ''}</span>
       ${can('edit') ? `<button class="btn small sec" onclick="event.stopPropagation();packRemove('${p.id}','${i.id}')">✕</button>` : ''}
     </div>`;
   };
 
   let contenu = '';
-  packPlan(p.id).forEach(i=>{
+  packItemsOf(p.id).forEach(i=>{
     contenu += ligne(i, false);
     const sp = packOfContainer(i.id);
-    if(sp) packPlan(sp.id).forEach(m=>{ contenu += ligne(m, true); });
+    if(sp) packItemsOf(sp.id).forEach(m=>{ contenu += ligne(m, true); });
   });
 
   document.getElementById('packBody').innerHTML = `
@@ -191,9 +184,9 @@ function renderPackDetail(){
     </div>
 
     <div class="repstats" style="margin:14px 0">
-      <div class="repstat"><div class="k">In the plan</div><div class="n">${st.plan}</div></div>
-      <div class="repstat"><div class="k">Present</div>
-        <div class="n ${st.manquants.length?'warnv':''}">${st.dedans.length + st.ailleurs.length}</div></div>
+      <div class="repstat"><div class="k">Items</div><div class="n">${st.total}</div></div>
+      <div class="repstat"><div class="k">In the box</div>
+        <div class="n ${st.absents.length?'warnv':''}">${st.présents.length}</div></div>
       <div class="repstat"><div class="k">Total weight</div>
         <div class="n">${esc(fweight(packWeight(p)))}</div></div>
     </div>
@@ -201,9 +194,9 @@ function renderPackDetail(){
     <div class="fieldlbl">Contents</div>
     <div class="pklist" data-drop="${p.id}">${contenu || '<div class="muted">Empty.</div>'}</div>
 
-    ${st.manquants.length ? `<div class="infoband bad" style="display:block">
-      <b>⚠ Missing from the plan — ${st.manquants.length}</b>
-      <div style="margin-top:5px">${st.manquants.map(m=>
+    ${st.absents.length ? `<div class="infoband bad" style="display:block">
+      <b>⚠ Missing from the plan — ${st.absents.length}</b>
+      <div style="margin-top:5px">${st.absents.map(m=>
         `${esc(itemTitleText(m.i))} <span class="muted">· ${esc(m.où || 'location unknown')}</span>`
       ).join('<br>')}</div>
     </div>` : ''}
@@ -239,7 +232,12 @@ function packDragStart(e, type, id){
   if(!can('edit')) return;
   if(e.button !== undefined && e.button !== 0) return;
   const depart = {x:e.clientX, y:e.clientY};
-  drag = {type, id, depart, actif:false, cible:null, fantome:null};
+  /* La liste d'où part le geste : c'est en haut d'ELLE que la zone de
+     sortie doit apparaître, pas en haut de la fenêtre. Une bande
+     flottante au sommet de l'écran n'a aucun rapport avec l'endroit
+     où l'on travaille. */
+  const conteneur = e.target.closest('#packTree, .pklist');
+  drag = {type, id, depart, actif:false, cible:null, fantome:null, conteneur};
   e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId);
   const move = ev => packDragMove(ev);
   const up   = ev => { packDragEnd(ev); window.removeEventListener('pointermove', move);
@@ -295,15 +293,17 @@ function packDragMove(e){
 function packOutBar(montrer){
   let b = document.getElementById('packout');
   if(!montrer){ if(b) b.remove(); return; }
-  if(b) return;
+  if(b || !drag || !drag.conteneur) return;
   const parent = packDragParent();
   if(!parent) return;
   b = document.createElement('div');
   b.id = 'packout';
+  b.className = 'packoutrow';
   b.setAttribute('data-drop', '__out');
   b.innerHTML = `↥ Take out of <b>${esc(parent.name)}</b>`;
-  document.body.appendChild(b);
+  drag.conteneur.insertBefore(b, drag.conteneur.firstChild);
 }
+
 /* Le pack dont l'objet glissé sort, s'il est rangé quelque part. */
 function packDragParent(){
   if(!drag) return null;
@@ -311,8 +311,7 @@ function packDragParent(){
     const p = pack(drag.id);
     return p ? packParent(p) : null;
   }
-  const i = item(drag.id);
-  return i && i.in_pack_id ? pack(i.in_pack_id) : null;
+  return packOfItem(drag.id);
 }
 
 function packDragLabel(cibleId, boucle){
@@ -325,7 +324,7 @@ function packDragLabel(cibleId, boucle){
   if(!cible) return t;
   if(boucle) return t + `<span class="no">✕ ${esc(cible.name)} is already inside it</span>`;
   const st = packStatus(cible);
-  return t + `<span class="ok">→ ${esc(cible.name)} · ${st.plan + 1} items · ${esc(fweight(packWeight(cible) + poids))}</span>`;
+  return t + `<span class="ok">→ ${esc(cible.name)} · ${st.total + 1} items · ${esc(fweight(packWeight(cible) + poids))}</span>`;
 }
 
 async function packDragEnd(e){
@@ -360,43 +359,27 @@ async function packDragEnd(e){
    ============================================================ */
 async function packMoveInto(packId, itemIds){
   const p = pack(packId);
+  /* Où chacun était rangé, pour pouvoir revenir en arrière. */
   const avant = itemIds.map(id=>{
-    const i = item(id);
-    return {id, in_pack_id: i ? i.in_pack_id : null,
-            appartenait: packsOfItem(id).some(x=>x.id === packId)};
+    const o = packOfItem(id);
+    return {id, pack: o ? o.id : null};
   });
   try{
+    /* Un item n'est que dans un pack : on le retire d'abord du sien. */
+    for(const a of avant) if(a.pack && a.pack !== packId) await apiRemovePackItems(a.pack, [a.id]);
     await apiAddPackItems(packId, itemIds);
-    /* La position ne suit que si l'item est au studio. S'il est en
-       tournée, seul le plan change — on ne va pas prétendre avoir
-       déplacé quelque chose qui est à trois cents kilomètres. */
-    const ici = itemIds.filter(id=>{ const i = item(id); return i && i.status !== 'sorti'; });
-    if(ici.length) await apiSetItemsPack(ici, packId);
-    await refresh();
+    await refresh(); renderPacks();
     if(packShown) renderPackDetail();
-
-    const dehors = itemIds.length - ici.length;
-    toast(`${itemIds.length} item(s) → ${p.name}` +
-          (dehors ? ` · ${dehors} still out, plan only` : ''),
-          'ok', 'Undo', ()=>packUndoMove(packId, avant), 10000);
-  }catch(err){
-    toast(String(err.message || err), 'error');
-  }
+    toast(`${itemIds.length} item(s) → ${p.name}`, 'ok',
+          'Undo', ()=>packUndoMove(packId, avant), 10000);
+  }catch(err){ toast(String(err.message || err), 'error'); }
 }
 
 async function packUndoMove(packId, avant){
   try{
-    const àRetirer = avant.filter(a=>!a.appartenait).map(a=>a.id);
-    if(àRetirer.length) await apiRemovePackItems(packId, àRetirer);
-    /* On remet chacun là où il était, groupé par destination. */
-    const groupes = new Map();
-    avant.forEach(a=>{
-      const k = a.in_pack_id || '';
-      if(!groupes.has(k)) groupes.set(k, []);
-      groupes.get(k).push(a.id);
-    });
-    for(const [k, ids] of groupes) await apiSetItemsPack(ids, k || null);
-    await refresh();
+    await apiRemovePackItems(packId, avant.map(a=>a.id));
+    for(const a of avant) if(a.pack) await apiAddPackItems(a.pack, [a.id]);
+    await refresh(); renderPacks();
     if(packShown) renderPackDetail();
     toast('Reverted.', 'ok');
   }catch(err){ toast('Could not undo: ' + (err.message||err), 'error'); }
@@ -406,19 +389,14 @@ async function packUndoMove(packId, avant){
    contenait et n'est plus rangé nulle part. Ses autres appartenances
    ne bougent pas — on le sort d'une boîte, on ne l'efface pas. */
 async function packTakeOut(itemId){
-  const i = item(itemId);
-  const parentId = i ? i.in_pack_id : null;
-  if(!parentId){ toast('This is not inside a pack.', 'error'); return; }
-  const p = pack(parentId);
-  const appartenait = packsOfItem(itemId).some(x=>x.id === parentId);
+  const p = packOfItem(itemId);
+  if(!p){ toast('This is not inside a pack.', 'error'); return; }
   try{
-    if(appartenait) await apiRemovePackItems(parentId, [itemId]);
-    await apiSetItemsPack([itemId], null);
+    await apiRemovePackItems(p.id, [itemId]);
     await refresh(); renderPacks();
     if(packShown) renderPackDetail();
-    toast(`Taken out of ${p ? p.name : 'its pack'}.`, 'ok', 'Undo', async ()=>{
-      if(appartenait) await apiAddPackItems(parentId, [itemId]);
-      await apiSetItemsPack([itemId], parentId);
+    toast(`Taken out of ${p.name}.`, 'ok', 'Undo', async ()=>{
+      await apiAddPackItems(p.id, [itemId]);
       await refresh(); renderPacks();
       if(packShown) renderPackDetail();
       toast('Reverted.', 'ok');
@@ -427,16 +405,12 @@ async function packTakeOut(itemId){
 }
 
 async function packRemove(packId, itemId){
-  const avant = [{id:itemId, in_pack_id:item(itemId) ? item(itemId).in_pack_id : null, appartenait:true}];
   try{
     await apiRemovePackItems(packId, [itemId]);
-    if(item(itemId) && item(itemId).in_pack_id === packId) await apiSetItemsPack([itemId], null);
-    await refresh();
-    renderPackDetail();
+    await refresh(); renderPacks(); renderPackDetail();
     toast('Removed from the pack.', 'ok', 'Undo', async ()=>{
       await apiAddPackItems(packId, [itemId]);
-      await apiSetItemsPack([itemId], avant[0].in_pack_id);
-      await refresh(); renderPackDetail();
+      await refresh(); renderPacks(); renderPackDetail();
     }, 10000);
   }catch(err){ toast(String(err.message||err), 'error'); }
 }
@@ -547,7 +521,7 @@ function packAddToggle(id){
 function renderPackAdd(){
   const p = pack(packShown);
   const q = (document.getElementById('pa-q').value||'').toLowerCase().trim();
-  const déjà = new Set(packPlan(p.id).map(i=>i.id));
+  const déjà = new Set(packItemsOf(p.id).map(i=>i.id));
   const rows = db.items
     .filter(i=>!déjà.has(i.id))
     .filter(i=>!q || (itemTitleText(i)+' '+i.id).toLowerCase().includes(q))
@@ -559,7 +533,7 @@ function renderPackAdd(){
       <input type="checkbox" ${packAddSel.has(i.id)?'checked':''} ${boucle?'disabled':''}>
       ${i.photo ? `<img class="repthumb sm" src="${i.photo}">` : '<span class="repthumb sm rnophoto"></span>'}
       <div class="repbody"><div>${itemTitle(i)} <span class="mono">${esc(i.id)}</span>
-        ${sp ? `<span class="tag rsent">pack · ${packStatus(sp).plan} items</span>` : ''}</div>
+        ${sp ? `<span class="tag rsent">pack · ${packStatus(sp).total} items</span>` : ''}</div>
         <div class="repmeta">${esc(itemWhere(i))}${boucle?' · would create a loop':''}</div></div>
     </div>`;
   }).join('') || '<div class="muted">Nothing matches.</div>';
@@ -574,21 +548,21 @@ async function packAddApply(){
 }
 
 /* ---- Sortir un pack ----
-   On sort ce qui est réellement dedans. Ce qui manque est annoncé,
-   pas embarqué : l'inventaire ne doit jamais affirmer qu'un objet
-   est en tournée alors qu'il est dans un tiroir. */
+   On sort ce qui est dans la boîte. Ce qui est déjà dehors est
+   annoncé, pas embarqué : l'inventaire ne doit jamais affirmer
+   qu'un objet part alors qu'il est déjà ailleurs. */
 function packCheckout(id){
   const p = pack(id);
   const st = packStatus(p);
-  const sortables = st.dedans.filter(i=>i.status === 'dispo' && canCheckout(i));
-  const bloqués = st.dedans.filter(i=>i.status === 'dispo' && !canCheckout(i));
+  const sortables = st.présents.filter(i=>i.status === 'dispo' && canCheckout(i));
+  const bloqués = st.présents.filter(i=>i.status === 'dispo' && !canCheckout(i));
   if(!sortables.length){ toast('Nothing in this pack can be checked out.', 'error'); return; }
 
   sel = new Set(sortables.map(i=>i.id));
   close_('ovPack');
-  if(st.manquants.length || bloqués.length){
+  if(st.absents.length || bloqués.length){
     toast(`${sortables.length} item(s) selected` +
-          (st.manquants.length ? ` · ${st.manquants.length} missing from the pack` : '') +
+          (st.absents.length ? ` · ${st.absents.length} already out` : '') +
           (bloqués.length ? ` · ${bloqués.length} blocked` : ''), 'info', null, null, 7000);
   }
   show('inv');

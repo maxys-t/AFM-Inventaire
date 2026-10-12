@@ -238,40 +238,40 @@ function inLocFilter(sel,name){
 
 /* --- Formatage des lignes d'historique --- */
 function histIcon(t){ return {create:"➕",out:"📤",in:"📥",move:"📍",edit:"✏️",repair:"🔧"}[t]||"•"; }
-/* ---- Packs (v1.20) ----
+/* ---- Packs (v1.20, simplifiés en v1.20.4) ----
 
-   Deux relations à ne jamais confondre :
-     le PLAN      — ce que le pack devrait contenir (pack_items)
-     la POSITION  — où l'item se trouve vraiment (items.in_pack_id)
+   UNE seule relation : `pack_items`. Un item est rangé dans un pack,
+   ou il ne l'est pas. Comme une piste dans un dossier Pro Tools.
 
-   L'imbrication ne demande aucune structure : un pack est représenté
-   par son contenant, qui est un item ordinaire, donc membre possible
-   d'un autre pack. Tout ce qui suit se contente de lire ça.        */
+   La v1.20 en portait deux — le plan et la position — pour pouvoir
+   dire « il manque trois micros, ils sont dans le Rack B ». Juste sur
+   le papier, inutilisable à l'écran : trois états par ligne, un item
+   visible dans plusieurs packs, et deux réponses contradictoires à la
+   même question. « Ce qui manque » se lit désormais sur le statut de
+   l'item, ce qui couvre le cas qui compte avant un départ.
+
+   L'imbrication, elle, ne demande toujours aucune structure : un pack
+   est représenté par son contenant, qui est un item comme un autre,
+   donc rangeable dans un autre pack.                                */
 
 function pack(id){ return (db.packs||[]).find(p=>p.id === id) || null; }
 function packOfContainer(itemId){
   return (db.packs||[]).find(p=>p.container_id === itemId) || null;
 }
-/* Le plan d'un pack. */
-function packPlan(id){
+/* Le contenu d'un pack. */
+function packItemsOf(id){
   return (db.packItems||[]).filter(l=>l.pack_id === id)
     .map(l=>item(l.item_id)).filter(Boolean);
 }
-/* Ce qui est réellement dedans. */
-function packInside(id){ return (db.items||[]).filter(i=>i.in_pack_id === id); }
-/* Les packs auxquels un item appartient. */
-function packsOfItem(itemId){
-  return (db.packItems||[]).filter(l=>l.item_id === itemId)
-    .map(l=>pack(l.pack_id)).filter(Boolean);
+/* Le pack où se trouve un item — au plus un. */
+function packOfItem(itemId){
+  const l = (db.packItems||[]).find(x=>x.item_id === itemId);
+  return l ? pack(l.pack_id) : null;
 }
 
-/* L'arbre. Un pack est enfant d'un autre si son contenant est membre
-   de celui-là. Les packs sans contenant, ou dont le contenant n'est
-   rangé nulle part, sont à la racine. */
+/* L'arbre : un pack est enfant d'un autre si son contenant y est rangé. */
 function packParent(p){
-  if(!p.container_id) return null;
-  const l = (db.packItems||[]).find(x=>x.item_id === p.container_id);
-  return l ? pack(l.pack_id) : null;
+  return p && p.container_id ? packOfItem(p.container_id) : null;
 }
 function packChildren(id){
   return (db.packs||[]).filter(p=>{ const par = packParent(p); return par && par.id === id; });
@@ -281,88 +281,73 @@ function packRoots(){
 }
 
 /* Poids effectif d'un item : le sien, plus celui du pack dont il est
-   le contenant. Un lunchbox « pèse » ses six modules.
-   `vus` coupe les boucles — la base les refuse, mais un calcul qui
-   tourne sans fin sur une donnée douteuse fige l'écran sans rien dire. */
+   le contenant. Un lunchbox « pèse » ses modules. `vus` coupe les
+   boucles — la base les refuse, mais un calcul sans fin fige l'écran
+   sans rien dire. */
 function itemWeightDeep(i, vus){
   vus = vus || new Set();
   if(!i || vus.has(i.id)) return 0;
   vus.add(i.id);
   let g = i.weight_g || 0;
   const p = packOfContainer(i.id);
-  if(p && !vus.has('p:' + p.id)){
-    vus.add('p:' + p.id);
-    packPlan(p.id).forEach(m=>{ g += itemWeightDeep(m, vus); });
-  }
+  if(p) packItemsOf(p.id).forEach(m=>{ g += itemWeightDeep(m, vus); });
   return g;
 }
-/* Poids d'un pack : son contenant (qui embarque déjà son contenu) ou,
-   à défaut de contenant, la somme de son plan. */
 function packWeight(p, vus){
-  vus = vus || new Set();
-  if(!p || vus.has('p:' + p.id)) return 0;
+  if(!p) return 0;
   if(p.container_id){
     const c = item(p.container_id);
     if(c) return itemWeightDeep(c, vus);
   }
-  vus.add('p:' + p.id);
-  return packPlan(p.id).reduce((t,m)=>t + itemWeightDeep(m, vus), 0);
+  return packItemsOf(p.id).reduce((t,m)=>t + itemWeightDeep(m, vus || new Set()), 0);
 }
 /* Le détail, pour ne pas afficher un total qu'on ne sait pas expliquer. */
 function packWeightParts(p){
   const c = p.container_id ? item(p.container_id) : null;
-  const plan = packPlan(p.id);
-  const sous = plan.filter(m=>packOfContainer(m.id));
+  const dedans = packItemsOf(p.id);
+  const sous = dedans.filter(m=>packOfContainer(m.id));
   return {
     contenant: c ? (c.weight_g || 0) : 0,
     sousPacks: sous.reduce((t,m)=>t + itemWeightDeep(m), 0),
-    autres: plan.filter(m=>!packOfContainer(m.id)).reduce((t,m)=>t + (m.weight_g||0), 0),
+    autres: dedans.filter(m=>!packOfContainer(m.id)).reduce((t,m)=>t + (m.weight_g||0), 0),
     nSousPacks: sous.length
   };
 }
 
-/* Complétude. On sépare ce qui demande une action de ce qui est
-   normal : un item rangé dans un AUTRE pack auquel il appartient
-   aussi est à une de ses places, pas égaré. Sans cette nuance, un
-   item partagé entre cinq packs en rendrait quatre orange en
-   permanence — et une alerte permanente n'est plus lue. */
+/* Ce qui est là, et ce qui n'y est pas. Un item « absent » n'est plus
+   un item rangé ailleurs — c'est un item sorti ou en réparation. */
 function packStatus(p){
-  const dedans = [], ailleurs = [], manquants = [];
-  packPlan(p.id).forEach(i=>{
-    if(i.in_pack_id === p.id){ dedans.push(i); return; }
-    const autre = i.in_pack_id ? pack(i.in_pack_id) : null;
-    const luiAppartient = autre && packsOfItem(i.id).some(x=>x.id === autre.id);
-    if(luiAppartient && i.status !== 'sorti') ailleurs.push({i, pack: autre});
-    else manquants.push({i, où: itemWhere(i)});
+  const présents = [], absents = [];
+  packItemsOf(p.id).forEach(i=>{
+    if(i.status === 'sorti' || repairOf(i.id)) absents.push({i, où: itemWhere(i)});
+    else présents.push(i);
   });
-  return {dedans, ailleurs, manquants, plan: dedans.length + ailleurs.length + manquants.length};
+  return {présents, absents, total: présents.length + absents.length};
 }
 /* Où se trouve un item, en une phrase. */
 function itemWhere(i){
   if(!i) return '';
   if(i.status === 'sorti') return outForRepair(i)
     ? `at ${i.out.reason}` : `checked out · ${i.out ? i.out.reason : ''}`;
-  if(i.in_pack_id){ const p = pack(i.in_pack_id); if(p) return `in ${p.name}`; }
+  const r = repairOf(i.id);
+  if(r) return r.status === 'sent' ? 'at the repair shop' : 'needs repair';
+  const p = packOfItem(i.id);
+  if(p) return `in ${p.name}`;
   return locLabel(i.loc) || '';
 }
-/* La photo d'un pack est celle de son contenant — on reconnaît une
-   Pelicase à la caisse, pas à une liste de noms. */
+/* La photo d'un pack est celle de son contenant. */
 function packPhoto(p){
   const c = p.container_id ? item(p.container_id) : null;
   if(c && c.photo) return c.photo;
-  const m = packPlan(p.id).find(x=>x.photo);
+  const m = packItemsOf(p.id).find(x=>x.photo);
   return m ? m.photo : null;
 }
-/* Déposer A dans B créerait-il une boucle ? La base refuse déjà, mais
-   l'écran doit le dire AVANT la dépose, pas après l'échec. */
+/* Ranger X dans C fermerait-il une boucle ? On part de la CIBLE et on
+   remonte ses parents jusqu'au pack que X représente. */
 function packWouldLoop(packId, itemId){
-  /* Déposer l'item X dans le pack C ferme une boucle si C est déjà,
-     de près ou de loin, à l'intérieur du pack que X représente.
-     On part donc de la CIBLE et on remonte ses parents jusqu'au pack
-     de X — et non l'inverse, qui ne voyait que le cas trivial. */
   const pX = packOfContainer(itemId);
-  if(!pX) return false;                 // X n'est le contenant de rien
-  if(pX.id === packId) return true;     // une caisse dans son propre pack
+  if(!pX) return false;
+  if(pX.id === packId) return true;
   let p = pack(packId), n = 0;
   while(p && n++ < 25){
     if(p.id === pX.id) return true;

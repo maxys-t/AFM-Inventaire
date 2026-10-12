@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.20.2';
+const APP_VERSION = '1.20.4';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','packs','rep','settings'];
@@ -278,7 +278,7 @@ function importJSON(inp){
       if(d.users.length) await apiUpsertPeople(d.users);
       if(d.items.length) await apiUpsertItems(d.items.map(i=>({
         id:i.id,name:i.name,cat:i.cat||'divers',subcat:i.subcat||'autre',brand:i.brand||"",serial:i.serial||"",cond:normCond(i.cond),
-        notes:i.notes||"",photo:i.photo||null,owner:i.owner||"",provider:i.provider||"",price:i.price??null,sales_order:i.sales_order||"",purchase_date:i.purchase_date||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null,weight_g:i.weight_g??null,weight_est:!!i.weight_est,in_pack_id:i.in_pack_id||null,
+        notes:i.notes||"",photo:i.photo||null,owner:i.owner||"",provider:i.provider||"",price:i.price??null,sales_order:i.sales_order||"",purchase_date:i.purchase_date||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null,weight_g:i.weight_g??null,weight_est:!!i.weight_est,
         ...(db.trashSupported ? {deleted_at:i.deleted_at||null} : {})
       })));
       if(d.packs.length) await apiUpsertPacks(d.packs);

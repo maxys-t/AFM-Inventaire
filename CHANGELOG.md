@@ -1,5 +1,79 @@
 # Changelog
 
+## [1.20.4] — 2026-10-12
+
+### Modifié — simplification du modèle
+
+- **Un item est dans un pack, ou il n'y est pas.** Comme une piste dans
+  un dossier Pro Tools.
+
+  La v1.20 portait deux relations : le *plan* — ce que le pack devrait
+  contenir — et la *position* — où l'objet se trouve vraiment. Sur le
+  papier, ça permettait de dire « il manque trois micros, ils sont dans
+  le Rack B ». À l'usage, illisible : trois états par ligne, un item
+  visible dans plusieurs packs à la fois, et deux réponses
+  contradictoires à la même question.
+
+  « Ce qui manque » se lit désormais sur le statut de l'item — sorti,
+  en réparation. C'est le cas qui compte avant un départ, et il ne
+  demande pas d'inventer une seconde vérité.
+
+### Corrigé
+
+- **Un pack supprimé puis recréé se rangeait tout seul dans un autre.**
+  Le contenant gardait son appartenance au pack parent après la
+  suppression, et le nouveau pack héritait donc de la place de
+  l'ancien. Pire, on ne pouvait plus l'en sortir : la zone « Take out »
+  s'affichait d'après l'appartenance, l'action lisait la position, ne
+  trouvait rien et refusait. Les deux symptômes avaient la même cause,
+  et elle disparaît avec la seconde relation.
+
+### Base de données
+
+`sql/021-packs-simplifies.sql` : les positions sans appartenance
+correspondante sont converties avant toute suppression, les
+appartenances multiples réduites à une seule, un index unique inscrit
+la règle dans la base, et `items.in_pack_id` disparaît.
+
+### Ce qu'on perd, et pourquoi c'est acceptable
+
+Savoir qu'une Pelicase « devrait » contenir huit micros quand trois
+sont rangés ailleurs dans le studio. C'était l'argument de départ pour
+les deux relations — mais c'est aussi exactement ce qui rendait l'écran
+incompréhensible. Un modèle juste qu'on ne sait pas lire ne vaut pas un
+modèle approximatif qu'on utilise.
+
+
+## [1.20.3] — 2026-10-12
+
+### Modifié
+
+- **La zone « Take out » s'insère en tête de la liste**, au lieu de
+  flotter en haut de la fenêtre. Une bande au sommet de l'écran n'a
+  aucun rapport avec l'endroit où le geste se passe — sur une longue
+  liste, il fallait quitter des yeux ce qu'on déplaçait pour la
+  trouver. Elle apparaît désormais dans la liste d'où part le
+  glissement : l'arbre des packs, ou le contenu d'un pack ouvert.
+
+
+## Base de données — 2026-10-12
+
+`sql/020-codes-identifiants.sql` — treize identifiants remis en accord
+avec leur sous-catégorie. Aucun changement de code applicatif : la
+migration embarque les 73 codes de `config.js`, compare chaque
+identifiant au code attendu et corrige ce qui diverge, sans liste à
+fournir.
+
+Les numéros repartent du plus haut déjà pris pour chaque code,
+corbeille comprise — réutiliser un numéro libéré ferait réapparaître un
+identifiant mort dans un vieil historique. Les packs et les réparations
+ont suivi par clé étrangère ; l'historique et les projets, qui stockent
+les identifiants en texte et en JSON, ont été repris à la main.
+
+Simulée sans collision avant exécution, puis vérifiée : plus aucun code
+périmé dans Settings → Data.
+
+
 ## [1.20.2] — 2026-10-12
 
 ### Corrigé

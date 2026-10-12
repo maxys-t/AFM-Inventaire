@@ -452,10 +452,6 @@ async function apiAddPackItems(packId, itemIds){
 async function apiRemovePackItems(packId, itemIds){
   await run(sb.from('pack_items').delete().eq('pack_id', packId).in('item_id', itemIds));
 }
-/* La position : dans quel pack l'item se trouve réellement. */
-async function apiSetItemsPack(itemIds, packId){
-  await run(sb.from('items').update({in_pack_id: packId}).in('id', itemIds));
-}
 async function apiUpsertPacks(rows){ await run(sb.from('packs').upsert(rows)); }
 async function apiUpsertPackItems(rows){
   await run(sb.from('pack_items').upsert(rows, {onConflict:'pack_id,item_id'}));

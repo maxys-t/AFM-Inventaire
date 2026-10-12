@@ -1035,13 +1035,13 @@ body.dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
   .packtools{flex-wrap:wrap}
 }
 
-/* La zone de sortie n'existe que pendant un glissement : une cible
-   permanente invite aux dépôts accidentels. */
-#packout{position:fixed;left:50%;transform:translateX(-50%);top:14px;z-index:115;
-  background:var(--panel);border:2px dashed var(--border2);border-radius:11px;
-  padding:11px 18px;font-size:13px;color:var(--muted);
-  box-shadow:0 10px 26px rgba(0,0,0,.45);pointer-events:auto}
-#packout b{color:var(--txt)}
-#packout.dropok{border-color:var(--accent);color:var(--txt);
+/* La zone de sortie n'existe que pendant un glissement, et s'insère
+   en tête de la liste où l'on travaille — pas en haut de l'écran. */
+.packoutrow{display:flex;align-items:center;justify-content:center;gap:7px;
+  border:2px dashed var(--border2);border-radius:10px;
+  padding:11px;margin:6px 0;font-size:12.5px;color:var(--muted)}
+.packoutrow b{color:var(--txt)}
+.packoutrow.dropok{border-color:var(--accent);color:var(--txt);
   background:rgba(10,132,255,.12)}
+
 .tag.stale{background:rgba(255,159,10,.14);color:var(--warn);cursor:help}
