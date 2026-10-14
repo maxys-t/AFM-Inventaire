@@ -1061,3 +1061,103 @@ body.dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 tr.outpack{cursor:pointer;background:rgba(10,132,255,.05)}
 tr.outpack:hover{background:rgba(10,132,255,.09)}
 tr.outpack .chev{margin-right:7px}
+
+/* ============================================================
+   PROJETS (v1.22) — liste, composition, préparation
+
+   La composition tient en deux colonnes sur ordinateur, et en une
+   seule sur iPad en portrait : l'inventaire défile, le projet reste
+   collé en bas de l'écran. La cible du dépôt est ainsi toujours sous
+   le doigt, au lieu d'exiger qu'on fasse défiler en maintenant le
+   glissement — geste impossible à une main.
+   ============================================================ */
+
+.pjcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.pjcard{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.pjcard.arch{opacity:.65}
+.pjcard h3{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.pjcard-top{display:flex;align-items:flex-start;gap:8px}
+.pjacts{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+
+.pjsum{display:flex;gap:18px;flex-wrap:wrap;padding:10px 12px;
+  background:var(--panel2);border-radius:12px;margin:12px 0}
+.pjsum div{font-size:13px;color:var(--muted)}
+.pjsum b{display:block;font-size:19px;color:var(--txt);font-weight:700;letter-spacing:-.02em}
+
+.pjhead{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.pjtitle{font-size:19px;font-weight:600;flex:1;min-width:140px}
+.pjname{font-size:17px;font-weight:600;flex:1;min-width:180px}
+
+.pjedit{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.pjcol{background:var(--panel);border-radius:var(--radius);padding:14px;min-height:400px}
+.pjtabs{display:flex;gap:6px;margin-bottom:10px}
+.pjtabs button{flex:1;background:var(--panel2);border:1px solid var(--border);color:var(--muted);
+  padding:9px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:500;font-family:inherit}
+.pjtabs button.on{background:var(--txt);color:#1d1d1f;border-color:var(--txt)}
+.pjcol input[type=search]{width:100%}
+.pjsrc{margin-top:10px;max-height:60vh;overflow:auto}
+
+/* `touch-action:none` est indispensable : sans lui, iOS interprète le
+   glissement comme un défilement et le dépôt n'arrive jamais. */
+.pjrow{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;
+  border-bottom:1px solid var(--border);touch-action:none;user-select:none;-webkit-user-select:none}
+.pjrow:last-child{border-bottom:none}
+.pjsrc .pjrow:hover{background:var(--panel2)}
+.pjrow.off{opacity:.45}
+.pjsrc .pjrow.off:hover{background:none}
+.pjrow .pjnm{flex:1;min-width:0}
+.pjrow .pjnm .t{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pjrow .pjnm .s{font-size:12px;color:var(--muted)}
+.pjgrip{color:var(--border2);font-size:16px;line-height:1;cursor:grab;flex:none}
+.pjadd{background:var(--panel2);border:1px solid var(--border2);color:var(--txt);
+  width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1;flex:none;font-family:inherit}
+.pjadd:hover:not(:disabled){background:var(--accent);border-color:var(--accent)}
+.pjadd:disabled{opacity:.3;cursor:default}
+.pjqty{display:flex;align-items:center;gap:5px;flex:none}
+.pjqty button{width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);
+  background:var(--panel2);color:var(--txt);cursor:pointer;font-size:16px;line-height:1;font-family:inherit}
+.pjqty button:disabled{opacity:.3;cursor:default}
+.pjqty span{min-width:18px;text-align:center;font-size:14px}
+
+#pjdrop{transition:background .15s,outline-color .15s;
+  outline:2px dashed transparent;outline-offset:-6px;border-radius:var(--radius)}
+#pjdrop.hot{outline-color:var(--accent);background:rgba(10,132,255,.07)}
+.pjghost{position:fixed;z-index:200;pointer-events:none;background:var(--accent);color:#fff;
+  padding:7px 14px;border-radius:980px;font-size:13px;font-weight:500;
+  box-shadow:0 8px 24px rgba(0,0,0,.45);transform:translate(-50%,-50%);max-width:70vw;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.pjgrp{border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.pjgrp>.hd{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel2);flex-wrap:wrap}
+.pjgrp>.hd .t{flex:1;font-weight:600;font-size:14px;min-width:100px}
+.pjgrp>.bd{padding:2px 10px}
+.pjsub{font-size:11px;color:var(--muted);padding:8px 2px 3px;
+  text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.warntxt{color:var(--warn)}
+/* Un consommable doit se lire comme une ligne de rappel, jamais comme
+   un item : il n'a ni identifiant, ni poids, ni état. */
+.pjrow.extra .pjnm .t::after{content:"consumable";margin-left:8px;font-size:11px;font-weight:500;
+  color:var(--muted);background:var(--panel2);padding:2px 8px;border-radius:980px;vertical-align:middle}
+.pjx{background:none;border:none;color:var(--muted);cursor:pointer;font-size:17px;
+  line-height:1;padding:2px 6px;flex:none;font-family:inherit}
+.pjx:hover{color:var(--bad)}
+.pjgrab{display:none}
+.pbar.done>div{background:var(--ok)}
+.tag.perm{background:rgba(0,113,227,.12);color:var(--accent2)}
+.tag.conf{background:rgba(110,110,115,.16);color:var(--muted)}
+.toast.warn{border-color:var(--warn)}
+.toast.warn .ic{color:var(--warn)}
+
+@media(max-width:900px){
+  .pjedit{display:block}
+  .pjcol.src{min-height:0}
+  .pjsrc{max-height:none}
+  .pjcol.prj{position:fixed;left:0;right:0;bottom:0;z-index:60;margin:0;
+    border-radius:18px 18px 0 0;border-top:1px solid var(--border2);
+    box-shadow:0 -10px 34px rgba(0,0,0,.55);max-height:40vh;overflow:auto;padding:8px 14px 16px}
+  #v-proj{padding-bottom:44vh}
+  .pjgrab{display:block;width:40px;height:4px;border-radius:99px;
+    background:var(--border2);margin:2px auto 8px;cursor:pointer}
+  body.pjfold .pjcol.prj{max-height:58px;overflow:hidden}
+  .pjname{min-width:120px}
+}

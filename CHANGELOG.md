@@ -1,5 +1,93 @@
 # Changelog
 
+## [1.22.0] — 2026-10-14
+
+**Migration SQL à passer : `sql/024-packs-presets-projets.sql`.**
+
+### Changé — un pack est une recette, pas un lieu
+
+- **Un item peut de nouveau appartenir à plusieurs packs.** La v1.20.4
+  l'avait interdit, et c'était une correction excessive : ce qui rendait
+  la v1.20 illisible n'était pas la cardinalité, mais deux relations
+  concurrentes — le plan et la position — dont on ne savait jamais
+  laquelle on manipulait. Une seule subsiste, `pack_items` ; on lève
+  simplement son unicité.
+
+  Car un pack n'est pas l'endroit où vit un objet : c'est un préréglage
+  réutilisable. Le même préampli figure dans la config du rack studio et
+  dans celle de la Pelicase de tournée ; une seule est montée à la fois.
+  « Où est cet item ? » se lit désormais sur son emplacement et son
+  statut de sortie — jamais sur le pack.
+
+- **Chaque pack est « monté en permanence » ou « configuration ».** Un
+  trou dans le rack studio est un problème ; une configuration de
+  tournée qui n'est pas assemblée ne manque de rien. Même chiffre, deux
+  lectures : l'onglet Packs ne signale un manque que pour le premier
+  cas, et le compteur de packs incomplets ne compte plus que ceux-là.
+
+- **Glisser déplace toujours, depuis la caisse d'où part le geste.** Avec
+  l'appartenance multiple, un glissement pourrait vouloir dire « aussi
+  ajouter » ; on tranche pour un seul sens. Pour qu'un item figure dans
+  une deuxième recette, on l'ajoute depuis l'intérieur du pack.
+
+- **Le contrôle anti-boucle remonte tous les parents**, dans
+  l'application comme dans la base. L'ancien parcours en suivait un
+  seul : avec plusieurs recettes, il aurait laissé passer une boucle
+  refermée par l'autre branche.
+
+### Ajouté
+
+- **Les consommables d'un pack.** Gaffer, colliers, piles, un multitool :
+  des lignes de checklist, pas des items. Ni identifiant, ni fiche, ni
+  historique, ni étiquette — et volontairement **sans poids**, parce que
+  le total d'un projet est le chiffre qu'on lit face à un transporteur.
+  Ils apparaissent à la préparation de toute caisse qui les porte,
+  packs imbriqués compris.
+
+- **La page Projets est refondue.** Plus de fenêtre : la composition
+  occupe l'écran, l'inventaire à gauche, le projet à droite, et l'on
+  remplit en glissant de l'un vers l'autre. À gauche, deux onglets Items
+  et Packs ; les exemplaires d'un même modèle tiennent sur une ligne avec
+  un compteur, plutôt que douze lignes à glisser une par une. Sur iPad en
+  portrait, le projet devient un bandeau fixe en bas de l'écran : la
+  cible du dépôt reste sous le doigt.
+
+  Le glisser-déposer utilise les pointer events, comme l'onglet Packs :
+  l'API HTML de glisser-déposer ne fonctionne pas au doigt.
+
+- **Le poids et le nombre de colis, partout.** Sur la carte d'un projet,
+  en tête de la composition, en tête de chaque caisse, et dans le mail de
+  livraison. C'est ce qu'on vous demandera.
+
+- **Dupliquer un projet.** Un nouveau chargement ressemble presque
+  toujours à un précédent ; partir d'une copie est plus rapide que
+  n'importe quel glissement. Les caisses et les items sont repris, la
+  checklist repart à zéro.
+
+- **La checklist de préparation suit les caisses.** Une section par
+  contenant, son contenu dessous, les consommables à part, et une
+  progression par caisse en plus de la progression générale.
+
+### Corrigé par construction
+
+- **Un item apporté par une caisse n'est plus compté deux fois.** S'il
+  traînait aussi dans la liste des items isolés, la caisse l'emporte et
+  il est retiré du hors-caisse, avec un message qui le dit.
+
+- **Un item indisponible est écarté, pas caché.** Sorti ailleurs ou en
+  réparation, il reste affiché avec sa raison, hors de la checklist et
+  hors du poids. On peut sortir la caisse quand même.
+
+- **Le contenu d'un projet est figé au départ.** Tant qu'il se prépare,
+  il suit les packs — vider une Pelicase change ce qui partira, et c'est
+  voulu. Une fois parti, non : vider cette même caisse le lendemain
+  réécrirait ce qui est sorti la veille.
+
+- **La destination d'un projet était perdue à la réouverture** de la page
+  de composition : le menu s'affichait sans sélection. Même piège qu'en
+  v1.11 pour les lieux archivés, qui restent désormais sélectionnés.
+
+
 ## [1.21.6] — 2026-10-14
 
 ### Corrigé

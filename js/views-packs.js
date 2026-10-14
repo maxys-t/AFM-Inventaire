@@ -21,7 +21,7 @@ function renderPacks(){
   }
 
   const tous = (db.packs||[]).filter(p=>!p.archived);
-  const incomplets = tous.filter(p=>packStatus(p).absents.length).length;
+  const incomplets = tous.filter(p=>packStatus(p).manque).length;
   /* Le poids total ne somme que les racines : additionner un pack et
      celui qu'il contient compterait deux fois le même matériel. */
   const total = packRoots().reduce((t,p)=>t + packWeight(p), 0);
@@ -67,7 +67,7 @@ function packMatches(p){
       (itemTitleText(i) + ' ' + i.id).toLowerCase().includes(q));
     if(!dansLeNom && !dansLeContenu) return false;
   }
-  if(packOnlyIncomplete && !packStatus(p).absents.length) return false;
+  if(packOnlyIncomplete && !packStatus(p).manque) return false;
   return true;
 }
 
@@ -82,15 +82,23 @@ function packTreeHTML(){
     `<div class="empty">${chercheur ? 'Nothing matches.' : 'No pack yet.'}</div>`;
 }
 
-function packBrancheHTML(p, niveau){
+/* `parentId` : la branche d'où la ligne est affichée. Depuis la v1.22
+   un pack peut figurer dans plusieurs autres ; sans cette information,
+   un glissement ne saurait pas de QUELLE caisse on sort l'objet, et
+   « déplacer » deviendrait « copier » au hasard des branches.
+   `vus` coupe les répétitions dans une même descendance. */
+function packBrancheHTML(p, niveau, parentId, vus){
+  vus = vus || new Set();
+  if(vus.has(p.id)) return '';
+  vus.add(p.id);
   const enfants = packChildren(p.id);
   const ouvert = packOpen.has(p.id);
-  let h = packRowHTML(p, niveau, false, enfants.length);
-  if(ouvert) enfants.forEach(c=>{ h += packBrancheHTML(c, niveau + 1); });
+  let h = packRowHTML(p, niveau, false, enfants.length, parentId);
+  if(ouvert) enfants.forEach(c=>{ h += packBrancheHTML(c, niveau + 1, p.id, new Set(vus)); });
   return h;
 }
 
-function packRowHTML(p, niveau, aplati, nEnfants){
+function packRowHTML(p, niveau, aplati, nEnfants, parentId){
   const st = packStatus(p);
   const ph = packPhoto(p);
   const c = p.container_id ? item(p.container_id) : null;
@@ -99,11 +107,16 @@ function packRowHTML(p, niveau, aplati, nEnfants){
     ? `<span class="chev" onclick="event.stopPropagation();togglePack('${p.id}')">${packOpen.has(p.id)?'▾':'▸'}</span>`
     : '<span class="chev ghost">•</span>';
 
-  const etat = st.absents.length
-    ? `<span class="pkwarn">${st.absents.length} out</span>`
-    : `<span class="pkok">all here</span>`;
+  /* Un trou dans un rack monté en permanence est un problème ; dans
+     une configuration qui n'est pas montée, ce n'en est pas un. Même
+     chiffre, deux lectures — l'écran ne doit crier que pour la
+     première. */
+  const etat = !st.absents.length
+    ? (p.permanent ? `<span class="pkok">all here</span>` : `<span class="pkok">all free</span>`)
+    : (st.manque ? `<span class="pkwarn">${st.absents.length} missing</span>`
+                 : `<span class="muted">${st.absents.length} in use</span>`);
 
-  return `<div class="packrow" data-pack="${p.id}" data-drop="${p.id}"
+  return `<div class="packrow" data-pack="${p.id}" data-drop="${p.id}" data-parent="${parentId||''}"
        style="padding-left:${12 + niveau*26}px" onclick="openPackDetail('${p.id}')"
        onpointerdown="packDragStart(event,'pack','${p.id}')">
     ${chev}
@@ -176,7 +189,8 @@ function renderPackDetail(){
     <div class="pkhead">
       ${ph ? `<img class="pkbig" src="${ph}">` : '<span class="pkbig rnophoto"></span>'}
       <div>
-        <h3 style="margin:0">${esc(p.name)}</h3>
+        <h3 style="margin:0">${esc(p.name)}
+          <span class="tag ${p.permanent?'perm':'conf'}">${p.permanent?'assembled':'config'}</span></h3>
         <div class="submuted" style="margin:3px 0 0">
           ${c ? `▣ ${esc(itemTitleText(c))} · <span class="mono">${esc(c.id)}</span> · ${esc(itemWhere(c))}`
               : 'No container — a grouping without a box'}</div>
@@ -194,12 +208,16 @@ function renderPackDetail(){
     <div class="fieldlbl">Contents</div>
     <div class="pklist" data-drop="${p.id}">${contenu || '<div class="muted">Empty.</div>'}</div>
 
-    ${st.absents.length ? `<div class="infoband bad" style="display:block">
-      <b>⚠ Missing from the plan — ${st.absents.length}</b>
+    ${st.absents.length ? `<div class="infoband ${st.manque?'bad':''}" style="display:block">
+      <b>${st.manque ? `⚠ Missing from the rack — ${st.absents.length}`
+                     : `In use elsewhere — ${st.absents.length}`}</b>
       <div style="margin-top:5px">${st.absents.map(m=>
         `${esc(itemTitleText(m.i))} <span class="muted">· ${esc(m.où || 'location unknown')}</span>`
       ).join('<br>')}</div>
+      ${st.manque ? '' : '<div class="hintline" style="margin-top:6px">This pack is a configuration, not a place: these items are simply busy right now.</div>'}
     </div>` : ''}
+
+    ${packExtrasBlock(p)}
 
     <div class="hintline" style="margin-top:12px">Weight:
       container ${esc(fweight(parts.contenant))}${
@@ -210,6 +228,62 @@ function renderPackDetail(){
     ${can('edit') ? `<button class="btn sec" onclick="openPackForm('${p.id}')">Edit</button>` : ''}
     ${can('edit') ? `<button class="btn sec" onclick="openPackAdd('${p.id}')">+ Add items</button>` : ''}
     ${can('checkout') ? `<button class="btn" onclick="packCheckout('${p.id}')">Check out pack</button>` : ''}`;
+}
+
+/* ============================================================
+   CONSOMMABLES (v1.22)
+
+   Gaffer, colliers, piles, un multitool. Des choses qu'on veut voir
+   sur la checklist d'une caisse, mais qui ne méritent ni identifiant,
+   ni fiche, ni historique, ni étiquette QR. Les inscrire à
+   l'inventaire ferait passer le parc de 649 à 700 lignes dont des
+   rouleaux de scotch — et « sortir un rouleau de gaffer » n'a aucun
+   sens.
+
+   Ce sont donc des lignes de checklist, et elles doivent le rester :
+   un libellé, une quantité. Volontairement sans poids — le total d'un
+   projet est le chiffre qu'on lit face à un transporteur.
+   ============================================================ */
+function packExtrasBlock(p){
+  if(!db.packExtrasSupported){
+    return `<div class="hintline" style="margin-top:12px">Consumables need <b>sql/024-packs-presets-projets.sql</b> — run it in Supabase, then refresh.</div>`;
+  }
+  const ex = packExtrasOf(p.id);
+  return `
+    <div class="fieldlbl" style="margin-top:14px">Consumables
+      <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">— checklist only, no weight</span></div>
+    <div class="pklist">
+      ${ex.map(e=>`<div class="pkline">
+        <div class="repbody"><div>${esc(e.label)} <span class="muted">× ${e.qty}</span></div></div>
+        ${can('edit')?`<button class="btn small sec" onclick="packExtraDelete('${e.id}')">✕</button>`:''}
+      </div>`).join('') || '<div class="muted">None.</div>'}
+    </div>
+    ${can('edit')?`<div class="toolbar" style="margin-top:8px">
+      <input id="px-label" placeholder="e.g. Black gaffer tape" style="flex:1;min-width:150px"
+             onkeydown="if(event.key==='Enter')packExtraAdd('${p.id}')">
+      <input id="px-qty" type="number" min="1" max="9999" value="1" style="width:84px">
+      <button class="btn small" onclick="packExtraAdd('${p.id}')">Add</button>
+    </div>`:''}`;
+}
+
+async function packExtraAdd(packId){
+  const el = document.getElementById('px-label');
+  const label = (el.value||'').trim();
+  if(!label){ toast('Type a name first.', 'warn'); return; }
+  const qty = Math.max(1, Math.min(9999, parseInt(document.getElementById('px-qty').value, 10) || 1));
+  try{
+    const row = await apiInsertPackExtra({pack_id:packId, label, qty, pos:packExtrasOf(packId).length});
+    db.packExtras.push(row);
+    renderPackDetail();
+    toast('Added.', 'ok');
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+async function packExtraDelete(id){
+  try{
+    await apiDeletePackExtra(id);
+    db.packExtras = db.packExtras.filter(e=>e.id !== id);
+    renderPackDetail();
+  }catch(err){ toast(String(err.message||err), 'error'); }
 }
 
 /* ============================================================
@@ -237,7 +311,15 @@ function packDragStart(e, type, id){
      flottante au sommet de l'écran n'a aucun rapport avec l'endroit
      où l'on travaille. */
   const conteneur = e.target.closest('#packTree, .pklist');
-  drag = {type, id, depart, actif:false, cible:null, fantome:null, conteneur};
+  /* D'OÙ part le geste. Un item peut désormais appartenir à plusieurs
+     packs : sans cette origine, « déplacer » le retirerait d'une
+     caisse choisie au hasard, ou de nulle part — et le glissement
+     deviendrait une copie silencieuse. */
+  const ligne = e.target.closest('.packrow');
+  const source = (conteneur && conteneur.classList.contains('pklist'))
+    ? (conteneur.dataset.drop || null)
+    : (ligne ? (ligne.dataset.parent || null) : null);
+  drag = {type, id, depart, actif:false, cible:null, fantome:null, conteneur, source};
   e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId);
   const move = ev => packDragMove(ev);
   const up   = ev => { packDragEnd(ev); window.removeEventListener('pointermove', move);
@@ -305,8 +387,12 @@ function packOutBar(montrer){
 }
 
 /* Le pack dont l'objet glissé sort, s'il est rangé quelque part. */
+/* La caisse d'où part le geste, pour afficher « sortir de … ». On
+   préfère l'origine réelle du glissement à une déduction : un item
+   peut appartenir à plusieurs packs depuis la v1.22. */
 function packDragParent(){
   if(!drag) return null;
+  if(drag.source) return pack(drag.source);
   if(drag.type === 'pack'){
     const p = pack(drag.id);
     return p ? packParent(p) : null;
@@ -339,7 +425,7 @@ async function packDragEnd(e){
 
   if(d.cible === '__out'){
     const itemId = d.type === 'pack' ? (pack(d.id) || {}).container_id : d.id;
-    if(itemId) await packTakeOut(itemId);
+    if(itemId) await packTakeOut(itemId, d.source);
     return;
   }
   const cible = pack(d.cible);
@@ -348,7 +434,7 @@ async function packDragEnd(e){
      qu'on range, et c'est ce que la personne a en tête. */
   const itemId = d.type === 'pack' ? (pack(d.id) || {}).container_id : d.id;
   if(!itemId){ toast('This pack has no container, so it cannot be put inside another.', 'error'); return; }
-  await packMoveInto(cible.id, [itemId]);
+  await packMoveInto(cible.id, [itemId], d.source);
 }
 
 /* ============================================================
@@ -357,15 +443,19 @@ async function packDragEnd(e){
    trois gestes plus tard écraserait le travail de quelqu'un d'autre.
    On défait ce qu'on vient de faire, tout de suite ou jamais.
    ============================================================ */
-async function packMoveInto(packId, itemIds){
+async function packMoveInto(packId, itemIds, sourceId){
   const p = pack(packId);
-  /* Où chacun était rangé, pour pouvoir revenir en arrière. */
+  /* Où chacun était rangé, pour pouvoir revenir en arrière. La source
+     est la caisse D'OÙ le geste est parti : depuis la v1.22 un item
+     peut appartenir à plusieurs packs, et seule celle-là doit le
+     perdre. À défaut d'origine connue (un glissement depuis un pack
+     racine), on ne retire rien et le geste ajoute. */
   const avant = itemIds.map(id=>{
-    const o = packOfItem(id);
-    return {id, pack: o ? o.id : null};
+    const o = sourceId ? pack(sourceId) : null;
+    return {id, pack: (o && packItemsOf(o.id).some(x=>x.id === id)) ? o.id : null};
   });
   try{
-    /* Un item n'est que dans un pack : on le retire d'abord du sien. */
+    /* Glisser déplace : on retire de la caisse d'origine avant d'ajouter. */
     for(const a of avant) if(a.pack && a.pack !== packId) await apiRemovePackItems(a.pack, [a.id]);
     await apiAddPackItems(packId, itemIds);
     await refresh(); renderPacks();
@@ -388,8 +478,8 @@ async function packUndoMove(packId, avant){
 /* Sortir un objet de son pack : il quitte le plan de celui qui le
    contenait et n'est plus rangé nulle part. Ses autres appartenances
    ne bougent pas — on le sort d'une boîte, on ne l'efface pas. */
-async function packTakeOut(itemId){
-  const p = packOfItem(itemId);
+async function packTakeOut(itemId, sourceId){
+  const p = sourceId ? pack(sourceId) : packOfItem(itemId);
   if(!p){ toast('This is not inside a pack.', 'error'); return; }
   try{
     await apiRemovePackItems(p.id, [itemId]);
@@ -452,6 +542,12 @@ function openPackForm(id){
           `<option value="${esc(étiquette(i))}">`).join('')}</datalist></div>
       <div class="field full"><label>Notes</label>
         <input id="pf-notes" value="${esc(p ? (p.notes||'') : '')}"></div>
+      <div class="field full">
+        <label class="checkline" data-tip="An assembled pack is a real place: a missing item is a gap worth flagging. A configuration is a reusable recipe — nothing is missing until it is built.">
+          <input type="checkbox" id="pf-perm" ${p && p.permanent ? 'checked' : ''}>
+          Assembled permanently (studio rack, console) ⓘ</label>
+        <div class="hintline">Leave unticked for a touring configuration: the same item may belong to several configurations, and only one is built at a time.</div>
+      </div>
     </div>
     ${p ? `<div class="modsec"><button class="btn danger small" onclick="packDelete('${p.id}')">Delete this pack</button>
       <div class="hintline">The items stay in the inventory — only the grouping disappears.</div></div>` : ''}`;
@@ -481,7 +577,8 @@ async function packSave(){
   const brut = document.getElementById('pf-cont').value.trim();
   const cont = brut ? packPickId(brut) : null;
   if(brut && !cont){ toast('Container not found — pick one from the list.', 'error'); return; }
-  const row = {name, container_id: cont, notes: document.getElementById('pf-notes').value.trim() || null};
+  const row = {name, container_id: cont, notes: document.getElementById('pf-notes').value.trim() || null,
+               permanent: !!(document.getElementById('pf-perm')||{}).checked};
   try{
     if(packEditing) await apiUpdatePack(packEditing, row);
     else { const p = await apiInsertPack(row); packShown = p.id; }
@@ -495,7 +592,7 @@ async function packSave(){
 
 async function packDelete(id){
   const p = pack(id);
-  if(!confirm(`Delete the pack "${p.name}"?\n\nThe ${packStatus(p).plan} items stay in the inventory.`)) return;
+  if(!confirm(`Delete the pack "${p.name}"?\n\nThe ${packStatus(p).total} items stay in the inventory.`)) return;
   try{
     await apiDeletePack(id);
     close_('ovPackForm'); close_('ovPack');

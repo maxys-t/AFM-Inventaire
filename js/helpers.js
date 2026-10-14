@@ -238,21 +238,28 @@ function inLocFilter(sel,name){
 
 /* --- Formatage des lignes d'historique --- */
 function histIcon(t){ return {create:"➕",out:"📤",in:"📥",move:"📍",edit:"✏️",repair:"🔧"}[t]||"•"; }
-/* ---- Packs (v1.20, simplifiés en v1.20.4) ----
+/* ---- Packs (v1.20, simplifiés en v1.20.4, rouverts en v1.22) ----
 
-   UNE seule relation : `pack_items`. Un item est rangé dans un pack,
-   ou il ne l'est pas. Comme une piste dans un dossier Pro Tools.
+   UNE seule relation : `pack_items`. Elle n'a jamais changé.
 
-   La v1.20 en portait deux — le plan et la position — pour pouvoir
-   dire « il manque trois micros, ils sont dans le Rack B ». Juste sur
-   le papier, inutilisable à l'écran : trois états par ligne, un item
-   visible dans plusieurs packs, et deux réponses contradictoires à la
-   même question. « Ce qui manque » se lit désormais sur le statut de
-   l'item, ce qui couvre le cas qui compte avant un départ.
+   La v1.20 en portait deux — le plan et la position — et c'est cette
+   concurrence, pas la cardinalité, qui rendait l'écran illisible : on
+   ne savait jamais laquelle des deux on manipulait. La v1.20.4 a
+   supprimé la seconde, et en a profité pour interdire qu'un item
+   figure dans plusieurs packs. Correction excessive.
 
-   L'imbrication, elle, ne demande toujours aucune structure : un pack
-   est représenté par son contenant, qui est un item comme un autre,
-   donc rangeable dans un autre pack.                                */
+   Car un pack n'est pas l'endroit où vit un item : c'est une RECETTE,
+   un préréglage réutilisable. Le même préampli figure dans la config
+   du rack studio et dans celle de la Pelicase de tournée ; une seule
+   est montée à la fois. Depuis la 024, un item peut donc appartenir à
+   plusieurs packs — et « où est-il ? » se lit sur son emplacement et
+   son statut de sortie, jamais sur le pack.
+
+   Conséquence : l'arbre devient un graphe. Un pack peut avoir
+   plusieurs parents, et apparaître à plusieurs endroits de la liste.
+   C'est honnête — la même caisse sert dans deux configurations — mais
+   tout parcours vers le haut doit explorer TOUTES les branches, pas
+   la première venue.                                                */
 
 function pack(id){ return (db.packs||[]).find(p=>p.id === id) || null; }
 function packOfContainer(itemId){
@@ -263,21 +270,61 @@ function packItemsOf(id){
   return (db.packItems||[]).filter(l=>l.pack_id === id)
     .map(l=>item(l.item_id)).filter(Boolean);
 }
-/* Le pack où se trouve un item — au plus un. */
+/* Les packs où figure un item — zéro, un, ou plusieurs. */
+function packsOfItem(itemId){
+  return (db.packItems||[]).filter(x=>x.item_id === itemId)
+    .map(l=>pack(l.pack_id)).filter(Boolean);
+}
+/* Le pack « de référence » d'un item, quand il faut en nommer un seul
+   (une ligne de tableau, une phrase). Un assemblage monté en
+   permanence l'emporte : c'est là que l'objet se trouve vraiment. À
+   défaut, l'unique pack s'il n'y en a qu'un. Sinon rien — mieux vaut
+   ne rien dire que désigner une recette au hasard. */
 function packOfItem(itemId){
-  const l = (db.packItems||[]).find(x=>x.item_id === itemId);
-  return l ? pack(l.pack_id) : null;
+  const l = packsOfItem(itemId);
+  if(!l.length) return null;
+  const montés = l.filter(p=>p.permanent);
+  if(montés.length === 1) return montés[0];
+  return l.length === 1 ? l[0] : null;
 }
 
-/* L'arbre : un pack est enfant d'un autre si son contenant y est rangé. */
+/* L'arbre : un pack est enfant d'un autre si son contenant y est rangé.
+   Plusieurs parents sont désormais possibles. */
+function packParents(p){
+  return (p && p.container_id) ? packsOfItem(p.container_id) : [];
+}
+/* Un seul parent, pour les cas où l'on n'en affiche qu'un (fil
+   d'ariane). Même règle que packOfItem. */
 function packParent(p){
-  return p && p.container_id ? packOfItem(p.container_id) : null;
+  return (p && p.container_id) ? packOfItem(p.container_id) : null;
 }
 function packChildren(id){
-  return (db.packs||[]).filter(p=>{ const par = packParent(p); return par && par.id === id; });
+  return (db.packs||[]).filter(p=>packParents(p).some(par=>par.id === id));
 }
 function packRoots(){
-  return (db.packs||[]).filter(p=>!p.archived && !packParent(p));
+  return (db.packs||[]).filter(p=>!p.archived && !packParents(p).length);
+}
+
+/* ---- Consommables (v1.22) ----
+   Gaffer, colliers, piles, un multitool. Des lignes de checklist, pas
+   des items : ni identifiant, ni fiche, ni historique, ni poids. Le
+   poids d'un projet sert à parler à un transporteur ; y mêler une
+   estimation de scotch le rendrait faux. */
+function packExtrasOf(id){
+  return (db.packExtras||[]).filter(e=>e.pack_id === id)
+    .sort((a,b)=>(a.pos||0)-(b.pos||0) || String(a.label).localeCompare(String(b.label),'fr'));
+}
+/* Les consommables d'un pack ET de ses packs imbriqués. */
+function packAllExtras(p, vus){
+  vus = vus || new Set();
+  if(!p || vus.has(p.id)) return [];
+  vus.add(p.id);
+  let out = packExtrasOf(p.id).map(e=>({...e, packName:p.name}));
+  packItemsOf(p.id).forEach(i=>{
+    const sous = packOfContainer(i.id);
+    if(sous) out = out.concat(packAllExtras(sous, vus));
+  });
+  return out;
 }
 
 /* Poids effectif d'un item : le sien, plus celui du pack dont il est
@@ -334,14 +381,21 @@ function packAllItems(p, vus){
 }
 
 /* Ce qui est là, et ce qui n'y est pas. Un item « absent » n'est plus
-   un item rangé ailleurs — c'est un item sorti ou en réparation. */
+   un item rangé ailleurs — c'est un item sorti ou en réparation.
+
+   « Absent » n'a pas le même poids selon le pack. Dans un rack monté
+   en permanence, un item manquant est un trou : quelque chose cloche.
+   Dans une configuration qui n'est pas montée, rien ne manque — elle
+   n'est simplement pas assemblée. Le compte est le même, c'est
+   l'écran qui en tire des conclusions différentes. */
 function packStatus(p){
   const présents = [], absents = [];
   packItemsOf(p.id).forEach(i=>{
     if(i.status === 'sorti' || repairOf(i.id)) absents.push({i, où: itemWhere(i)});
     else présents.push(i);
   });
-  return {présents, absents, total: présents.length + absents.length};
+  return {présents, absents, total: présents.length + absents.length,
+          manque: !!p.permanent && absents.length > 0};
 }
 /* Où se trouve un item, en une phrase. */
 function itemWhere(i){
@@ -350,8 +404,11 @@ function itemWhere(i){
     ? `at ${i.out.reason}` : `checked out · ${i.out ? i.out.reason : ''}`;
   const r = repairOf(i.id);
   if(r) return r.status === 'sent' ? 'at the repair shop' : 'needs repair';
+  /* Depuis la v1.22, un pack est une recette : il ne dit plus où
+     l'objet se trouve. Seul un assemblage monté en permanence est
+     aussi un lieu — sinon c'est l'emplacement qui répond. */
   const p = packOfItem(i.id);
-  if(p) return `in ${p.name}`;
+  if(p && p.permanent) return `in ${p.name}`;
   return locLabel(i.loc) || '';
 }
 /* La photo d'un pack est celle de son contenant. */
@@ -362,17 +419,123 @@ function packPhoto(p){
   return m ? m.photo : null;
 }
 /* Ranger X dans C fermerait-il une boucle ? On part de la CIBLE et on
-   remonte ses parents jusqu'au pack que X représente. */
+   remonte ses parents jusqu'au pack que X représente.
+
+   Depuis la v1.22 un pack peut avoir plusieurs parents : remonter une
+   seule branche laisserait passer une boucle fermée par l'autre. On
+   explore donc tout l'ensemble des ancêtres, `vus` garantissant
+   l'arrêt même si une boucle existe déjà en base. */
 function packWouldLoop(packId, itemId){
   const pX = packOfContainer(itemId);
   if(!pX) return false;
   if(pX.id === packId) return true;
-  let p = pack(packId), n = 0;
-  while(p && n++ < 25){
+  const vus = new Set();
+  const file = [pack(packId)].filter(Boolean);
+  while(file.length){
+    const p = file.shift();
+    if(vus.has(p.id)) continue;
+    vus.add(p.id);
     if(p.id === pX.id) return true;
-    p = packParent(p);
+    packParents(p).forEach(par=>{ if(!vus.has(par.id)) file.push(par); });
   }
   return false;
+}
+
+/* ---- Composition d'un projet (v1.22) ----
+
+   Un projet est un mélange de caisses et d'items isolés. Tant qu'il se
+   prépare, son contenu SUIT les packs : vider une Pelicase change ce
+   qui partira. Au départ, il est FIGÉ dans `snapshot` — sinon, vider
+   cette même caisse le lendemain réécrirait ce qui est parti la
+   veille, et l'historique mentirait.
+
+   Un item apporté par une caisse n'est pas compté une seconde fois
+   s'il traîne aussi dans la liste des items isolés : on le retire de
+   l'isolé, la caisse l'emporte. Deux caisses qui se partagent un item
+   ne l'emportent qu'une fois, dans la première.                     */
+
+function projPacks(p){ return (p.pack_ids||[]).map(id=>pack(id)).filter(Boolean); }
+
+/* Indisponible pour CE projet : en réparation, ou sorti ailleurs.
+   Sorti pour ce projet-ci, c'est au contraire la situation normale
+   une fois le show commencé. */
+function projBusy(i, p){
+  if(!i) return false;
+  if(repairOf(i.id)) return true;
+  if(i.status === 'sorti') return !(i.out && i.out.projectId === p.id);
+  return false;
+}
+
+/* Clé de checklist d'un consommable : il n'a pas d'identifiant d'item,
+   et `prep` est une table à plat. Le préfixe évite toute collision. */
+function extraKey(e){ return 'x:' + e.id; }
+
+function projContent(p){
+  if(!p) return {groups:[], loose:[], items:[], extras:[], weight:0, missing:0, frozen:false};
+  if(p.snapshot && p.status === 'show') return projFromSnapshot(p);
+
+  const groups = [], vus = new Set();
+  projPacks(p).forEach(k=>{
+    const tous = packAllItems(k).filter(i=>!vus.has(i.id));
+    tous.forEach(i=>vus.add(i.id));
+    groups.push({
+      packId: k.id, name: k.name, permanent: !!k.permanent,
+      items:   tous.filter(i=>!projBusy(i, p)),
+      écartés: tous.filter(i=>projBusy(i, p)),
+      extras:  packAllExtras(k).map(e=>({...e, key: extraKey(e)}))
+    });
+  });
+
+  const loose = (p.item_ids||[])
+    .filter(id=>!vus.has(id)).map(id=>item(id)).filter(Boolean);
+  loose.forEach(i=>vus.add(i.id));
+
+  const items  = groups.reduce((a,g)=>a.concat(g.items), []).concat(loose);
+  const extras = groups.reduce((a,g)=>a.concat(g.extras), []);
+  /* Les items supprimés de l'inventaire depuis la création du projet.
+     On les compte pour pouvoir le dire, plutôt que de laisser le
+     total baisser sans explication. */
+  const missing = (p.item_ids||[]).filter(id=>!item(id)).length;
+
+  return {groups, loose, items, extras,
+          weight: items.reduce((t,i)=>t + (i.weight_g||0), 0),
+          missing, frozen:false};
+}
+
+/* Le contenu figé, relu tel quel. Un item disparu de l'inventaire
+   depuis le départ est compté comme manquant, pas effacé. */
+function projFromSnapshot(p){
+  const s = p.snapshot || {};
+  let missing = 0;
+  const résoudre = ids => (ids||[]).map(id=>{
+    const i = item(id); if(!i) missing++; return i;
+  }).filter(Boolean);
+
+  const groups = (s.packs||[]).map(g=>({
+    packId: g.id, name: g.name, permanent: !!g.permanent,
+    items: résoudre(g.items), écartés: [],
+    extras: (g.extras||[]).map(e=>({...e, key: extraKey(e)}))
+  }));
+  const loose  = résoudre(s.items);
+  const items  = groups.reduce((a,g)=>a.concat(g.items), []).concat(loose);
+  const extras = groups.reduce((a,g)=>a.concat(g.extras), []);
+  return {groups, loose, items, extras,
+          weight: items.reduce((t,i)=>t + (i.weight_g||0), 0),
+          missing, frozen:true};
+}
+
+/* La photographie prise au moment du départ. */
+function projSnapshot(p){
+  const c = projContent(p);
+  return {
+    frozen_at: new Date().toISOString(),
+    packs: c.groups.map(g=>({
+      id: g.packId, name: g.name, permanent: g.permanent,
+      items: g.items.map(i=>i.id),
+      extras: g.extras.map(e=>({id:e.id, label:e.label, qty:e.qty}))
+    })),
+    items: c.loose.map(i=>i.id)
+  };
 }
 
 /* ---- Poids (v1.19) ----

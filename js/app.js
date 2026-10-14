@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.21.6';
+const APP_VERSION = '1.22.0';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','packs','rep','settings'];
@@ -180,6 +180,7 @@ async function exportJSON(){
   const out = {...db, items:[...db.items, ...db.trash]};
   delete out.trash; delete out.trashSupported; delete out.projectsError;
   delete out.repairsSupported; delete out.packsSupported;
+  delete out.packExtrasSupported;
   try{
     toast('Reading the full history…', 'info');
     const [hist, items] = await Promise.all([
@@ -266,14 +267,24 @@ function normalizeImport(d){
      oublié comment il était rangé. */
   const packs = (d.packs||[]).filter(p=>p && p.id && p.name).map(p=>({
     id:p.id, name:p.name, notes:p.notes||null,
-    container_id:p.container_id||null, archived:!!p.archived
+    container_id:p.container_id||null, archived:!!p.archived,
+    // v1.22 : monté en permanence, ou simple configuration.
+    permanent: !!p.permanent
   }));
   const packItems = (d.packItems || d.pack_items || [])
     .map(l=>({pack_id:l.pack_id, item_id:l.item_id}))
     .filter(l=>l.pack_id && l.item_id);
+  /* Les consommables (v1.22). Sans cette ligne, une caisse restaurée
+     reviendrait sans son gaffer ni ses piles — la quatrième fois que
+     l'on oublie une table à la restauration, après les photos, les
+     réparations et les packs. */
+  const packExtras = (d.packExtras || d.pack_extras || [])
+    .map(e=>({id:e.id, pack_id:e.pack_id, label:e.label,
+              qty:e.qty||1, pos:e.pos||0}))
+    .filter(e=>e.id && e.pack_id && e.label);
 
   return {items:d.items||[], users, locations, history, projects:d.projects||[],
-          repairs, providers, packs, packItems};
+          repairs, providers, packs, packItems, packExtras};
 }
 function importJSON(inp){
   const f = inp.files[0]; if(!f) return;
@@ -299,11 +310,14 @@ function importJSON(inp){
       })));
       if(d.packs.length) await apiUpsertPacks(d.packs);
       if(d.packItems.length) await apiUpsertPackItems(d.packItems);
+      if(d.packExtras.length) await apiUpsertPackExtras(d.packExtras);
       if(d.providers.length) await apiUpsertProviders(d.providers);
       if(d.repairs.length)   await apiUpsertRepairs(d.repairs);
       if(d.projects.length) await apiUpsertProjects(d.projects.map(p=>({
         id:p.id,name:p.name,description:p.description||"",status:p.status||'inactif',
         item_ids:p.item_ids||[],prep:p.prep||{},last_used:p.last_used||null,
+        // v1.22 : les caisses du projet, et le contenu figé au départ.
+        pack_ids:p.pack_ids||[],snapshot:p.snapshot||null,
         // Destination, dates et archivage : ajoutés en v1.11, ils étaient
         // perdus à la restauration jusqu'ici.
         loc_name:p.loc_name||null,starts_on:p.starts_on||null,

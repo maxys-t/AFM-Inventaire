@@ -8,6 +8,7 @@ let sb = null;
 let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:false,
           repairs:[],providers:[],repairsSupported:true,
           packs:[],packItems:[],packsSupported:true,
+          packExtras:[],packExtrasSupported:true,
           trash:[],trashSupported:true,profiles:[]};
 let syncState = 'off';   // 'ok' | 'off' | 'error'
 
@@ -148,6 +149,10 @@ async function loadAll(){
   db.projectsError = !!pr.error;
   db.projects = pr.error ? [] : pr.data.map(p=>({
     ...p, item_ids:p.item_ids||[], prep:p.prep||{},
+    /* pack_ids et snapshot n'existent qu'après la 024 : on les
+       normalise ici pour que le reste du code n'ait jamais à se
+       demander si la migration est passée. */
+    pack_ids:p.pack_ids||[], snapshot:p.snapshot||null,
     loc_name:p.loc_name||'', starts_on:p.starts_on||null, ends_on:p.ends_on||null,
     archived: !!p.archived
   }));
@@ -164,13 +169,18 @@ async function loadAll(){
   ]);
   /* Packs (migration 019). Tolérant à son absence, comme les
      réparations : sans eux l'onglet est vide, l'app tourne. */
-  const [pk, pit] = await Promise.all([
+  const [pk, pit, pex] = await Promise.all([
     sb.from('packs').select('*').order('name'),
-    sb.from('pack_items').select('*')
+    sb.from('pack_items').select('*'),
+    sb.from('pack_extras').select('*').order('pos')
   ]);
   db.packsSupported = !pk.error;
-  db.packs = pk.error ? [] : pk.data;
+  db.packs = pk.error ? [] : pk.data.map(p=>({...p, permanent: !!p.permanent}));
   db.packItems = pit.error ? [] : pit.data;
+  /* Les consommables datent de la 024 : leur absence ne doit pas
+     vider l'onglet Packs, elle doit juste ne rien afficher. */
+  db.packExtrasSupported = !pex.error;
+  db.packExtras = pex.error ? [] : pex.data;
 
   db.repairsSupported = !rp.error;
   db.repairs = rp.error ? [] : rp.data.map(r=>({...r, item_id:r.item_id}));
@@ -210,7 +220,7 @@ async function refresh(){
    le moindre enregistrement de préférence d'affichage déclencherait
    un rechargement complet de l'inventaire à chaque case cochée. */
 const SYNC_TABLES = ['items','people','locations','history','projects','profiles',
-                     'repairs','repair_providers','packs','pack_items'];
+                     'repairs','repair_providers','packs','pack_items','pack_extras'];
 function subscribe(){
   let t = null;
   try{
@@ -304,10 +314,15 @@ function outBy(i){
   return i.out ? userName(i.out.userId) : "";
 }
 function outForRepair(i){ return !!(i.out && i.out.repairId); }
-function projItems(p){ return (p.item_ids||[]).map(id=>item(id)).filter(Boolean); }
+/* Ce qui part réellement : les caisses résolues et les items isolés,
+   sans doublon. Le détail est dans helpers.js (projContent), parce
+   qu'il dépend des packs. Ces deux fonctions restent le point
+   d'entrée simple, utilisé partout depuis la v1.11. */
+function projItems(p){ return projContent(p).items; }
 function projProgress(p){
-  const its = projItems(p);
-  return {done: its.filter(i=>p.prep && p.prep[i.id]).length, total: its.length};
+  const c = projContent(p);
+  const clés = c.items.map(i=>i.id).concat(c.extras.map(e=>e.key));
+  return {done: clés.filter(k=>p.prep && p.prep[k]).length, total: clés.length};
 }
 
 /* ================= HISTORIQUE ================= */
@@ -452,6 +467,17 @@ async function apiAddPackItems(packId, itemIds){
 async function apiRemovePackItems(packId, itemIds){
   await run(sb.from('pack_items').delete().eq('pack_id', packId).in('item_id', itemIds));
 }
+
+/* ---------------- Consommables d'un pack (v1.22) ----------------
+   Gaffer, colliers, piles : des lignes de checklist, pas des items.
+   Elles n'ont ni poids ni état, et c'est volontaire — voir la 024. */
+async function apiInsertPackExtra(e){
+  const {data,error} = await sb.from('pack_extras').insert(e).select().single();
+  if(error) throw error;
+  return data;
+}
+async function apiUpdatePackExtra(id, f){ await run(sb.from('pack_extras').update(f).eq('id', id)); }
+async function apiDeletePackExtra(id){ await run(sb.from('pack_extras').delete().eq('id', id)); }
 /* ---------------- Lecture complète, pour la sauvegarde ----------------
 
    `loadAll` plafonne l'historique à 1 000 lignes : c'est un choix
@@ -480,6 +506,7 @@ async function apiUpsertPacks(rows){ await run(sb.from('packs').upsert(rows)); }
 async function apiUpsertPackItems(rows){
   await run(sb.from('pack_items').upsert(rows, {onConflict:'pack_id,item_id'}));
 }
+async function apiUpsertPackExtras(rows){ await run(sb.from('pack_extras').upsert(rows)); }
 
 async function apiUpsertRepairs(rows){ await run(sb.from('repairs').upsert(rows)); }
 async function apiUpsertProviders(rows){ await run(sb.from('repair_providers').upsert(rows)); }

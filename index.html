@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=1.21.6">
+<link rel="stylesheet" href="css/styles.css?v=1.22.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -441,30 +441,10 @@
   </div>
 </div></div>
 
-<div class="overlay" id="ovProj"><div class="modal" style="max-width:820px">
-  <h3 id="projFormTitle">New project</h3>
-  <div class="form-grid">
-    <div class="field full"><label>Name *</label><input id="p-name" placeholder="e.g. Band X Tour 2026"></div>
-    <div class="field full"><label>Description</label><textarea id="p-desc" rows="2"></textarea></div>
-    <div class="field full"><label>Destination</label>
-      <select id="p-dest"></select>
-      <p class="muted" style="margin-top:4px">Add off-site addresses in Settings → Locations.</p>
-    </div>
-    <div class="field"><label>Start date</label><input type="date" id="p-start"></div>
-    <div class="field"><label>End date</label><input type="date" id="p-end"></div>
-    <div class="field full"><label>Project gear *</label>
-      <input type="search" id="p-search" placeholder="Search the whole inventory (name, ID, serial…)" oninput="renderPicker()" style="width:100%;margin-bottom:8px">
-      <div id="p-picker"></div>
-      <div id="p-count" style="margin-top:8px;font-size:13px"></div>
-    </div>
-  </div>
-  <div class="modal-actions">
-    <button class="btn sec" onclick="close_('ovProj')">Cancel</button>
-    <button class="btn" onclick="saveProj()">Save</button>
-  </div>
-</div></div>
-
-<div class="overlay" id="ovProjDetail"><div class="modal" id="projDetailBody"></div></div>
+<!-- Les deux fenêtres des projets (formulaire et fiche) ont disparu en
+     v1.22 : composer un chargement se fait désormais en pleine page,
+     par glisser-déposer. Une modale ne laissait pas la place de voir
+     l'inventaire et le projet en même temps, surtout sur iPad. -->
 
 <div class="overlay" id="ovDetail"><div class="modal" id="detailBody"></div></div>
 
@@ -544,25 +524,25 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=1.21.6"></script>
-<script src="js/auth.js?v=1.21.6"></script>
-<script src="js/helpers.js?v=1.21.6"></script>
-<script src="js/crop.js?v=1.21.6"></script>
-<script src="js/prefs.js?v=1.21.6"></script>
-<script src="js/db.js?v=1.21.6"></script>
-<script src="js/views-dashboard.js?v=1.21.6"></script>
-<script src="js/views-inventory.js?v=1.21.6"></script>
-<script src="js/views-projects.js?v=1.21.6"></script>
-<script src="js/views-out.js?v=1.21.6"></script>
-<script src="js/views-packs.js?v=1.21.6"></script>
-<script src="js/views-repairs.js?v=1.21.6"></script>
-<script src="js/views-people-loc.js?v=1.21.6"></script>
-<script src="js/views-trash.js?v=1.21.6"></script>
-<script src="js/views-users.js?v=1.21.6"></script>
-<script src="js/views-settings.js?v=1.21.6"></script>
-<script src="js/import-csv.js?v=1.21.6"></script>
-<script src="js/import-weights.js?v=1.21.6"></script>
-<script src="js/photos-bulk.js?v=1.21.6"></script>
-<script src="js/app.js?v=1.21.6"></script>
+<script src="js/config.js?v=1.22.0"></script>
+<script src="js/auth.js?v=1.22.0"></script>
+<script src="js/helpers.js?v=1.22.0"></script>
+<script src="js/crop.js?v=1.22.0"></script>
+<script src="js/prefs.js?v=1.22.0"></script>
+<script src="js/db.js?v=1.22.0"></script>
+<script src="js/views-dashboard.js?v=1.22.0"></script>
+<script src="js/views-inventory.js?v=1.22.0"></script>
+<script src="js/views-projects.js?v=1.22.0"></script>
+<script src="js/views-out.js?v=1.22.0"></script>
+<script src="js/views-packs.js?v=1.22.0"></script>
+<script src="js/views-repairs.js?v=1.22.0"></script>
+<script src="js/views-people-loc.js?v=1.22.0"></script>
+<script src="js/views-trash.js?v=1.22.0"></script>
+<script src="js/views-users.js?v=1.22.0"></script>
+<script src="js/views-settings.js?v=1.22.0"></script>
+<script src="js/import-csv.js?v=1.22.0"></script>
+<script src="js/import-weights.js?v=1.22.0"></script>
+<script src="js/photos-bulk.js?v=1.22.0"></script>
+<script src="js/app.js?v=1.22.0"></script>
 </body>
 </html>

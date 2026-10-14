@@ -1,10 +1,16 @@
 /* ============================================================
-   VUE — Projets / tournées : liste, template de matériel,
-   checklist de préparation, transitions Inactif → Prépa → Show
+   VUE — Projets : liste, composition en pleine page, préparation
+
+   L'onglet Projets sert à faire partir du matériel. Un projet est un
+   mélange de caisses (packs) et d'items isolés ; on le compose en
+   glissant depuis l'inventaire, à gauche, vers le projet, à droite.
+
+   Trois écrans, pas de fenêtre modale : composer un chargement
+   demande de la place, et une modale sur iPad n'en laisse aucune.
+     liste → composition → préparation
    ============================================================ */
 
-/* Un projet archivé sort de la liste sans disparaître : les tournées
-   passées restent consultables, et leur historique reste lisible. */
+let projView = {mode:'list', id:null, tab:'items', q:''};
 let showArchivedProj = false;
 function toggleArchivedProj(){ showArchivedProj = !showArchivedProj; renderProj(); }
 
@@ -17,411 +23,654 @@ function projDates(p){
 }
 
 function renderProj(){
-  let html = can('edit') ? `<div class="toolbar"><button class="btn" onclick="openProjForm()">+ New project</button></div>` : '';
+  const box = document.getElementById('v-proj');
   if(db.projectsError){
-    html += `<div class="alert bad">The projects table does not exist yet — run <b>sql/003-projets.sql</b> in Supabase (SQL Editor), then click ↻ Refresh.</div>`;
-    document.getElementById('v-proj').innerHTML = html; return;
+    box.innerHTML = `<div class="alert bad">The projects table does not exist yet — run <b>sql/003-projets.sql</b> in Supabase (SQL Editor), then click ↻ Refresh.</div>`;
+    return;
   }
+  /* Un projet supprimé ailleurs pendant qu'on l'éditait : on retombe
+     sur la liste plutôt que sur un écran vide. */
+  if(projView.mode !== 'list' && !project(projView.id)) projView.mode = 'list';
+
+  if(projView.mode === 'edit'){ box.innerHTML = projEditor(); bindProjDrag(); return; }
+  if(projView.mode === 'prep'){ box.innerHTML = projPrep(); return; }
+  box.innerHTML = projList();
+}
+
+function projGo(mode, id){
+  projView.mode = mode; projView.id = id || null; projView.q = '';
+  renderProj();
+  window.scrollTo(0, 0);
+}
+function projBack(){ projGo('list'); }
+
+/* ============================================================
+   1. La liste
+   ============================================================ */
+function projList(){
+  let html = can('edit')
+    ? `<div class="toolbar"><button class="btn" onclick="openProjForm()">+ New project</button></div>` : '';
+
   const rows = db.projects.filter(p=>showArchivedProj || !p.archived);
   const nbArch = db.projects.filter(p=>p.archived).length;
 
   if(!rows.length){
     html += '<div class="panel"><div class="empty">'
       + (db.projects.length ? 'No active project — everything is archived.'
-         : 'No project yet. Create a tour template with its fixed gear list — it can be reused every time.')
+         : 'No project yet. Build one from your packs and a few loose items — it can be duplicated next time.')
       + '</div></div>';
   }else{
-    html += `<div class="panel"><table><thead><tr><th>Project</th><th>Destination</th><th>Dates</th><th>Status</th><th>Gear</th><th>Packing</th></tr></thead><tbody>` +
-    rows.map(p=>{
+    html += '<div class="pjcards">' + rows.map(p=>{
+      const c = projContent(p);
       const pr = projProgress(p);
-      const prog = p.status==='preparation'
-        ? `<div class="pline" style="margin:0"><div class="pbar"><div style="width:${pr.total?Math.round(pr.done/pr.total*100):0}%"></div></div><span class="muted">${pr.done}/${pr.total}</span></div>`
-        : (p.status==='show' ? '<span class="muted">on show</span>' : '<span class="muted">—</span>');
       const d = projDates(p);
-      return `<tr class="rowlink ${p.archived?'archrow':''}" onclick="openProject('${p.id}')">
-        <td data-l="Project"><b>${esc(p.name)}</b>${p.archived?' <span class="tag pinactif">archived</span>':''}
-          ${p.description?`<div class="muted">${esc(p.description)}</div>`:""}</td>
-        <td data-l="Destination">${p.loc_name?esc(p.loc_name):'<span class="muted">—</span>'}</td>
-        <td data-l="Dates">${d?esc(d):'<span class="muted">—</span>'}</td>
-        <td data-l="Status"><span class="tag ${PTAG[p.status]}">${PSTAT[p.status]||p.status}</span></td>
-        <td data-l="Gear">${(p.item_ids||[]).length} item(s)</td>
-        <td data-l="Packing">${prog}</td>
-      </tr>`;
-    }).join("") + "</tbody></table></div>";
+      return `<div class="pjcard${p.archived?' arch':''}">
+        <div class="pjcard-top">
+          <div style="flex:1;min-width:0">
+            <h3>${esc(p.name)}</h3>
+            <div class="muted">${p.loc_name?esc(p.loc_name):'no destination'}${d?' · '+esc(d):''}</div>
+          </div>
+          <span class="tag ${PTAG[p.status]}">${PSTAT[p.status]||p.status}</span>
+        </div>
+        ${p.description?`<div class="muted" style="margin-top:4px">${esc(p.description)}</div>`:''}
+        <div class="pjsum">
+          <div><b>${c.groups.length}</b>case(s)</div>
+          <div><b>${c.items.length}</b>item(s)</div>
+          <div><b>${fweight(c.weight)}</b>total</div>
+        </div>
+        ${p.status==='preparation'?`<div class="pline"><div class="pbar"><div style="width:${pr.total?Math.round(pr.done/pr.total*100):0}%"></div></div><span class="muted">${pr.done}/${pr.total}</span></div>`:''}
+        <div class="pjacts">
+          <button class="btn small" onclick="projGo('prep','${p.id}')">Open</button>
+          ${(can('edit') && p.status!=='show')?`<button class="btn sec small" onclick="projGo('edit','${p.id}')">Edit gear</button>`:''}
+          ${can('edit')?`<button class="btn sec small" onclick="duplicateProj('${p.id}')">Duplicate</button>`:''}
+        </div>
+        ${p.archived?'<span class="tag pinactif">archived</span>':''}
+      </div>`;
+    }).join('') + '</div>';
   }
   if(nbArch){
-    html += `<div style="margin-top:-6px"><button class="btn sec small" onclick="toggleArchivedProj()">
+    html += `<div style="margin-top:10px"><button class="btn sec small" onclick="toggleArchivedProj()">
       ${showArchivedProj?'Hide':'Show'} archived (${nbArch})</button></div>`;
   }
-  document.getElementById('v-proj').innerHTML = html;
+  return html;
 }
 
-/* ---- formulaire projet (création / modification du template) ----
-   Le sélecteur fonctionne comme le Finder : familles → sous-catégories → items.
-   Une recherche court-circuite l'arborescence et affiche une liste à plat. */
-let editingProjId = null, pickerSel = new Set();
-let pickCat = "", pickSub = "";       // dossier ouvert
-
-function openProjForm(id){
-  editingProjId = id||null;
-  const p = id?project(id):null;
-  document.getElementById('projFormTitle').textContent = p?'Edit project':'New project';
-  document.getElementById('p-name').value = p?p.name:"";
-  document.getElementById('p-desc').value = p?(p.description||""):"";
-  const dest = document.getElementById('p-dest');
-  if(dest){
-    dest.innerHTML = '<option value="">— no destination —</option>' + locOptions();
-    dest.value = p ? (p.loc_name||"") : "";
-    // Une destination archivée n'est plus dans la liste : on l'y remet
-    // pour ne pas l'effacer silencieusement en rouvrant le formulaire.
-    if(p && p.loc_name && dest.value !== p.loc_name){
-      dest.insertAdjacentHTML('beforeend',
-        `<option value="${esc(p.loc_name)}">${esc(p.loc_name)} (archived)</option>`);
-      dest.value = p.loc_name;
-    }
-  }
-  const s = document.getElementById('p-start'), e = document.getElementById('p-end');
-  if(s) s.value = p ? (p.starts_on||"") : "";
-  if(e) e.value = p ? (p.ends_on||"") : "";
-  document.getElementById('p-search').value = "";
-  pickerSel = new Set(p?(p.item_ids||[]):[]);
-  pickCat = ""; pickSub = "";
-  renderPicker();
-  open_('ovProj');
+/* Création : le projet existe en base dès l'ouverture de la page.
+   Composer un chargement se fait par petits gestes — glisser une
+   caisse, en retirer un item — et chacun doit être enregistré sur le
+   champ. Un formulaire qu'on « valide » à la fin perdrait tout si
+   l'iPad se verrouille au milieu. */
+async function openProjForm(id){
+  if(id){ projGo('edit', id); return; }
+  if(!can('edit')) return;
+  const p = {id:"p"+Date.now(), name:"New project", description:"", status:'inactif',
+             item_ids:[], pack_ids:[], prep:{}, snapshot:null, last_used:null,
+             created_at:now(), loc_name:'', starts_on:null, ends_on:null, archived:false};
+  db.projects.push(p);
+  projGo('edit', p.id);
+  try{ await apiInsertProject({...p, loc_name:null}); }
+  catch(e){ toast('Could not create the project: ' + (e.message||e), 'error'); }
 }
 
-/* Items d'un dossier : famille, puis sous-catégorie si elle est ouverte */
-function pickItems(cat, sub){
-  return db.items.filter(i=>(!cat || i.cat===cat) && (!sub || i.subcat===sub))
-                 .sort((a,b)=>itemTitleText(a).localeCompare(itemTitleText(b),'fr'));
-}
-function pickCount(cat, sub){
-  const its = pickItems(cat, sub);
-  return {n:its.length, sel:its.filter(i=>pickerSel.has(i.id)).length};
-}
-
-function pickOpenCat(c){ pickCat = (pickCat===c && !pickSub) ? "" : c; pickSub = ""; renderPicker(); }
-function pickOpenSub(sb){ pickSub = (pickSub===sb) ? "" : sb; renderPicker(); }
-
-function pickRow(i){
-  const on = pickerSel.has(i.id);
-  const etat = i.status==='sorti' ? '<span class="tag sorti">sorti</span>'
-             : i.cond!=='bon' ? `<span class="tag ${i.cond}">${CONDS[i.cond]}</span>` : '';
-  return `<label class="prow${on?' on':''}">
-    <input type="checkbox" ${on?'checked':''} onchange="togglePick('${i.id}',this.checked)">
-    ${i.photo?`<img loading="lazy" src="${i.photo}">`:'<span class="ph"></span>'}
-    <span class="nm">${itemTitle(i)}</span>
-    <span class="mono">${i.id}</span>${etat}
-  </label>`;
+async function duplicateProj(id){
+  const s = project(id); if(!s) return;
+  const p = {...s, id:"p"+Date.now(), name:s.name + ' (copy)', status:'inactif',
+             prep:{}, snapshot:null, last_used:null, created_at:now(), archived:false,
+             item_ids:[...(s.item_ids||[])], pack_ids:[...(s.pack_ids||[])]};
+  db.projects.push(p);
+  projGo('edit', p.id);
+  try{
+    await apiInsertProject({...p, loc_name:p.loc_name||null});
+    toast('Duplicated — same cases and items, empty checklist.', 'ok');
+  }catch(e){ toast('Could not duplicate: ' + (e.message||e), 'error'); }
 }
 
-function renderPicker(){
-  const q = (document.getElementById('p-search').value||"").trim().toLowerCase();
-  const box = document.getElementById('p-picker');
+/* ============================================================
+   2. La composition
+   ============================================================ */
 
-  if(q){                                        // recherche : liste à plat
-    const rows = db.items.filter(i=>
-      (itemTitleText(i)+" "+i.id+" "+catPath(i)+" "+(i.serial||"")).toLowerCase().includes(q));
-    box.innerHTML = `<div class="pnav"><div class="pcol wide">
-        <div class="phead">${rows.length} result(s) for "${esc(q)}"
-          ${rows.length?`<button type="button" class="lnk" onclick="pickAll(${JSON.stringify(rows.map(i=>i.id)).replace(/"/g,'&quot;')},true)">select all</button>`:''}</div>
-        ${rows.map(pickRow).join("") || '<div class="muted" style="padding:10px">No item.</div>'}
-      </div></div>`;
-    updatePickCount(); return;
-  }
+/* Les exemplaires se regroupent : « XLR 5 m — 12 exemplaires, 8
+   disponibles » plutôt que douze lignes à glisser une par une. */
+function projGroups(){
+  const m = new Map();
+  db.items.forEach(i=>{
+    const base = groupKeyOf(i.name) || i.name;
+    const k = (i.brand||'') + '|' + base + '|' + i.subcat;
+    if(!m.has(k)) m.set(k, {key:k, brand:i.brand||'', name:base, subcat:i.subcat, all:[]});
+    m.get(k).all.push(i);
+  });
+  return [...m.values()].sort((a,b)=>
+    ((a.brand+' '+a.name).localeCompare(b.brand+' '+b.name,'fr')));
+}
 
-  // Colonne 1 : familles
-  const fams = Object.entries(CATS).map(([k,v])=>{
-    const c = pickCount(k);
-    if(!c.n) return '';
-    return `<div class="pitem${pickCat===k?' on':''}" onclick="pickOpenCat('${k}')">
-      <span class="nm">${esc(v.label)}</span>
-      <span class="cnt">${c.sel?`<b>${c.sel}</b>/`:''}${c.n}</span><span class="arr">›</span>
-    </div>`;
-  }).join("");
+/* Ce que les caisses du projet apportent déjà : un item s'y trouvant
+   ne doit pas pouvoir être ajouté une seconde fois à côté. */
+function projFromPacks(p){
+  const s = new Set();
+  projPacks(p).forEach(k=>packAllItems(k).forEach(i=>s.add(i.id)));
+  return s;
+}
 
-  // Colonne 2 : sous-catégories de la famille ouverte
-  let subs = '<div class="muted" style="padding:10px">Pick a family</div>';
-  if(pickCat){
-    subs = Object.entries(subsOf(pickCat)).map(([k,v])=>{
-      const c = pickCount(pickCat, k);
-      if(!c.n) return '';
-      return `<div class="pitem${pickSub===k?' on':''}" onclick="pickOpenSub('${k}')">
-        <span class="nm">${esc(v.label)}</span>
-        <span class="cnt">${c.sel?`<b>${c.sel}</b>/`:''}${c.n}</span><span class="arr">›</span>
+function projEditor(){
+  const p = project(projView.id);
+  const q = (projView.q||'').trim().toLowerCase();
+  const pris = projFromPacks(p);
+  const c = projContent(p);
+
+  /* ---- colonne de gauche ---- */
+  let src = '';
+  if(projView.tab === 'items'){
+    const gs = projGroups().filter(g=>!q ||
+      (g.brand + ' ' + g.name + ' ' + catPath(g.all[0]) + ' ' +
+       g.all.map(i=>i.id + ' ' + (i.serial||'')).join(' ')).toLowerCase().includes(q));
+    src = gs.map(g=>{
+      const posés  = g.all.filter(i=>(p.item_ids||[]).includes(i.id)).length;
+      const libres = g.all.filter(i=>!pris.has(i.id) && !(p.item_ids||[]).includes(i.id)
+                                     && !projBusy(i, p));
+      const viaPack = g.all.filter(i=>pris.has(i.id)).length;
+      const enRep   = g.all.filter(i=>repairOf(i.id)).length;
+      const sous = [
+        g.all.length + ' copy(ies)',
+        libres.length + ' free',
+        viaPack ? viaPack + ' already in a case of this project' : '',
+        enRep ? enRep + ' in repair' : ''
+      ].filter(Boolean).join(' · ');
+      const mort = !libres.length && !posés;
+      return `<div class="pjrow${mort?' off':''}" data-kind="item" data-key="${esc(g.key)}">
+        <span class="pjgrip">⠿</span>
+        <div class="pjnm"><div class="t">${g.brand?`<b>${esc(g.brand)}</b> `:''}${esc(g.name)}</div>
+          <div class="s">${esc(sous)} · ${fweight(g.all[0].weight_g||0)} each</div></div>
+        ${posés
+          ? `<span class="pjqty">
+               <button onclick="projLess('${esc(g.key)}')">−</button><span>${posés}</span>
+               <button onclick="projMore('${esc(g.key)}')"${libres.length?'':' disabled'}>+</button></span>`
+          : `<button class="pjadd" onclick="projMore('${esc(g.key)}')"${libres.length?'':' disabled'}>+</button>`}
       </div>`;
-    }).join("") || '<div class="muted" style="padding:10px">Empty</div>';
-  }
-
-  // Colonne 3 : items du dossier courant
-  let items = '<div class="muted" style="padding:10px">Pick a folder</div>';
-  if(pickCat){
-    const its = pickItems(pickCat, pickSub);
-    const ids = its.map(i=>i.id);
-    const tous = ids.length && ids.every(id=>pickerSel.has(id));
-    items = `<div class="phead">${its.length} item(s)
-        <button type="button" class="lnk" onclick="pickAll(${JSON.stringify(ids).replace(/"/g,'&quot;')},${!tous})">${tous?'clear all':'select all'}</button>
-      </div>` + (its.map(pickRow).join("") || '<div class="muted" style="padding:10px">Empty</div>');
-  }
-
-  box.innerHTML = `<div class="pnav">
-    <div class="pcol">${fams}</div>
-    <div class="pcol">${subs}</div>
-    <div class="pcol wide">${items}</div>
-  </div>`;
-  updatePickCount();
-}
-
-function pickAll(ids, on){
-  ids.forEach(id=>{ if(on) pickerSel.add(id); else pickerSel.delete(id); });
-  renderPicker();
-}
-function togglePick(id,on){
-  if(on) pickerSel.add(id); else pickerSel.delete(id);
-  // Redessin complet pour rafraîchir les compteurs des dossiers,
-  // en conservant la position de défilement de la colonne des items.
-  const col = document.querySelector('#p-picker .pcol.wide');
-  const sc = col ? col.scrollTop : 0;
-  renderPicker();
-  const nc = document.querySelector('#p-picker .pcol.wide');
-  if(nc) nc.scrollTop = sc;
-}
-
-/* Bandeau de sélection, avec retrait au clic */
-function updatePickCount(){
-  const el = document.getElementById('p-count');
-  const n = pickerSel.size;
-  if(!n){ el.innerHTML = '<span class="muted">No item selected.</span>'; return; }
-  const its = [...pickerSel].map(id=>item(id)).filter(Boolean);
-  const max = 30;
-  el.innerHTML = `<b>${n}</b> item(s) selected `
-    + `<button type="button" class="lnk" onclick="pickAll(${JSON.stringify([...pickerSel]).replace(/"/g,'&quot;')},false)">clear all</button>`
-    + `<div class="pchips">` + its.slice(0,max).map(i=>
-        `<span class="chip" onclick="togglePick('${i.id}',false)">${esc(itemTitleText(i))} ✕</span>`).join("")
-    + (its.length>max?`<span class="muted">+ ${its.length-max} more</span>`:'') + `</div>`;
-}
-
-async function saveProj(){
-  const name = document.getElementById('p-name').value.trim();
-  if(!name){ alert("A name is required."); return; }
-  if(!pickerSel.size){ alert("Select at least one item."); return; }
-  const desc = document.getElementById('p-desc').value.trim();
-  const loc_name = (document.getElementById('p-dest')||{}).value || '';
-  const starts_on = (document.getElementById('p-start')||{}).value || null;
-  const ends_on = (document.getElementById('p-end')||{}).value || null;
-  if(starts_on && ends_on && ends_on < starts_on){
-    alert("The end date comes before the start date.");
-    return;
-  }
-  const dates = {loc_name: loc_name||null, starts_on, ends_on};
-  if(editingProjId){
-    const p = project(editingProjId);
-    p.name = name; p.description = desc; p.item_ids = [...pickerSel];
-    p.loc_name = loc_name; p.starts_on = starts_on; p.ends_on = ends_on;
-    p.prep = p.prep||{};
-    Object.keys(p.prep).forEach(k=>{ if(!pickerSel.has(k)) delete p.prep[k]; });
-    await apiUpdateProject(p.id, {name,description:desc,item_ids:p.item_ids,prep:p.prep,...dates});
+    }).join('') || '<div class="empty">Nothing matches.</div>';
   }else{
-    const p = {id:"p"+Date.now(), name, description:desc, status:'inactif',
-               item_ids:[...pickerSel], prep:{}, last_used:null, created_at:now(),
-               loc_name, starts_on, ends_on, archived:false};
-    db.projects.push(p);
-    await apiInsertProject({...p, loc_name: loc_name||null});
+    const ks = (db.packs||[]).filter(k=>!k.archived && (!q || k.name.toLowerCase().includes(q)));
+    src = ks.map(k=>{
+      const tous = packAllItems(k);
+      const ind = tous.filter(i=>projBusy(i, p));
+      const dedans = (p.pack_ids||[]).includes(k.id);
+      const ex = packExtrasOf(k.id).length;
+      return `<div class="pjrow${dedans?' off':''}" data-kind="pack" data-key="${k.id}">
+        <span class="pjgrip">⠿</span>
+        <div class="pjnm"><div class="t">${esc(k.name)}
+            <span class="tag ${k.permanent?'perm':'conf'}">${k.permanent?'assembled':'config'}</span></div>
+          <div class="s">${tous.length} item(s) · ${fweight(tous.reduce((t,i)=>t+(i.weight_g||0),0))}${
+            ind.length?` · <span class="warntxt">${ind.length} unavailable</span>`:''}${
+            ex?` · ${ex} consumable(s)`:''}</div></div>
+        ${dedans ? '<span class="muted">in project</span>'
+                 : `<button class="pjadd" onclick="projAddPack('${k.id}')">+</button>`}
+      </div>`;
+    }).join('') || '<div class="empty">No pack yet — build one in the Packs tab.</div>';
   }
-  close_('ovProj'); renderProj();
+
+  /* ---- colonne de droite ---- */
+  let contenu = c.groups.map(g=>`
+    <div class="pjgrp">
+      <div class="hd"><span class="t">${esc(g.name)}</span>
+        <span class="muted">${g.items.length} item(s) · ${fweight(g.items.reduce((t,i)=>t+(i.weight_g||0),0))}</span>
+        <button class="pjx" onclick="projRemovePack('${g.packId}')" title="Remove this case">✕</button></div>
+      <div class="bd">
+        ${g.items.map(i=>`<div class="pjrow"><div class="pjnm"><div class="t">${itemTitle(i)}</div>
+            <div class="s mono">${i.id}</div></div><span class="muted">${fweight(i.weight_g||0)}</span></div>`).join('')}
+        ${g.écartés.length?`<div class="pjsub warntxt">Left out — unavailable</div>` +
+          g.écartés.map(i=>`<div class="pjrow off"><div class="pjnm"><div class="t">${itemTitle(i)}</div>
+            <div class="s">${esc(itemWhere(i))}</div></div></div>`).join(''):''}
+        ${g.extras.length?`<div class="pjsub">Consumables</div>` +
+          g.extras.map(e=>`<div class="pjrow extra"><div class="pjnm"><div class="t">${esc(e.label)}</div>
+            <div class="s">× ${e.qty} · not counted in the weight</div></div></div>`).join(''):''}
+      </div>
+    </div>`).join('');
+
+  if(c.loose.length){
+    contenu += `<div class="pjgrp"><div class="hd"><span class="t">Loose items</span>
+      <span class="muted">${c.loose.length} item(s) · ${fweight(c.loose.reduce((t,i)=>t+(i.weight_g||0),0))}</span></div>
+      <div class="bd">${c.loose.map(i=>`<div class="pjrow">
+        <div class="pjnm"><div class="t">${itemTitle(i)}</div><div class="s mono">${i.id}</div></div>
+        <span class="muted">${fweight(i.weight_g||0)}</span>
+        <button class="pjx" onclick="projRemoveItem('${i.id}')">✕</button></div>`).join('')}
+      </div></div>`;
+  }
+  if(!contenu) contenu = `<div class="empty">Drag a case or an item from the left,<br>or use the + button.</div>`;
+
+  return `
+  <div class="pjhead">
+    <button class="btn sec small" onclick="projBack()">← Projects</button>
+    <input id="pj-name" value="${esc(p.name)}" onchange="projSetName(this.value)"
+           class="pjname" placeholder="Project name">
+    <select id="pj-dest" onchange="projSetField('loc_name', this.value)">${projDestOptions(p)}</select>
+    <input type="date" value="${p.starts_on||''}" onchange="projSetField('starts_on', this.value||null)">
+    <input type="date" value="${p.ends_on||''}"   onchange="projSetField('ends_on', this.value||null)">
+    <button class="btn ok" onclick="projGo('prep','${p.id}')">Packing →</button>
+  </div>
+
+  <div class="pjedit">
+    <div class="pjcol src">
+      <div class="pjtabs">
+        <button class="${projView.tab==='items'?'on':''}" onclick="projTab('items')">Items</button>
+        <button class="${projView.tab==='packs'?'on':''}" onclick="projTab('packs')">Packs</button>
+      </div>
+      <input type="search" id="pj-q" placeholder="Search…" value="${esc(projView.q)}"
+             oninput="projSearch(this.value)">
+      <div class="pjsrc">${src}</div>
+    </div>
+
+    <div class="pjcol prj" id="pjdrop">
+      <div class="pjgrab" onclick="document.body.classList.toggle('pjfold')"></div>
+      <div class="pjsum">
+        <div><b>${c.groups.length}</b>case(s)</div>
+        <div><b>${c.items.length}</b>item(s)</div>
+        <div><b>${fweight(c.weight)}</b>total</div>
+      </div>
+      ${c.missing?`<div class="alert">⚠️ ${c.missing} item(s) of this project are no longer in the inventory.</div>`:''}
+      ${contenu}
+    </div>
+  </div>`;
 }
 
-/* Archivage : on range, on ne supprime pas. */
+/* La liste des destinations, avec la bonne déjà choisie. Un lieu
+   archivé n'y figure plus : on l'y remet, sinon rouvrir un projet
+   effacerait sa destination sans rien dire — c'était le piège corrigé
+   en v1.11, et il se reposait à l'identique ici. */
+function projDestOptions(p){
+  let html = '<option value="">— no destination —</option>' + locOptions();
+  const n = p.loc_name || '';
+  if(!n) return html;
+  const cible = `<option value="${esc(n)}">`;
+  if(html.includes(cible)) return html.replace(cible, `<option value="${esc(n)}" selected>`);
+  return html + `<option value="${esc(n)}" selected>${esc(n)} (archived)</option>`;
+}
+
+function projTab(t){ projView.tab = t; renderProj(); }
+function projSearch(v){
+  projView.q = v;
+  renderProj();
+  const e = document.getElementById('pj-q');
+  if(e){ e.focus(); e.setSelectionRange(e.value.length, e.value.length); }
+}
+
+/* ---- mutations ---- */
+async function projSave(p, fields){
+  try{ await apiUpdateProject(p.id, fields); }
+  catch(e){ toast('Not saved: ' + (e.message||e), 'error'); }
+}
+async function projSetName(v){
+  const p = project(projView.id); if(!p) return;
+  p.name = v.trim() || 'Untitled project';
+  await projSave(p, {name:p.name});
+}
+async function projSetField(f, v){
+  const p = project(projView.id); if(!p) return;
+  p[f] = v;
+  if(p.starts_on && p.ends_on && p.ends_on < p.starts_on){
+    toast('The end date comes before the start date.', 'warn');
+  }
+  await projSave(p, {[f]: v || null});
+}
+
+/* Ajouter un exemplaire : l'application choisit lequel, parmi ceux
+   qui sont réellement disponibles. Demander « lequel des douze XLR »
+   n'apporte rien à qui charge un camion. */
+async function projMore(key){
+  const p = project(projView.id); if(!p || !can('edit')) return;
+  const g = projGroups().find(x=>x.key === key); if(!g) return;
+  const pris = projFromPacks(p);
+  const libre = g.all.find(i=>!pris.has(i.id) && !(p.item_ids||[]).includes(i.id) && !projBusy(i, p));
+  if(!libre){ toast('No free copy left of ' + g.name + '.', 'warn'); return; }
+  p.item_ids = [...(p.item_ids||[]), libre.id];
+  renderProj();
+  await projSave(p, {item_ids:p.item_ids});
+}
+async function projLess(key){
+  const p = project(projView.id); if(!p || !can('edit')) return;
+  const g = projGroups().find(x=>x.key === key); if(!g) return;
+  const dedans = g.all.filter(i=>(p.item_ids||[]).includes(i.id));
+  if(!dedans.length) return;
+  const id = dedans[dedans.length-1].id;
+  p.item_ids = (p.item_ids||[]).filter(x=>x !== id);
+  if(p.prep) delete p.prep[id];
+  renderProj();
+  await projSave(p, {item_ids:p.item_ids, prep:p.prep||{}});
+}
+async function projRemoveItem(id){
+  const p = project(projView.id); if(!p || !can('edit')) return;
+  p.item_ids = (p.item_ids||[]).filter(x=>x !== id);
+  if(p.prep) delete p.prep[id];
+  renderProj();
+  await projSave(p, {item_ids:p.item_ids, prep:p.prep||{}});
+}
+
+/* Ajouter une caisse. Deux garde-fous visibles plutôt qu'un refus :
+   on dit ce qui est écarté et ce qui a été retiré du hors-caisse, et
+   on laisse partir. Le studio anticipe ses croisements ; l'application
+   n'a pas à décider à sa place. */
+async function projAddPack(id){
+  const p = project(projView.id); if(!p || !can('edit')) return;
+  const k = pack(id); if(!k) return;
+  if((p.pack_ids||[]).includes(id)) return;
+  p.pack_ids = [...(p.pack_ids||[]), id];
+
+  const amenés = new Set(packAllItems(k).map(i=>i.id));
+  const avant = (p.item_ids||[]).length;
+  p.item_ids = (p.item_ids||[]).filter(x=>!amenés.has(x));
+  const retirés = avant - p.item_ids.length;
+
+  renderProj();
+  await projSave(p, {pack_ids:p.pack_ids, item_ids:p.item_ids});
+
+  if(retirés) toast(`${retirés} item(s) already carried by ${k.name} were removed from the loose list.`, 'info');
+  const ind = packAllItems(k).filter(i=>projBusy(i, p));
+  if(ind.length) toast(`${k.name} added — ${ind.length} item(s) unavailable, left out of the checklist.`, 'warn');
+}
+async function projRemovePack(id){
+  const p = project(projView.id); if(!p || !can('edit')) return;
+  p.pack_ids = (p.pack_ids||[]).filter(x=>x !== id);
+  renderProj();
+  await projSave(p, {pack_ids:p.pack_ids});
+}
+
+/* ---- glisser-déposer ----
+   Pointer events, et non le glisser-déposer HTML5 : celui-ci ne
+   fonctionne pas au doigt sur iPad. Même mécanique que l'onglet
+   Packs, où elle a fait ses preuves. */
+let projDrag = null;
+function bindProjDrag(){
+  if(!can('edit')) return;
+  document.querySelectorAll('.pjsrc .pjrow').forEach(r=>{
+    r.addEventListener('pointerdown', e=>{
+      if(e.button !== undefined && e.button !== 0) return;
+      if(e.target.closest('button')) return;
+      if(r.classList.contains('off')) return;
+      projDrag = {kind:r.dataset.kind, key:r.dataset.key,
+                  x:e.clientX, y:e.clientY, actif:false, fantôme:null, sur:false};
+      try{ r.setPointerCapture(e.pointerId); }catch(err){}
+    });
+    r.addEventListener('pointermove', e=>{
+      if(!projDrag) return;
+      if(!projDrag.actif){
+        if(Math.abs(e.clientX-projDrag.x) + Math.abs(e.clientY-projDrag.y) < 8) return;
+        projDrag.actif = true;
+        const f = document.createElement('div');
+        f.className = 'pjghost';
+        f.textContent = projDrag.kind==='pack'
+          ? (pack(projDrag.key)||{}).name || ''
+          : r.querySelector('.pjnm .t').textContent.trim();
+        document.body.appendChild(f);
+        projDrag.fantôme = f;
+      }
+      projDrag.fantôme.style.left = e.clientX + 'px';
+      projDrag.fantôme.style.top  = e.clientY + 'px';
+      const dz = document.getElementById('pjdrop');
+      if(!dz) return;
+      const b = dz.getBoundingClientRect();
+      projDrag.sur = e.clientX >= b.left && e.clientX <= b.right
+                  && e.clientY >= b.top  && e.clientY <= b.bottom;
+      dz.classList.toggle('hot', projDrag.sur);
+    });
+    const fin = ()=>{
+      if(!projDrag) return;
+      const d = projDrag; projDrag = null;
+      if(d.fantôme) d.fantôme.remove();
+      const dz = document.getElementById('pjdrop');
+      if(dz) dz.classList.remove('hot');
+      if(d.actif && d.sur){ d.kind==='pack' ? projAddPack(d.key) : projMore(d.key); }
+    };
+    r.addEventListener('pointerup', fin);
+    r.addEventListener('pointercancel', fin);
+  });
+}
+
+/* ============================================================
+   3. La préparation
+   ============================================================ */
+function projPrep(){
+  const p = project(projView.id);
+  const c = projContent(p);
+  const pr = projProgress(p);
+  const pct = pr.total ? Math.round(pr.done/pr.total*100) : 0;
+  const figé = p.status === 'show';
+
+  const bloc = (titre, lignes, extras, écartés, poids) => {
+    const clés = lignes.map(l=>l.key);
+    const ok = clés.filter(k=>p.prep && p.prep[k]).length;
+    return `<div class="pjgrp">
+      <div class="hd"><span class="t">${esc(titre)}</span>
+        ${figé?'':`<div class="pbar${ok===clés.length&&clés.length?' done':''}" style="max-width:110px"><div style="width:${clés.length?ok/clés.length*100:0}%"></div></div>`}
+        <span class="muted">${figé?clés.length+' item(s)':ok+'/'+clés.length} · ${fweight(poids)}</span>
+        ${(!figé && can('projectPrep') && clés.length)?`<button class="btn sec small" onclick="projTickAll(${JSON.stringify(clés).replace(/"/g,'&quot;')})">Tick all</button>`:''}
+      </div>
+      <div class="bd">
+        ${lignes.filter(l=>!l.extra).map(l=>projLine(l, p, figé)).join('')}
+        ${extras.length?'<div class="pjsub">Consumables</div>' + lignes.filter(l=>l.extra).map(l=>projLine(l, p, figé)).join(''):''}
+        ${écartés.length?'<div class="pjsub warntxt">Left out — unavailable</div>' +
+          écartés.map(i=>`<div class="pjrow off"><div class="pjnm"><div class="t">${itemTitle(i)}</div>
+            <div class="s">${esc(itemWhere(i))}</div></div></div>`).join(''):''}
+      </div></div>`;
+  };
+
+  let blocs = c.groups.map(g=>bloc(
+    g.name,
+    g.items.map(i=>({key:i.id, html:itemTitle(i), sub:i.id + ' · ' + fweight(i.weight_g||0)}))
+      .concat(g.extras.map(e=>({key:e.key, html:esc(e.label), sub:'× ' + e.qty, extra:true}))),
+    g.extras, g.écartés,
+    g.items.reduce((t,i)=>t+(i.weight_g||0), 0)
+  )).join('');
+
+  if(c.loose.length){
+    blocs += bloc('Loose items',
+      c.loose.map(i=>({key:i.id, html:itemTitle(i), sub:i.id + ' · ' + fweight(i.weight_g||0)})),
+      [], [], c.loose.reduce((t,i)=>t+(i.weight_g||0), 0));
+  }
+
+  let actions = '';
+  if(can('projectPrep')){
+    if(p.status === 'inactif') actions = `<button class="btn" onclick="setProjStatus('${p.id}','preparation')">Start packing</button>`;
+    if(p.status === 'preparation') actions =
+      `<button class="btn" onclick="goShow('${p.id}')">🎪 Go on show</button>
+       <button class="btn sec small" onclick="resetPrep('${p.id}')">Reset checklist</button>
+       <button class="btn sec small" onclick="setProjStatus('${p.id}','inactif')">Pause</button>`;
+    if(p.status === 'show') actions = `<button class="btn ok" onclick="closeShow('${p.id}')">📥 Close show / gear back</button>`;
+  }
+
+  return `
+  <div class="pjhead">
+    <button class="btn sec small" onclick="projBack()">← Projects</button>
+    <h2 class="pjtitle">${esc(p.name)} <span class="tag ${PTAG[p.status]}">${PSTAT[p.status]}</span>
+      ${p.archived?'<span class="tag pinactif">archived</span>':''}</h2>
+    ${(can('edit') && !figé)?`<button class="btn sec small" onclick="projGo('edit','${p.id}')">Edit gear</button>`:''}
+  </div>
+
+  <div class="panel">
+    ${(p.loc_name || projDates(p)) ? `<div class="destbox">
+      ${p.loc_name?`<div><b>${esc(p.loc_name)}</b>${hasAddress(p.loc_name)?` <span class="muted">— ${esc(locAddress(p.loc_name))}</span>`:' <span class="muted">— no address on file</span>'}
+        ${locPhone(p.loc_name)?`<span class="muted">· ☎ ${esc(locPhone(p.loc_name))}</span>`:''}</div>`:''}
+      ${projDates(p)?`<div class="muted">${esc(projDates(p))}</div>`:''}
+    </div>` : ''}
+    <div class="pjsum">
+      <div><b>${c.groups.length}</b>case(s)</div>
+      <div><b>${c.items.length}</b>item(s)</div>
+      <div><b>${fweight(c.weight)}</b>total</div>
+      ${figé?'':`<div><b>${pr.done}/${pr.total}</b>ticked</div>`}
+    </div>
+    ${figé?`<div class="muted">Gear list frozen when the show started — changing a pack now will not rewrite what left.</div>`
+          :`<div class="pline"><div class="pbar${pr.done===pr.total&&pr.total?' done':''}"><div style="width:${pct}%"></div></div></div>`}
+    ${c.missing?`<div class="alert">⚠️ ${c.missing} item(s) of this project are no longer in the inventory.</div>`:''}
+  </div>
+
+  ${blocs || '<div class="panel"><div class="empty">This project is empty — add cases and items first.</div></div>'}
+
+  <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;margin-top:12px">${actions}</div>
+  <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;gap:6px">
+    <button class="btn sec small" onclick="openDeliveryMail('${p.id}')"
+            title="Opens a pre-filled draft in your mail app">✉️ Delivery details</button>
+    ${can('edit')?`<button class="btn sec small" onclick="duplicateProj('${p.id}')">Duplicate</button>`:''}
+    ${can('edit')?`<button class="btn sec small" onclick="archiveProj('${p.id}')">${p.archived?'Restore':'Archive'}</button>`:''}
+    ${can('delete')?`<button class="btn danger small" onclick="deleteProj('${p.id}')">Delete</button>`:''}
+  </div>`;
+}
+
+function projLine(l, p, figé){
+  const on = !!(p.prep && p.prep[l.key]);
+  if(figé || !can('projectPrep'))
+    return `<div class="pjrow${l.extra?' extra':''}"><div class="pjnm">
+      <div class="t">${l.html}</div><div class="s">${esc(l.sub)}</div></div></div>`;
+  return `<label class="pjrow${l.extra?' extra':''}" style="cursor:pointer">
+    <input type="checkbox" ${on?'checked':''} onchange="toggleProjItem('${p.id}','${l.key}',this.checked)">
+    <div class="pjnm"><div class="t"${on?' style="opacity:.5;text-decoration:line-through"':''}>${l.html}</div>
+      <div class="s">${esc(l.sub)}</div></div></label>`;
+}
+
+async function projTickAll(clés){
+  const p = project(projView.id); if(!p) return;
+  p.prep = p.prep || {};
+  clés.forEach(k=>p.prep[k] = true);
+  if(p.status === 'inactif') p.status = 'preparation';
+  renderProj();
+  await projSave(p, {prep:p.prep, status:p.status});
+}
+async function toggleProjItem(pid, key, on){
+  const p = project(pid); if(!p) return;
+  p.prep = p.prep || {};
+  if(on) p.prep[key] = true; else delete p.prep[key];
+  if(p.status === 'inactif' && on) p.status = 'preparation';
+  renderProj();
+  await projSave(p, {prep:p.prep, status:p.status});
+}
+async function setProjStatus(pid, st){
+  const p = project(pid); if(!p) return;
+  p.status = st;
+  renderProj();
+  await projSave(p, {status:st});
+}
+async function resetPrep(pid){
+  const p = project(pid); if(!p) return;
+  p.prep = {};
+  renderProj();
+  await projSave(p, {prep:{}});
+}
+
+/* ---- départ et retour ----
+
+   Au départ, le contenu est FIGÉ. Tant que le projet se prépare, il
+   suit les packs — vider une Pelicase change ce qui partira, et c'est
+   le comportement voulu. Une fois parti, non : vider cette caisse le
+   lendemain réécrirait ce qui est sorti la veille. */
+async function goShow(pid){
+  const p = project(pid); if(!p) return;
+  const c = projContent(p);
+  const pr = projProgress(p);
+  if(!c.items.length){ toast('Nothing to take out.', 'warn'); return; }
+  if(pr.done < pr.total &&
+     !confirm(`${pr.total-pr.done} line(s) are not ticked as ready. Go on show anyway?`)) return;
+
+  const date = now();
+  const lignes = [];
+  for(const i of c.items){
+    if(i.status === 'sorti') continue;
+    i.status = 'sorti';
+    i.out = {userId:null, projectId:p.id, date, reason:`Show — ${p.name}`};
+    i.loc = `Show — ${p.name}`;
+    await apiUpdateItem(i.id, {status:i.status, out:i.out, loc:i.loc});
+    lignes.push({itemId:i.id, type:'out', detail:`Show — ${p.name}`});
+  }
+  if(lignes.length) await histMany(lignes);
+
+  p.status = 'show'; p.last_used = date; p.snapshot = projSnapshot(p);
+  await projSave(p, {status:'show', last_used:date, snapshot:p.snapshot});
+  renderProj();
+  toast(`On show — ${c.items.length} item(s), ${fweight(c.weight)}.`, 'ok');
+}
+
+async function closeShow(pid){
+  const p = project(pid); if(!p) return;
+  if(!confirm("Close the show? All project gear will be checked in and returned to its home location.")) return;
+  const dehors = db.items.filter(i=>i.status==='sorti' && i.out && i.out.projectId===p.id);
+  const lignes = [];
+  for(const i of dehors){
+    i.status = 'dispo'; i.loc = i.home; i.out = null;
+    await apiUpdateItem(i.id, {status:'dispo', loc:i.loc, out:null});
+    lignes.push({itemId:i.id, type:'in', detail:`Back from show — ${p.name}`, cond:i.cond});
+  }
+  if(lignes.length) await histMany(lignes);
+  /* La photographie reste : elle documente ce qui est parti. Seule la
+     checklist se remet à zéro, pour la fois suivante. */
+  p.status = 'inactif'; p.prep = {};
+  await projSave(p, {status:'inactif', prep:{}});
+  renderProj();
+  toast(`${dehors.length} item(s) checked in.`, 'ok');
+}
+
+/* ---- archivage, suppression ---- */
 async function archiveProj(id){
   const p = project(id); if(!p) return;
-  if(!p.archived && p.status === 'show'){
-    alert("Close the show before archiving this project.");
-    return;
-  }
+  if(!p.archived && p.status === 'show'){ toast("Close the show before archiving this project.", 'warn'); return; }
   p.archived = !p.archived;
-  await apiUpdateProject(id, {archived: p.archived});
-  renderProjDetail(id); renderProj();
+  await projSave(p, {archived:p.archived});
+  renderProj();
+}
+async function deleteProj(id){
+  const p = project(id); if(!p) return;
+  if(p.status === 'show'){ toast("Close the show before deleting this project.", 'warn'); return; }
+  if(!confirm("Delete this project? (gear and history are untouched)")) return;
+  db.projects = db.projects.filter(x=>x.id !== id);
+  await apiDeleteProject(id);
+  projGo('list');
 }
 
 /* ---- brouillon de mail de livraison ----
    Volontairement un brouillon et non un envoi : le message part au nom
-   du studio, autant le relire. Un envoi automatique demanderait en plus
-   un serveur, donc le mot de passe SMTP quelque part hors de l'app. */
+   du studio, autant le relire. La liste suit les caisses — c'est elle
+   qu'on lit sur un quai, pas une liste par sous-catégorie. */
 function deliveryMailBody(p){
-  const its = projItems(p);
+  const c = projContent(p);
   const dest = p.loc_name || '';
   const dates = projDates(p);
 
   const L = [];
   L.push(`Delivery details — ${p.name}`, '');
-  if(dest) L.push(`Destination: ${dest}`);
-  // L'adresse sort sur plusieurs lignes, comme sur une étiquette
-  // de transport : c'est lisible et ça se recopie sans retouche.
-  if(dest) locAddressLines(dest).forEach(line => L.push('  ' + line));
-  if(dest && locPhone(dest)) L.push(`  Phone: ${locPhone(dest)}`);
+  if(dest){
+    L.push(`Destination: ${dest}`);
+    locAddressLines(dest).forEach(line => L.push('  ' + line));
+    if(locPhone(dest)) L.push(`  Phone: ${locPhone(dest)}`);
+  }
   if(dates) L.push(`Dates: ${dates}`);
-  L.push(`Items: ${its.length}`, '');
+  L.push(`Cases: ${c.groups.length} — items: ${c.items.length} — total weight: ${fweight(c.weight)}`, '');
 
-  // Regroupement par sous-catégorie, comme la checklist de préparation
-  const packs = new Map();
-  its.forEach(i=>{
-    const k = catPath(i);
-    if(!packs.has(k)) packs.set(k, []);
-    packs.get(k).push(i);
-  });
-  [...packs.entries()].sort((a,b)=>a[0].localeCompare(b[0],'fr')).forEach(([cat, arr])=>{
-    L.push(`${cat} (${arr.length})`);
-    arr.sort((a,b)=>itemTitleText(a).localeCompare(itemTitleText(b),'fr'))
-       .forEach(i=>L.push(`  - ${itemTitleText(i)} [${i.id}]`));
+  c.groups.forEach(g=>{
+    const poids = g.items.reduce((t,i)=>t+(i.weight_g||0), 0);
+    L.push(`${g.name} (${g.items.length} items, ${fweight(poids)})`);
+    g.items.forEach(i=>L.push(`  - ${itemTitleText(i)} [${i.id}]`));
+    g.extras.forEach(e=>L.push(`  · ${e.label} × ${e.qty}`));
     L.push('');
   });
-
-  const missing = (p.item_ids||[]).length - its.length;
-  if(missing > 0) L.push(`(${missing} item(s) of this project are no longer in the inventory)`, '');
+  if(c.loose.length){
+    const poids = c.loose.reduce((t,i)=>t+(i.weight_g||0), 0);
+    L.push(`Loose items (${c.loose.length}, ${fweight(poids)})`);
+    c.loose.forEach(i=>L.push(`  - ${itemTitleText(i)} [${i.id}]`));
+    L.push('');
+  }
+  if(c.missing > 0) L.push(`(${c.missing} item(s) of this project are no longer in the inventory)`, '');
+  L.push('Consumables are packing reminders and are not included in the weight.', '');
   L.push(`— ${LABELS.appTitle}`);
   return L.join('\n');
 }
 
 function openDeliveryMail(id){
   const p = project(id); if(!p) return;
-  if(!projItems(p).length){ alert("This project has no gear to list."); return; }
+  if(!projContent(p).items.length){ toast("This project has no gear to list.", 'warn'); return; }
   const subject = `${p.name}${p.loc_name?` — ${p.loc_name}`:''}${projDates(p)?` — ${projDates(p)}`:''}`;
   const href = 'mailto:?subject=' + encodeURIComponent(subject)
              + '&body=' + encodeURIComponent(deliveryMailBody(p));
-  // Certains clients mail plafonnent la longueur d'un lien mailto.
   if(href.length > 16000){
-    alert("This gear list is too long for an email draft. Export the project list instead.");
+    toast("This gear list is too long for an email draft. Export the project instead.", 'warn');
     return;
   }
   window.location.href = href;
 }
-async function deleteProj(id){
-  const p = project(id);
-  if(p.status==='show'){ alert("Close the show before deleting this project."); return; }
-  if(!confirm("Delete this project? (gear and history are untouched)")) return;
-  db.projects = db.projects.filter(x=>x.id!==id);
-  await apiDeleteProject(id);
-  close_('ovProjDetail'); renderProj();
-}
 
-/* ---- fiche projet / checklist ---- */
-function openProject(id){ renderProjDetail(id); open_('ovProjDetail'); }
-function renderProjDetail(id){
-  const p = project(id); if(!p) return;
-  const its = projItems(p);
-  const pr = projProgress(p);
-  const pct = pr.total?Math.round(pr.done/pr.total*100):0;
-  // Checklist groupée par sous-catégorie : plus lisible qu'une longue liste plate
-  const paquets = new Map();
-  its.forEach(i=>{
-    const k = catPath(i);
-    if(!paquets.has(k)) paquets.set(k, []);
-    paquets.get(k).push(i);
-  });
-  let list = [...paquets.entries()].sort((a,b)=>a[0].localeCompare(b[0],'fr')).map(([cat, arr])=>{
-    const prets = arr.filter(i=>p.prep && p.prep[i.id]).length;
-    const lignes = arr.map(i=>{
-      const busyElsewhere = i.status==='sorti' && (!i.out.projectId || i.out.projectId!==p.id);
-      const onTour = i.status==='sorti' && i.out.projectId===p.id;
-      const avail = onTour ? '<span class="tag pshow">on show</span>'
-        : busyElsewhere ? `<span class="tag sorti">out — ${esc(outBy(i))}</span>`
-        : i.cond!=='bon' ? `<span class="tag ${i.cond}">${CONDS[i.cond]}</span>`
-        : '<span class="tag dispo">available</span>';
-      const coche = p.prep && p.prep[i.id];
-      if(p.status==='show')
-        return `<div class="prow"><span class="ph"></span><span class="nm">${itemTitle(i)}</span>
-                <span class="mono">${i.id}</span>${avail}</div>`;
-      return `<label class="prow${coche?' on':''}">
-        <input type="checkbox" ${coche?'checked':''} onchange="toggleProjItem('${p.id}','${i.id}',this.checked)">
-        ${i.photo?`<img loading="lazy" src="${i.photo}">`:'<span class="ph"></span>'}
-        <span class="nm">${itemTitle(i)}</span><span class="mono">${i.id}</span>${avail}</label>`;
-    }).join("");
-    return `<div class="cgroup">
-      <div class="chead">${esc(cat)}
-        <span class="muted">${p.status==='show' ? arr.length + ' item(s)' : prets + '/' + arr.length + ' ready'}</span></div>
-      ${lignes}</div>`;
-  }).join("");
-  const missing = (p.item_ids||[]).length - its.length;
-  if(missing>0) list += `<div class="muted" style="padding:8px">⚠️ ${missing} item(s) from this template were deleted from the inventory.</div>`;
-  let actions = "";
-  if(p.status==='inactif') actions = `<button class="btn" onclick="setProjStatus('${p.id}','preparation')">Start packing</button>`;
-  if(p.status==='preparation') actions = `<button class="btn" onclick="goShow('${p.id}')">🎪 Go on show</button> <button class="btn sec small" onclick="resetPrep('${p.id}')">Reset checklist</button> <button class="btn sec small" onclick="setProjStatus('${p.id}','inactif')">Pause</button>`;
-  if(p.status==='show') actions = `<button class="btn ok" onclick="closeShow('${p.id}')">📥 Close show / gear back</button>`;
-  document.getElementById('projDetailBody').innerHTML = `
-    <h3>${esc(p.name)} <span class="tag ${PTAG[p.status]}">${PSTAT[p.status]}</span>
-      ${p.archived?'<span class="tag pinactif">archived</span>':''}</h3>
-    ${p.description?`<p class="muted" style="margin-bottom:8px">${esc(p.description)}</p>`:""}
-    ${(p.loc_name || projDates(p)) ? `<div class="destbox">
-      ${p.loc_name?`<div><b>${esc(p.loc_name)}</b>${hasAddress(p.loc_name)?` <span class="muted">— ${esc(locAddress(p.loc_name))}</span>`:' <span class="muted">— no address on file</span>'}
-        ${locPhone(p.loc_name)?`<span class="muted">· ☎ ${esc(locPhone(p.loc_name))}</span>`:''}</div>`:''}
-      ${projDates(p)?`<div class="muted">${esc(projDates(p))}</div>`:''}
-    </div>` : ''}
-    ${p.status!=='show'?`<div class="pline"><div class="pbar"><div style="width:${pct}%"></div></div><span class="muted"><b>${pr.done}/${pr.total}</b> ready</span></div>`:""}
-    <div class="clist" style="margin:10px 0">${list||'<div class="muted">No item.</div>'}</div>
-    <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap">${actions}</div>
-    <div class="modal-actions" style="justify-content:space-between;flex-wrap:wrap;gap:6px">
-      <span>
-        ${(can('edit') && p.status!=='show')?`<button class="btn sec small" onclick="openProjForm('${p.id}')">Edit</button>`:""}
-        <button class="btn sec small" onclick="openDeliveryMail('${p.id}')"
-                title="Opens a pre-filled draft in your mail app">✉️ Delivery details</button>
-        ${can('edit')?`<button class="btn sec small" onclick="archiveProj('${p.id}')">${p.archived?'Restore':'Archive'}</button>`:""}
-        ${can('edit')?`<button class="btn danger small" onclick="deleteProj('${p.id}')">Delete</button>`:""}
-      </span>
-      <button class="btn sec" onclick="close_('ovProjDetail')">Close</button>
-    </div>`;
-}
-
-/* ---- transitions de statut ---- */
-async function toggleProjItem(pid,itemId,on){
-  const p = project(pid);
-  p.prep = p.prep||{};
-  if(on) p.prep[itemId] = true; else delete p.prep[itemId];
-  if(p.status==='inactif' && on) p.status = 'preparation';
-  renderProjDetail(pid);
-  await apiUpdateProject(pid, {prep:p.prep,status:p.status});
-}
-async function setProjStatus(pid,st){
-  const p = project(pid);
-  p.status = st;
-  renderProjDetail(pid);
-  await apiUpdateProject(pid, {status:st});
-}
-async function resetPrep(pid){
-  const p = project(pid);
-  p.prep = {};
-  renderProjDetail(pid);
-  await apiUpdateProject(pid, {prep:{}});
-}
-async function goShow(pid){
-  const p = project(pid);
-  const its = projItems(p);
-  const pr = projProgress(p);
-  const busy = its.filter(i=>i.status==='sorti' && (!i.out.projectId || i.out.projectId!==p.id));
-  if(pr.done<pr.total && !confirm(`${pr.total-pr.done} item(s) are not ticked as ready. Go on show anyway?`)) return;
-  if(busy.length && !confirm(`${busy.length} item(s) are already checked out elsewhere (${busy.map(i=>i.name).join(", ")}). They will be skipped. Continue?`)) return;
-  const date = now();
-  for(const i of its){
-    if(i.status==='sorti') continue;
-    i.status = 'sorti';
-    i.out = {userId:null, projectId:p.id, date, reason:`Show — ${p.name}`};
-    i.loc = `Show — ${p.name}`;
-    await apiUpdateItem(i.id, {status:i.status,out:i.out,loc:i.loc});
-    await hist(i.id,'out',`Show — ${p.name}`);
-  }
-  p.status = 'show'; p.last_used = date;
-  await apiUpdateProject(pid, {status:'show',last_used:date});
-  renderProjDetail(pid);
-}
-async function closeShow(pid){
-  const p = project(pid);
-  if(!confirm("Close the show? All project gear will be checked in and returned to its home location.")) return;
-  const outItems = db.items.filter(i=>i.status==='sorti' && i.out && i.out.projectId===p.id);
-  for(const i of outItems){
-    i.status = 'dispo'; i.loc = i.home; i.out = null;
-    await apiUpdateItem(i.id, {status:'dispo',loc:i.loc,out:null});
-    await hist(i.id,'in',`Back from show — ${p.name}`,null,i.cond);
-  }
-  p.status = 'inactif'; p.prep = {};
-  await apiUpdateProject(pid, {status:'inactif',prep:{}});
-  renderProjDetail(pid);
-}
+/* Conservé pour les appels venus d'ailleurs (fiche item, tableau de
+   bord) : ouvrir un projet, c'est désormais ouvrir sa préparation. */
+function openProject(id){ show('proj'); projGo('prep', id); }
