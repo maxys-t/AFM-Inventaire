@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.21.2] — 2026-10-14
+
+### Ajouté
+
+- **Ajouter des exemplaires depuis la fiche d'un item.** La quantité
+  n'existait qu'à la création — or on découvre souvent après coup
+  qu'on possède deux housses K12 et pas une, et il fallait alors
+  ressaisir la fiche entière.
+
+  La convention de nommage est respectée : si l'item d'origine n'a pas
+  de numéro, il prend le `#1` et les copies suivent. Sans ça on
+  obtiendrait « K12 Bag » et « K12 Bag #2 », ce qui n'est une famille
+  pour personne.
+
+  **Le numéro de série n'est jamais recopié** — deux objets n'en
+  partagent pas. Le reste suit : photo, poids, prix, emplacement de
+  rangement, conditionnement.
+
+
 ## [1.21.1] — 2026-10-14
 
 ### Corrigé

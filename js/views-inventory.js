@@ -899,6 +899,8 @@ function openItemForm(id){
   pendingPhoto = null;
   showPhotoPreview(i ? i.photo : null);
   document.getElementById('qtyField').style.display = id?'none':'';
+  document.getElementById('copiesField').style.display = id?'':'none';
+  document.getElementById('i-copies').value = 0;
   document.getElementById('i-qty').value = 1;
   open_('ovItem');
 }
@@ -951,6 +953,7 @@ function saveItem(){
       if(movedHome && i.status==='dispo') await hist(i.id,'move',`new home location: ${locLabel(vals.home)}`);
       if(condChanged) await hist(i.id,'repair',`condition set to ${condLabel(vals.cond)}`,null,vals.cond);
       else await hist(i.id,'edit');
+      await addCopies(i, vals);
     }else{
       const qty = Math.max(1, Math.min(200, parseInt(document.getElementById('i-qty').value)||1));
       const base = groupKeyOf(name) || name;   // « Câble #4 » saisi → famille « Câble »
@@ -1271,4 +1274,52 @@ function toggleCaseNote(){
   const c = document.getElementById('i-case');
   const n = document.getElementById('i-casenote');
   if(c && n) n.style.display = c.checked ? '' : 'none';
+}
+
+
+/* ---- Exemplaires supplémentaires (v1.21.2) ----
+
+   On n'avait la quantité qu'à la création. Or on découvre souvent
+   après coup qu'on possède deux housses K12 et pas une — et il
+   fallait alors ressaisir la fiche entière.
+
+   La convention de nommage existante est respectée : une famille
+   d'exemplaires s'écrit « K12 Bag #1 », « K12 Bag #2 ». Si l'item
+   d'origine n'a pas de numéro, il prend le #1 — sinon on obtiendrait
+   « K12 Bag » et « K12 Bag #2 », ce qui n'est une famille pour
+   personne. */
+async function addCopies(src, vals){
+  const n = Math.max(0, Math.min(50, parseInt(document.getElementById('i-copies').value) || 0));
+  if(!n) return;
+
+  const base = groupKeyOf(vals.name) || vals.name;
+  const famille = db.items.filter(x => x.name === base || groupKeyOf(x.name) === base);
+  let max = famille.reduce((m, x) => {
+    const g = (x.name.match(/#(\d+)$/) || [])[1];
+    return Math.max(m, g ? +g : 0);
+  }, 0);
+
+  if(!groupKeyOf(src.name)){
+    src.name = `${base} #1`;
+    await apiUpdateItem(src.id, {name: src.name});
+    max = Math.max(max, 1);
+  }
+
+  const rows = [];
+  for(let k = 1; k <= n; k++){
+    const id = uid(vals.cat, vals.subcat);
+    rows.push({
+      id, ...vals,
+      name: `${base} #${max + k}`,
+      /* Un numéro de série ne se partage jamais entre deux objets. */
+      serial: '',
+      photo: src.photo || null,
+      loc: vals.home, status: 'dispo', out: null
+    });
+  }
+  db.items.push(...rows);
+  await apiInsertItems(rows);
+  await histMany(rows.map(r => ({itemId: r.id, type: 'create',
+                                 detail: `Added as a copy of ${src.id}`})));
+  toast(`${n} copy(ies) added — ${rows[0].id}${n > 1 ? ` to ${rows[n-1].id}` : ''}.`, 'ok');
 }
