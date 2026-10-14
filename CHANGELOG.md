@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.21.1] — 2026-10-14
+
+### Corrigé
+
+- **Les cases à cocher s'affichaient en gros carré détaché de leur
+  texte.** Une règle générale impose `width:100%` à tous les champs
+  d'un formulaire — elle s'appliquait aussi aux cases. Elles sont
+  désormais à leur taille, alignées contre leur libellé.
+
+### Modifié
+
+- **Le poids estimé devient le poids.** Le drapeau distinguait une
+  mesure d'une approximation, ce qui semblait prudent — mais personne
+  ne s'en servait pour décider quoi que ce soit, et il encombrait
+  chaque total d'une mention que personne ne lisait. Aucune donnée
+  perdue : les 46 valeurs concernées restent, elles cessent seulement
+  d'être annotées.
+- **Le conditionnement peut être précisé.** Cocher la case fait
+  apparaître un champ libre — « housse Gator », « flight case
+  d'origine ». Savoir qu'un synthé a une housse n'aide pas à la
+  retrouver ; savoir laquelle, si.
+
+### Ajouté
+
+- **Le pays d'un atelier de réparation** est saisissable. La colonne
+  existait en base depuis la migration 016, mais le formulaire ne
+  l'exposait pas — un oubli, pas une décision. Il s'affiche dans la
+  liste uniquement s'il est renseigné : un atelier à l'étranger change
+  le délai d'expédition, un atelier français n'a rien à signaler.
+
+### Base de données
+
+`sql/023-conditionnement-detail.sql` : colonne `case_note`, et
+suppression de `weight_est`.
+
+
 ## [1.21.0] — 2026-10-14
 
 ### Ajouté

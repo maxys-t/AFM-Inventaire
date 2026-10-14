@@ -230,7 +230,8 @@ function renderProviders(){
     </tr></thead><tbody>
     ${rows.map(p=>`<tr class="${p.archived?'muted':''}">
       <td data-l="Name"><b>${esc(p.name)}</b>${p.archived?' <span class="tag">archived</span>':''}</td>
-      <td data-l="Specialty">${esc(p.specialty||'—')}</td>
+      <td data-l="Specialty">${esc(p.specialty||'—')}${
+        p.addr_country ? ` <span class="muted">· ${esc(p.addr_country)}</span>` : ''}</td>
       <td data-l="Contact">${[p.contact,p.phone,p.email].filter(Boolean).map(esc).join('<br>')||'—'}</td>
       <td data-l="There now">${busy(p.id) || '—'}</td>
       <td>
@@ -257,6 +258,8 @@ function editProvider(id){
       <div class="field full"><label>Street</label><input id="pv-street" value="${esc(v('addr_line1'))}"></div>
       <div class="field"><label>Postcode</label><input id="pv-zip" value="${esc(v('addr_zip'))}"></div>
       <div class="field"><label>City</label><input id="pv-city" value="${esc(v('addr_city'))}"></div>
+      <div class="field"><label>Country</label>
+        <input id="pv-country" value="${esc(v('addr_country'))}" placeholder="Leave empty for France"></div>
       <div class="field full"><label>Notes</label><input id="pv-notes" value="${esc(v('notes'))}"></div>
     </div>`;
   document.getElementById('provFormTitle').textContent = p ? 'Edit repair shop' : 'Add a repair shop';
@@ -270,7 +273,8 @@ async function saveProvider(){
   const row = {name, specialty:g('spec')||null, contact:g('contact')||null,
                phone:g('phone')||null, email:g('email')||null,
                addr_line1:g('street')||null, addr_zip:g('zip')||null,
-               addr_city:g('city')||null, notes:g('notes')||null};
+               addr_city:g('city')||null, addr_country:g('country')||null,
+               notes:g('notes')||null};
   try{
     if(editingProvider) await apiUpdateProvider(editingProvider, row);
     else                await apiInsertProvider(row);

@@ -582,7 +582,7 @@ function invCellText(c, i){
     case 'prov':   return i.provider || '';
     case 'price':  return (i.price==null || i.price==='') ? '' : fprice(Number(i.price));
     case 'weight': return fweight(i.weight_g);
-    case 'case':   return i.has_case ? 'Yes' : '';
+    case 'case':   return i.has_case ? (i.case_note || 'Yes') : '';
     case 'pdate':  return i.purchase_date ? fdateOnly(i.purchase_date) : '';
     case 'so':     return i.sales_order || '';
     case 'serial': return i.serial || '';
@@ -602,10 +602,10 @@ function invCell(c, i){
     /* Un poids estimé porte une marque discrète : il compte dans les
        totaux, mais on doit pouvoir le distinguer d'une pesée. */
     case 'weight': return i.weight_g
-      ? `<span class="${i.weight_est?'west':''}">${esc(fweight(i.weight_g))}${i.weight_est?' ~':''}</span>`
-      : '<span class="muted">—</span>';
+      ? esc(fweight(i.weight_g)) : '<span class="muted">—</span>';
     case 'case':   return i.has_case
-      ? '<span class="pkok">✓</span>' : '<span class="muted">—</span>';
+      ? `<span class="pkok">✓</span>${i.case_note?` <span class="muted">${esc(i.case_note)}</span>`:''}`
+      : '<span class="muted">—</span>';
     default:       return esc(invCellText(c,i));
   }
 }
@@ -888,8 +888,9 @@ function openItemForm(id){
   document.getElementById('i-price').value = (i && i.price!=null)?String(i.price).replace('.',','):"";
   document.getElementById('i-order').value = i?(i.sales_order||""):"";
   document.getElementById('i-weight').value = (i && i.weight_g) ? fweight(i.weight_g) : "";
-  document.getElementById('i-westim').checked = !!(i && i.weight_est);
   document.getElementById('i-case').checked = !!(i && i.has_case);
+  document.getElementById('i-casenote').value = (i && i.case_note) || "";
+  toggleCaseNote();
   document.getElementById('i-date').value = i?(i.purchase_date||""):"";
   document.getElementById('i-cond').value = i?i.cond:"bon";
   if(i) document.getElementById('i-home').value = i.home;
@@ -928,12 +929,11 @@ function saveItem(){
     sales_order:document.getElementById('i-order').value.trim(),
     purchase_date:document.getElementById('i-date').value || null,
     weight_g: parseWeight(document.getElementById('i-weight').value),
-    weight_est: document.getElementById('i-westim').checked,
-    has_case: document.getElementById('i-case').checked
+    has_case: document.getElementById('i-case').checked,
+    case_note: document.getElementById('i-casenote').value.trim() || null
   };
-  /* Un champ vidé efface le poids, mais ne doit pas laisser traîner
-     la case « estimé » cochée sur un item qui n'a plus de poids. */
-  if(vals.weight_g === null) vals.weight_est = false;
+  /* Pas de précision sur un conditionnement qui n'existe pas. */
+  if(!vals.has_case) vals.case_note = null;
   const finish = async (photo)=>{
     // Une photo fraîchement recadrée part dans le stockage ; on ne garde que son lien.
     const uploadIfNeeded = async (dataUrl, id)=>{
@@ -1208,7 +1208,7 @@ function openDetail(id){
     ${i.photo?`<img class="itemphoto" loading="lazy" src="${i.photo}">`:""}
     <p style="margin-bottom:10px">
       <span class="tag cat">${esc(catPath(i))}</span> ${statusTag(i)} <span class="tag ${i.cond}">${condLabel(i.cond)}</span>${repairTag(i)}${
-      i.weight_g ? ` <span class="tag wtag">${esc(fweight(i.weight_g))}${i.weight_est?' ~':''}</span>` : ''}
+      i.weight_g ? ` <span class="tag wtag">${esc(fweight(i.weight_g))}</span>` : ''}
     </p>
     ${outInfo}
     <p class="muted" style="margin-bottom:4px">
@@ -1263,4 +1263,12 @@ function printLabel(){
   p.innerHTML = box.outerHTML; p.style.display = 'block';
   window.print();
   p.style.display = 'none';
+}
+
+
+/* La précision n'a de sens que si la case est cochée. */
+function toggleCaseNote(){
+  const c = document.getElementById('i-case');
+  const n = document.getElementById('i-casenote');
+  if(c && n) n.style.display = c.checked ? '' : 'none';
 }

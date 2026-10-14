@@ -409,24 +409,16 @@ function fweight(g){
     {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' kg';
 }
 
-/* Le total d'un lot, et ce qu'il vaut. Un total muet sur ses trous
-   laisse croire à une précision qu'il n'a pas. */
+/* Le total d'un lot, et ce qui lui manque. Un total muet sur ses
+   trous laisse croire à une précision qu'il n'a pas. */
 function weighLot(items){
-  let g = 0, pesés = 0, estimés = 0, sans = 0, gEst = 0;
-  items.forEach(i=>{
-    if(i.weight_g){
-      g += i.weight_g; pesés++;
-      if(i.weight_est){ estimés++; gEst += i.weight_g; }
-    } else sans++;
-  });
-  return {g, pesés, estimés, sans, gEst, total: items.length};
+  let g = 0, pesés = 0, sans = 0;
+  items.forEach(i=>{ if(i.weight_g){ g += i.weight_g; pesés++; } else sans++; });
+  return {g, pesés, sans, total: items.length};
 }
 function lotLabel(w){
   if(!w.pesés) return `no weight on ${w.total} item${w.total>1?'s':''}`;
-  let t = fweight(w.g);
-  if(w.sans)    t += ` · ${w.sans} without a weight`;
-  if(w.estimés) t += ` · ${fweight(w.gEst)} estimated`;
-  return t;
+  return fweight(w.g) + (w.sans ? ` · ${w.sans} without a weight` : '');
 }
 
 /* ---- Lecture d'une photo (v1.18.1) ----

@@ -104,7 +104,6 @@ function wiParse(text){
   const iB = find(['marque','manufacturer','brand']);
   const iM = find(['modele','model','item','designation']);
   const iW = find(['poids','weight']);
-  const iE = find(['confiance','estime','estimated','confidence']);
   if(iM < 0 || iW < 0)
     throw new Error('Could not find a model column and a weight column in the header.');
 
@@ -116,8 +115,7 @@ function wiParse(text){
        devient 544. */
     const g = parseWeight(String(c[iW]||'').replace(/(\d)\s*[;:]\s*(\d)/, '$1,$2'));
     if(g === null) continue;
-    const est = iE >= 0 && /estim|approx|env/i.test(c[iE] || '');
-    rows.push({brand: iB>=0 ? c[iB] : '', model: c[iM], g, est});
+    rows.push({brand: iB>=0 ? c[iB] : '', model: c[iM], g});
   }
   if(!rows.length) throw new Error('No readable weight in this file.');
   wiRows = rows;
@@ -132,8 +130,8 @@ function wiBuildPlan(){
   db.items.forEach(i=>{
     const r = byKey.get(itemModelKey(i));
     if(!r) return;
-    if(i.weight_g === r.g && !!i.weight_est === !!r.est) inchangés.push(i);
-    else maj.push({i, g: r.g, est: r.est});
+    if(i.weight_g === r.g) inchangés.push(i);
+    else maj.push({i, g: r.g});
   });
 
   const vus = new Set(db.items.map(itemModelKey));
@@ -197,12 +195,12 @@ async function wiApply(){
        est entre deux secondes et deux minutes. */
     const groupes = new Map();
     wiPlan.maj.forEach(m=>{
-      const k = m.g + '|' + (m.est ? 1 : 0);
-      if(!groupes.has(k)) groupes.set(k, {g:m.g, est:m.est, ids:[]});
+      const k = String(m.g);
+      if(!groupes.has(k)) groupes.set(k, {g:m.g, ids:[]});
       groupes.get(k).ids.push(m.i.id);
     });
     for(const grp of groupes.values()){
-      await apiUpdateItemsIn(grp.ids, {weight_g: grp.g, weight_est: grp.est});
+      await apiUpdateItemsIn(grp.ids, {weight_g: grp.g});
     }
     const n = wiPlan.maj.length;
     close_('ovWeightImp');

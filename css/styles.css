@@ -332,6 +332,17 @@ tr.csv-err td{ background:rgba(255,59,48,.07) }
        padding:1px 7px; border-radius:20px; margin-left:2px; white-space:nowrap }
 /* Empêche une règle générique sur "input" de transformer les cases
    à cocher du sélecteur en champs de saisie. */
+/* Une case à cocher ne doit pas s'étirer : la règle générale
+   « width:100% » des champs de formulaire la transformait en gros
+   carré détaché de son texte. */
+.checkline input[type=checkbox]{
+  width:18px; min-width:18px; height:18px; flex:none; margin:0;
+  padding:0; border-radius:5px;
+}
+.field .checkline{display:flex;align-items:center;gap:9px;
+  font-size:14px;color:var(--txt);margin:0;cursor:pointer}
+.field .checkline input[type=checkbox]{width:18px;min-width:18px}
+
 #p-picker input[type=checkbox], .clist input[type=checkbox]{
   width:auto; min-width:0; height:auto; padding:0; margin:0;
   border:0; background:none; box-shadow:none; flex:none;
