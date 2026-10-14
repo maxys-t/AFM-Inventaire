@@ -28,6 +28,7 @@ const INV_COLUMNS = [
   {k:'home',   label:'Home',           fixed:false},
   {k:'cond',   label:'Condition',      fixed:false},
   {k:'weight', label:'Weight',         fixed:false},
+  {k:'case',   label:'Case',           fixed:false},
   {k:'owner',  label:'Owner',          fixed:false},
   {k:'prov',   label:'Provider',       fixed:false},
   {k:'price',  label:'Purchase price', fixed:false, admin:true},

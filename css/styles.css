@@ -1045,3 +1045,8 @@ body.dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
   background:rgba(10,132,255,.12)}
 
 .tag.stale{background:rgba(255,159,10,.14);color:var(--warn);cursor:help}
+
+/* --- Sorties regroupées par pack (v1.21) --- */
+tr.outpack{cursor:pointer;background:rgba(10,132,255,.05)}
+tr.outpack:hover{background:rgba(10,132,255,.09)}
+tr.outpack .chev{margin-right:7px}

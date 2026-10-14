@@ -63,6 +63,7 @@ function filterText(c, i){
     case 'cond':   return CONDS[i.cond] || i.cond;
     case 'photo':  return i.photo ? 'With photo' : 'No photo';
     case 'weight': return i.weight_g ? fweight(i.weight_g) : 'No weight';
+    case 'case':   return i.has_case ? 'Has a case' : 'No case';
   }
   return (invCellText(c, i) || '').trim() || '(empty)';
 }
@@ -112,6 +113,7 @@ function sortKey(c, i){
     case 'cond':   return ['bon','use','hs'].indexOf(i.cond);
     case 'price':  return (i.price == null || i.price === '') ? null : Number(i.price);
     case 'weight': return i.weight_g || null;
+    case 'case':   return i.has_case ? 0 : 1;
     case 'pdate':  return i.purchase_date || null;    // « aaaa-mm-jj » se compare tel quel
     case 'photo':  return i.photo ? 0 : 1;
   }
@@ -231,6 +233,7 @@ function sepFor(i, by){
     case 'photo':  return i.photo ? 'With photo' : 'No photo';
     case 'serial': return (i.serial||'').trim() ? 'With serial number' : 'No serial number';
     case 'so':     return (i.sales_order||'').trim() || 'No sales order';
+    case 'case':   return i.has_case ? 'Has a case' : 'No case';
     case 'weight': {
       const g = i.weight_g;
       if(!g)          return 'No weight';
@@ -579,6 +582,7 @@ function invCellText(c, i){
     case 'prov':   return i.provider || '';
     case 'price':  return (i.price==null || i.price==='') ? '' : fprice(Number(i.price));
     case 'weight': return fweight(i.weight_g);
+    case 'case':   return i.has_case ? 'Yes' : '';
     case 'pdate':  return i.purchase_date ? fdateOnly(i.purchase_date) : '';
     case 'so':     return i.sales_order || '';
     case 'serial': return i.serial || '';
@@ -600,6 +604,8 @@ function invCell(c, i){
     case 'weight': return i.weight_g
       ? `<span class="${i.weight_est?'west':''}">${esc(fweight(i.weight_g))}${i.weight_est?' ~':''}</span>`
       : '<span class="muted">—</span>';
+    case 'case':   return i.has_case
+      ? '<span class="pkok">✓</span>' : '<span class="muted">—</span>';
     default:       return esc(invCellText(c,i));
   }
 }
@@ -883,6 +889,7 @@ function openItemForm(id){
   document.getElementById('i-order').value = i?(i.sales_order||""):"";
   document.getElementById('i-weight').value = (i && i.weight_g) ? fweight(i.weight_g) : "";
   document.getElementById('i-westim').checked = !!(i && i.weight_est);
+  document.getElementById('i-case').checked = !!(i && i.has_case);
   document.getElementById('i-date').value = i?(i.purchase_date||""):"";
   document.getElementById('i-cond').value = i?i.cond:"bon";
   if(i) document.getElementById('i-home').value = i.home;
@@ -921,7 +928,8 @@ function saveItem(){
     sales_order:document.getElementById('i-order').value.trim(),
     purchase_date:document.getElementById('i-date').value || null,
     weight_g: parseWeight(document.getElementById('i-weight').value),
-    weight_est: document.getElementById('i-westim').checked
+    weight_est: document.getElementById('i-westim').checked,
+    has_case: document.getElementById('i-case').checked
   };
   /* Un champ vidé efface le poids, mais ne doit pas laisser traîner
      la case « estimé » cochée sur un item qui n'a plus de poids. */

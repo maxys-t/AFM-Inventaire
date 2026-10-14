@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.21.0] — 2026-10-14
+
+### Ajouté
+
+- **Les sorties d'un même pack se regroupent.** Une ligne dépliable
+  « Rack Sidecar · 4 items · 26,19 kg », au lieu de quatre lignes
+  répétant le même emprunteur et la même destination. Un bouton
+  « Check-in all » rentre la caisse d'un geste.
+
+  Le regroupement n'a lieu que si plusieurs items du même pack sont
+  sortis ensemble chez la même personne : mieux vaut pas de groupe
+  qu'un groupe d'un seul. Et un item revenant de réparation en est
+  écarté — il repasse par le contrôle au retour, pas par un check-in
+  ordinaire.
+
+- **Conditionnement** : une case à cocher par item, pour savoir s'il a
+  une housse, un étui ou une boîte prévue pour le transport. Colonne
+  triable et filtrable dans l'inventaire ; la liste de ceux qui n'en
+  ont pas est une liste d'achats, en vue des tournées à venir.
+
+  Volontairement un booléen et rien de plus : le détail de ce qu'est
+  ce conditionnement a déjà sa place dans les notes de l'item.
+
+### Base de données
+
+`sql/022-conditionnement.sql` : colonne `has_case` sur les items.
+Purement additif.
+
+
 ## [1.20.5] — 2026-10-12
 
 ### Corrigé
