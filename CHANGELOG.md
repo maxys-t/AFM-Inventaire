@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.21.6] — 2026-10-14
+
+### Corrigé
+
+- **Réimporter une sauvegarde doublait l'historique.** Les items, les
+  lieux, les projets, les packs et les réparations se réécrivent
+  par-dessus eux-mêmes et sont rejouables depuis toujours ; l'historique,
+  lui, s'ajoutait. Ses lignes n'ont pas de clé naturelle — elles sont
+  numérotées par la base — donc rien ne reconnaissait une ligne déjà
+  présente.
+
+  L'import écarte maintenant ce qui existe déjà, sur la signature qui
+  définit une ligne d'historique : quel item, quel type d'événement,
+  quand. Et il annonce combien de lignes ont été ignorées, pour que le
+  doublon évité soit visible plutôt que supposé.
+
+  Trouvé en enchaînant deux imports pendant l'essai de restauration :
+  1 000 lignes tronquées plus 1 496 complètes donnaient 2 496.
+
+
 ## [1.21.5] — 2026-10-14
 
 ### Corrigé — trouvé par le premier essai de restauration

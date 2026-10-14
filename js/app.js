@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.21.5';
+const APP_VERSION = '1.21.6';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','packs','rep','settings'];
@@ -309,12 +309,16 @@ function importJSON(inp){
         loc_name:p.loc_name||null,starts_on:p.starts_on||null,
         ends_on:p.ends_on||null,archived:!!p.archived
       })));
-      if(d.history.length) await apiInsertHistoryRows(d.history.map(h=>({
+      let histInfo = null;
+      if(d.history.length) histInfo = await apiInsertHistoryRows(d.history.map(h=>({
         item_id:h.itemId,type:h.type,date:h.date,detail:h.detail,user_id:h.userId,
         cond:h.cond?normCond(h.cond):null,actor_name:h.actorName||null
       })));
       await loadAll(); render();
-      toast(`Import complete — ${d.items.length} item(s) restored.`, 'ok', null, null, 5000);
+      toast(`Import complete — ${d.items.length} item(s) restored` +
+            (histInfo && histInfo.ignorées
+              ? `, ${histInfo.ignorées} history entries already present`
+              : '') + '.', 'ok', null, null, 6000);
     }catch(err){ /* l'erreur est déjà signalée par run() */ }
     inp.value = "";
   };

@@ -483,4 +483,22 @@ async function apiUpsertPackItems(rows){
 
 async function apiUpsertRepairs(rows){ await run(sb.from('repairs').upsert(rows)); }
 async function apiUpsertProviders(rows){ await run(sb.from('repair_providers').upsert(rows)); }
-async function apiInsertHistoryRows(rows){ await run(sb.from('history').insert(rows)); }
+/* L'historique n'a pas de clé naturelle : ses lignes sont numérotées
+   par la base. Un import répété les ajoutait donc en double — les
+   autres tables, elles, se réécrivent par `upsert` et sont rejouables
+   depuis toujours. Révélé par le second import de l'essai du
+   14 octobre 2026 : 1 000 lignes tronquées + 1 496 complètes = 2 496.
+
+   On écarte ici ce qui est déjà en base, sur la signature qui définit
+   une ligne d'historique : quel item, quel type d'événement, quand. */
+async function apiInsertHistoryRows(rows){
+  if(!rows.length) return;
+  const existantes = new Set();
+  try{
+    const dejaLa = await apiFetchAll('history');
+    dejaLa.forEach(h => existantes.add(`${h.item_id}|${h.type}|${h.date}`));
+  }catch(e){ /* base vide ou illisible : on insère tout */ }
+  const neuves = rows.filter(r => !existantes.has(`${r.item_id}|${r.type}|${r.date}`));
+  if(neuves.length) await run(sb.from('history').insert(neuves));
+  return {insérées: neuves.length, ignorées: rows.length - neuves.length};
+}
