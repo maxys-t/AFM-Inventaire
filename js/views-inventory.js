@@ -1010,7 +1010,29 @@ function openCheckout(id){
   if(why && !allowDamaged){ showDamagedWarning([i], 'single'); return; }
   actionId = id; bulkMode = false;
   document.getElementById('out-item').textContent = i.name;
+  outPackBand(i);
   prepCheckoutForm();
+}
+
+/* Sortir une console sans ses cartes, ou une Pelicase sans son
+   contenu, arrive — mais rarement par choix. On le signale, et on
+   laisse décider : embarquer trois cartes en silence rendrait l'app
+   moins fiable, pas plus serviable. */
+function outPackBand(i){
+  const band = document.getElementById('out-packband');
+  if(!band) return;
+  const p = typeof packOfContainer === 'function' ? packOfContainer(i.id) : null;
+  const n = p ? packAllItems(p).filter(x=>x.id !== i.id && x.status === 'dispo').length : 0;
+  band.style.display = (p && n) ? '' : 'none';
+  if(!p || !n) return;
+  band.querySelector('span').innerHTML =
+    ` This is the container of <b>${esc(p.name)}</b> — ${n} more item${n>1?'s':''} inside.
+      <button class="btn small sec" style="margin-left:8px" onclick="checkoutWholePack('${p.id}')">Take the whole pack</button>`;
+}
+
+function checkoutWholePack(packId){
+  close_('ovOut');
+  packCheckout(packId);
 }
 
 function openBulkCheckout(){
@@ -1225,7 +1247,7 @@ function openDetail(id){
       Current location: <b>${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}</b><br>
       Packaging: <b>${i.has_case
         ? esc(i.case_note || 'yes, not described')
-        : 'none'}</b>
+        : 'none'}</b>${packLines(i)}
     </p>
     ${i.notes?`<p class="muted" style="margin-bottom:10px">📝 ${esc(i.notes)}</p>`:""}
     <div class="modal-actions" style="justify-content:flex-start;margin:12px 0;flex-wrap:wrap">
@@ -1325,4 +1347,20 @@ async function addCopies(src, vals){
   await histMany(rows.map(r => ({itemId: r.id, type: 'create',
                                  detail: `Added as a copy of ${src.id}`})));
   toast(`${n} copy(ies) added — ${rows[0].id}${n > 1 ? ` to ${rows[n-1].id}` : ''}.`, 'ok');
+}
+
+
+/* Où l'item se range, et ce qu'il contient le cas échéant. Sans ces
+   deux lignes, les packs n'existaient que dans leur propre onglet. */
+function packLines(i){
+  if(typeof packOfItem !== 'function') return '';
+  let t = '';
+  const dedans = packOfItem(i.id);
+  if(dedans) t += `<br>In pack: <b>${esc(dedans.name)}</b>`;
+  const sien = packOfContainer(i.id);
+  if(sien){
+    const st = packStatus(sien);
+    t += `<br>Container of: <b>${esc(sien.name)}</b> — ${st.total} item${st.total>1?'s':''}, ${esc(fweight(packWeight(sien)))}`;
+  }
+  return t;
 }

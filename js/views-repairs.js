@@ -233,7 +233,12 @@ function renderReport(){
     .map(([k,l])=>`<button class="chipbtn ${reportFault===k?'on':''}"
       onclick="setReportFault('${k}')">${esc(l)}</button>`).join('');
   document.getElementById('rp-conds').innerHTML = [
-    ['bon','Working apart from this fault'],['use','Marked, worn'],['hs','Unusable']
+    /* Pas de « Unusable » ici : « hors service » signifie retiré du
+       parc, et un item qu'on envoie en réparation y reste. Le dire au
+       moment d'ouvrir un dossier créait un item à la fois retiré et
+       en cours de réparation — une contradiction que la base refuse.
+       L'état « hors service » se décide à la clôture, pas à l'ouverture. */
+    ['bon','Working apart from this fault'],['use','Marked, worn']
   ].map(([k,l])=>`<button class="chipbtn sq ${reportCond===k?'on':''}"
       onclick="setReportCond('${k}')">${esc(l)}</button>`).join('');
 

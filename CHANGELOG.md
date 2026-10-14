@@ -1,5 +1,64 @@
 # Changelog
 
+## [1.21.5] — 2026-10-14
+
+### Corrigé — trouvé par le premier essai de restauration
+
+- **La sauvegarde tronquait l'historique à 1 000 lignes.** L'affichage
+  ne charge que les 1 000 dernières entrées, pour rester rapide ; mais
+  l'export exportait ce qui était chargé. Sur 1 495 lignes, un tiers
+  manquait déjà — silencieusement, depuis toujours.
+
+  L'export relit désormais la base, paginé : PostgREST plafonne lui
+  aussi chaque réponse à 1 000 lignes, donc retirer la limite ne
+  suffisait pas. Il annonce à la fin combien d'items et de lignes
+  d'historique sont partis, pour que le compte soit vérifiable sans
+  ouvrir le fichier.
+
+- **La fenêtre de signalement proposait « Unusable »**, qui marquait
+  l'item hors service tout en lui ouvrant un dossier de réparation.
+  Or « hors service » veut dire retiré du parc, donc hors du flux de
+  réparation — c'est la définition inscrite dans la migration 016
+  elle-même, qui refusait cette combinaison. Les deux sens se
+  contredisaient depuis la v1.17.
+
+  L'option disparaît : ouvrir un dossier dit déjà que l'item n'est pas
+  utilisable. L'état « hors service » se décide à la clôture, où il
+  signifie quelque chose — la réparation n'a rien donné.
+
+- **Trois migrations ne pouvaient pas tourner sur une base vierge.**
+  014, 015 et 016 supposaient trouver les données qu'elles venaient
+  transformer. Elles reconnaissent maintenant quatre états — à migrer,
+  base vierge, déjà migrée, à moitié passée — et seul le dernier est
+  refusé. Sans ça, remonter la base à zéro s'arrêtait à la
+  quatorzième migration, c'est-à-dire le seul jour où ça compte.
+
+### Note
+
+Quatre correctifs de sauvegarde en quatre versions avaient été
+découverts par relecture. Celui-ci est le premier trouvé en essayant,
+et c'est aussi le plus grave : les précédents oubliaient une table
+entière, visible au premier regard sur un fichier d'export. Celui-ci
+coupait une table en plein milieu.
+
+
+## [1.21.4] — 2026-10-14
+
+### Ajouté
+
+- **Sortir un contenant propose son pack.** Cocher la console affiche
+  un bandeau : « contenant de SQ5 — 3 autres items dedans », avec un
+  bouton pour tout emporter. On le signale et on laisse décider :
+  embarquer trois cartes en silence rendrait l'application moins
+  fiable, pas plus serviable.
+- **La fiche d'un item dit où il se range**, et ce qu'il contient s'il
+  est lui-même un contenant — avec le compte et le poids du pack.
+
+  Sans ces deux additions, les packs n'existaient que dans leur propre
+  onglet : il fallait y aller pour savoir qu'un micro vit dans la
+  Pelicase Micros.
+
+
 ## [1.21.3] — 2026-10-14
 
 ### Ajouté

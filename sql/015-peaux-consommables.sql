@@ -40,12 +40,31 @@ insert into _map(old, new) values
   ('H22-003', 'ICS-015'),
   ('HDX-001', 'ICS-016');
 
+/* Mêmes quatre états que la 014 : à migrer, base vierge, déjà
+   migrée, ou à moitié passée — seul le dernier est anormal. */
+create temporary table _etat on commit drop as
+  select (select count(*) from _map m join public.items i on i.id = m.old)::int as ancien,
+         (select count(*) from _map m join public.items i on i.id = m.new)::int as nouveau;
+
 -- Contrôles avant toute écriture
-do $$ declare n int; begin
+do $$ declare n int; anc int; nouv int; begin
   select count(*) into n from _map;
   if n <> 16 then raise exception 'Correspondance incomplète : % lignes', n; end if;
-  select count(*) into n from _map m join public.items i on i.id = m.new;
-  if n > 0 then raise exception '% nouvel(s) identifiant(s) déjà pris', n; end if;
+
+  select e.ancien, e.nouveau into anc, nouv from _etat e;
+
+  if anc = 0 and nouv = 0 then
+    raise notice 'Base vierge : aucune peau à reclasser.';
+    return;
+  end if;
+  if anc = 0 and nouv = 16 then
+    raise notice 'Déjà reclassées : rejeu sans effet.';
+    return;
+  end if;
+  if anc <> 16 or nouv <> 0 then
+    raise exception 'État intermédiaire : % ancien(s), % nouveau(x)', anc, nouv;
+  end if;
+
   select count(*) into n from public.items
    where subcat in ('peau12','peau14','peau16','peau22','peau_autre')
      and id not in (select old from _map);
@@ -86,7 +105,7 @@ update public.items set name = replace(name, ' — autre taille', '')
  where name like '%— autre taille%';
 
 -- Contrôles avant validation
-do $$ declare n int; begin
+do $$ declare n int; attendu int; begin
   select count(*) into n from public.items where id like '~%';
   if n > 0 then raise exception 'Il reste % identifiant(s) en ~', n; end if;
   select count(*) into n from public.history where item_id like '~%';
@@ -94,8 +113,21 @@ do $$ declare n int; begin
   select count(*) into n from public.items
    where subcat in ('peau12','peau14','peau16','peau22','peau_autre');
   if n > 0 then raise exception '% item(s) encore dans une ancienne taille', n; end if;
-  select count(*) into n from public.items where subcat = 'consommable_inst';
-  if n <> 16 then raise exception '% item(s) en Instrument consumables au lieu de 16', n; end if;
+  /* On vérifie que ce qui a bougé est arrivé à bon port, pas qu'il y
+     ait exactement 16 items : sur une base vierge il n'y en a aucun,
+     et exiger 16 empêchait de remonter le schéma pour un essai de
+     restauration. Révélé par l'essai du 14 octobre 2026. */
+  /* À l'arrivée, les seize portent le nouvel identifiant — qu'elles
+     viennent d'être reclassées ou qu'elles l'aient déjà été. Les cas
+     « rien à faire » sont sortis plus haut. */
+  select e.ancien into attendu from _etat e;
+  if attendu = 0 then return; end if;
+  select count(*) into n
+    from _map m join public.items i on i.id = m.new
+   where i.subcat <> 'consommable_inst';
+  if n > 0 then raise exception '% item(s) renuméroté(s) mais pas reclassé(s)', n; end if;
+  select count(*) into n from _map m join public.items i on i.id = m.new;
+  if n <> 16 then raise exception '% peau(x) sur 16 reclassée(s)', n; end if;
 end $$;
 
 alter table public.items enable trigger guard_items;

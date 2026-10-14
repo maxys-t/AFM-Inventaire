@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.21.3';
+const APP_VERSION = '1.21.5';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','packs','rep','settings'];
@@ -173,16 +173,32 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
 }));
 
 /* ---- export / import JSON ---- */
-function exportJSON(){
-  // On inclut les items de la corbeille (avec leur date de suppression)
-  // pour que l'export soit une image complète de la base.
+async function exportJSON(){
+  /* On relit la base plutôt que d'exporter ce qui est à l'écran :
+     l'affichage se limite aux 1 000 dernières lignes d'historique, et
+     la sauvegarde héritait de ce plafond sans le dire. */
   const out = {...db, items:[...db.items, ...db.trash]};
   delete out.trash; delete out.trashSupported; delete out.projectsError;
   delete out.repairsSupported; delete out.packsSupported;
+  try{
+    toast('Reading the full history…', 'info');
+    const [hist, items] = await Promise.all([
+      apiFetchAll('history', 'date'),
+      apiFetchAll('items', 'id')
+    ]);
+    out.history = hist.map(h=>({itemId:h.item_id, type:h.type, date:h.date,
+      userId:h.user_id, detail:h.detail, cond:h.cond, actorName:h.actor_name||null}));
+    out.items = items;
+  }catch(e){
+    toast('Could not read everything — export cancelled: ' + (e.message||e), 'error');
+    return;
+  }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));
   a.download = 'afm-inventory-' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
+  toast(`Exported — ${out.items.length} items, ${out.history.length} history entries.`,
+        'ok', null, null, 6000);
 }
 /* Accepte deux formats :
    — l'export du bouton « Exporter » de l'application (users, itemId, userId)

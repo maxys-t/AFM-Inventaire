@@ -103,21 +103,49 @@ insert into _map(old, new, subkey, fam) values
   ('STD-058', 'TRY-005', 'plateau', 'supports'),
   ('STD-014', 'TRY-006', 'plateau', 'supports');
 
+-- Combien des 59 items concernés existent réellement ? Zéro sur une
+-- base vierge, 59 en production. On le retient ici : tous les
+-- contrôles qui suivent s'y réfèrent, au lieu de supposer 59.
+/* Quatre états possibles, et trois sont normaux :
+     ancien=59, nouveau=0   → à migrer, cas de la production en 2026
+     ancien=0,  nouveau=0   → base vierge, rien à faire
+     ancien=0,  nouveau=59  → déjà migrée, rejeu sans effet
+     tout le reste          → migration à moitié passée, on refuse
+   Ne pas avoir prévu le troisième cas a fait échouer l'essai de
+   restauration du 14 octobre 2026 : la base restaurée contenait
+   évidemment déjà les nouveaux identifiants. */
+create temporary table _etat on commit drop as
+  select (select count(*) from _map m join public.items i on i.id = m.old)::int as ancien,
+         (select count(*) from _map m join public.items i on i.id = m.new)::int as nouveau;
+
 -- ---------- 2. Contrôles AVANT d'écrire quoi que ce soit ----------
-do $$ declare n int; begin
+-- Une migration doit pouvoir tourner sur une base vierge sans rien
+-- trouver : c'est ce qui permet de remonter le schéma complet pour un
+-- essai de restauration. Le contrôle « cet item n'existe pas » n'a de
+-- sens que si AU MOINS UN existe — sinon il bloque la montée d'une
+-- base neuve, ce que l'essai du 14 octobre 2026 a révélé.
+do $$ declare n int; anc int; nouv int; begin
   select count(*) into n from _map;
   if n <> 59 then raise exception 'Correspondance incomplète : % lignes au lieu de 59', n; end if;
 
-  select count(*) into n from _map m join public.items i on i.id = m.new;
-  if n > 0 then raise exception '% nouvel(s) identifiant(s) déjà pris — annulation', n; end if;
+  select e.ancien, e.nouveau into anc, nouv from _etat e;
+
+  if anc = 0 and nouv = 0 then
+    raise notice 'Base vierge : rien à renuméroter.';
+    return;
+  end if;
+  if anc = 0 and nouv = 59 then
+    raise notice 'Déjà renumérotée : rejeu sans effet.';
+    return;
+  end if;
+  if anc <> 59 or nouv <> 0 then
+    raise exception 'État intermédiaire : % ancien(s), % nouveau(x) — migration à moitié passée',
+                    anc, nouv;
+  end if;
 
   select count(*) into n from public.items
    where subcat = 'stand' and id not in (select old from _map);
   if n > 0 then raise exception '% item(s) en sous-catégorie stand hors correspondance', n; end if;
-
-  select count(*) into n from _map m
-   where not exists (select 1 from public.items i where i.id = m.old);
-  if n > 0 then raise exception '% correspondance(s) pointent vers un item inexistant', n; end if;
 end $$;
 
 -- ---------- 3. Peaux de batterie → Consumables ----------
@@ -165,7 +193,7 @@ do $$ begin
 end $$;
 
 -- ---------- 6. Contrôles avant validation ----------
-do $$ declare n int; begin
+do $$ declare n int; anc int; nouv int; begin
   select count(*) into n from public.items where id like '~%';
   if n > 0 then raise exception 'Il reste % identifiant(s) en ~ — annulation', n; end if;
 
@@ -175,9 +203,18 @@ do $$ declare n int; begin
   select count(*) into n from public.items where subcat = 'stand';
   if n > 0 then raise exception '% item(s) encore en sous-catégorie stand', n; end if;
 
-  select count(*) into n from _map m
-   where not exists (select 1 from public.items i where i.id = m.new);
-  if n > 0 then raise exception '% item(s) introuvable(s) après renumérotation', n; end if;
+  /* Autant d'items portent le nouvel identifiant qu'il y en avait à
+     renuméroter. Zéro sur une base vierge, 59 en production — on
+     compare à l'état relevé au départ, pas à un nombre supposé. */
+  /* À l'arrivée, tous les items concernés portent le nouvel
+     identifiant — qu'ils viennent d'être renumérotés ou qu'ils
+     l'aient déjà été. Les cas « rien à faire » sont sortis plus haut. */
+  select e.ancien, e.nouveau into anc, nouv from _etat e;
+  if anc = 0 then return; end if;
+  select count(*) into n from _map m join public.items i on i.id = m.new;
+  if n <> 59 then
+    raise exception '% item(s) sur 59 portent le nouvel identifiant', n;
+  end if;
 end $$;
 
 -- ---------- 7. Remise en place des garde-fous ----------

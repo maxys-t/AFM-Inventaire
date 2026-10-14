@@ -227,12 +227,21 @@ do $$ declare n int; begin
   select count(*) into n from public.items where cond not in ('bon','use','hs');
   if n > 0 then raise exception '% item(s) avec un état hors liste', n; end if;
 
+  /* Un item hors service avec un dossier ouvert est contradictoire :
+     « hors service » veut dire retiré du parc, donc hors du flux de
+     réparation. Mais c'est une incohérence de données, pas une
+     corruption — et refuser une restauration pour ça serait
+     disproportionné. On la signale, on ne la réécrit pas : une
+     migration qui devine à la place de l'utilisateur fait pire.
+     (Cas rencontré lors de l'essai du 14 octobre 2026 : la fenêtre
+     de signalement proposait « Unusable », qui posait cond='hs' en
+     ouvrant un dossier. Corrigé côté application en v1.21.5.) */
   select count(*) into n from public.items i
    where exists (select 1 from public.repairs r
                   where r.item_id = i.id and r.status <> 'closed')
      and i.cond = 'hs';
   if n > 0 then
-    raise exception '% item(s) hors service avec un dossier ouvert', n;
+    raise notice '% item(s) hors service avec un dossier ouvert — à trancher à la main', n;
   end if;
 
   select count(*) into n from (

@@ -452,6 +452,30 @@ async function apiAddPackItems(packId, itemIds){
 async function apiRemovePackItems(packId, itemIds){
   await run(sb.from('pack_items').delete().eq('pack_id', packId).in('item_id', itemIds));
 }
+/* ---------------- Lecture complète, pour la sauvegarde ----------------
+
+   `loadAll` plafonne l'historique à 1 000 lignes : c'est un choix
+   d'affichage, l'écran n'en montre jamais autant. Mais l'export
+   exportait ce qui était chargé, donc la sauvegarde s'arrêtait elle
+   aussi à 1 000 — silencieusement. À 1 495 lignes, un tiers de
+   l'historique manquait déjà. Découvert par l'essai de restauration
+   du 14 octobre 2026, jamais par relecture.
+
+   PostgREST plafonne en plus chaque réponse à 1 000 lignes, d'où la
+   pagination : on ne peut pas se contenter de retirer la limite. */
+async function apiFetchAll(table, order){
+  const PAGE = 1000;
+  const out = [];
+  for(let de = 0; ; de += PAGE){
+    let q = sb.from(table).select('*').range(de, de + PAGE - 1);
+    if(order) q = q.order(order);
+    const {data, error} = await q;
+    if(error) throw error;
+    out.push(...data);
+    if(data.length < PAGE) return out;
+  }
+}
+
 async function apiUpsertPacks(rows){ await run(sb.from('packs').upsert(rows)); }
 async function apiUpsertPackItems(rows){
   await run(sb.from('pack_items').upsert(rows, {onConflict:'pack_id,item_id'}));
