@@ -394,8 +394,42 @@ function packStatus(p){
     if(i.status === 'sorti' || repairOf(i.id)) absents.push({i, où: itemWhere(i)});
     else présents.push(i);
   });
+  const dehors = packOut(p);
   return {présents, absents, total: présents.length + absents.length,
-          manque: !!p.permanent && absents.length > 0};
+          dehors,
+          /* Une caisse partie entière n'a rien perdu : elle est en
+             déplacement. Crier « il manque trois éléments » quand ils
+             sont dans la caisse, à l'autre bout de Paris, apprend le
+             contraire de la vérité. */
+          manque: !!p.permanent && absents.length > 0 && !dehors};
+}
+
+/* Le pack est-il sorti, et pour où ?
+   Deux cas comptent : son contenant est sorti — la caisse est partie,
+   donc le pack avec — ou tout son contenu est parti ensemble, ce qui
+   revient au même sans boîte. On ne compte pas les départs à
+   l'atelier : un objet en réparation s'en va seul, le pack reste. */
+function packOut(p){
+  if(!p) return null;
+  const tous = packAllItems(p);
+  if(!tous.length) return null;
+  const dehors = tous.filter(i=>i.status === 'sorti' && !outForRepair(i));
+  if(!dehors.length) return null;
+
+  const c = p.container_id ? item(p.container_id) : null;
+  const parContenant = !!(c && c.status === 'sorti' && !outForRepair(c));
+  if(!parContenant && dehors.length !== tous.length) return null;
+
+  const réf = parContenant ? c : dehors[0];
+  return {
+    /* La raison de la sortie d'abord : c'est elle qui porte le lieu
+       (« Mustard Factory », « Show — Trianon »). Le nom de
+       l'emprunteur ne vient qu'à défaut. */
+    où: (réf.out && réf.out.reason) || outBy(réf) || '',
+    quand: réf.out ? réf.out.date : null,
+    projectId: réf.out ? réf.out.projectId : null,
+    partiel: dehors.length < tous.length
+  };
 }
 /* Où se trouve un item, en une phrase. */
 function itemWhere(i){

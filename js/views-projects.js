@@ -374,8 +374,15 @@ async function projRemovePack(id){
 
 /* ---- glisser-déposer ----
    Pointer events, et non le glisser-déposer HTML5 : celui-ci ne
-   fonctionne pas au doigt sur iPad. Même mécanique que l'onglet
-   Packs, où elle a fait ses preuves. */
+   fonctionne pas au doigt sur iPad.
+
+   Les écouteurs vivent sur la FENÊTRE, pas sur la ligne. La première
+   version s'appuyait sur `setPointerCapture` seul : dès que le doigt
+   quittait la ligne, les événements cessaient d'arriver, le fantôme
+   se figeait au bord de la colonne et le dépôt n'avait jamais lieu —
+   soit exactement le geste qu'on demande à l'utilisateur de faire.
+   L'onglet Packs écoute la fenêtre depuis la v1.20 ; c'est cette
+   mécanique-là qui fonctionne, et on la reprend telle quelle. */
 let projDrag = null;
 function bindProjDrag(){
   if(!can('edit')) return;
@@ -384,43 +391,63 @@ function bindProjDrag(){
       if(e.button !== undefined && e.button !== 0) return;
       if(e.target.closest('button')) return;
       if(r.classList.contains('off')) return;
-      projDrag = {kind:r.dataset.kind, key:r.dataset.key,
+      projDrag = {kind:r.dataset.kind, key:r.dataset.key, ligne:r,
                   x:e.clientX, y:e.clientY, actif:false, fantôme:null, sur:false};
-      try{ r.setPointerCapture(e.pointerId); }catch(err){}
+      const move = ev => projDragMove(ev);
+      const up   = ev => { projDragEnd(ev);
+                           window.removeEventListener('pointermove', move);
+                           window.removeEventListener('pointercancel', up);
+                           window.removeEventListener('pointerup', up); };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', up);
     });
-    r.addEventListener('pointermove', e=>{
-      if(!projDrag) return;
-      if(!projDrag.actif){
-        if(Math.abs(e.clientX-projDrag.x) + Math.abs(e.clientY-projDrag.y) < 8) return;
-        projDrag.actif = true;
-        const f = document.createElement('div');
-        f.className = 'pjghost';
-        f.textContent = projDrag.kind==='pack'
-          ? (pack(projDrag.key)||{}).name || ''
-          : r.querySelector('.pjnm .t').textContent.trim();
-        document.body.appendChild(f);
-        projDrag.fantôme = f;
-      }
-      projDrag.fantôme.style.left = e.clientX + 'px';
-      projDrag.fantôme.style.top  = e.clientY + 'px';
-      const dz = document.getElementById('pjdrop');
-      if(!dz) return;
-      const b = dz.getBoundingClientRect();
-      projDrag.sur = e.clientX >= b.left && e.clientX <= b.right
-                  && e.clientY >= b.top  && e.clientY <= b.bottom;
-      dz.classList.toggle('hot', projDrag.sur);
-    });
-    const fin = ()=>{
-      if(!projDrag) return;
-      const d = projDrag; projDrag = null;
-      if(d.fantôme) d.fantôme.remove();
-      const dz = document.getElementById('pjdrop');
-      if(dz) dz.classList.remove('hot');
-      if(d.actif && d.sur){ d.kind==='pack' ? projAddPack(d.key) : projMore(d.key); }
-    };
-    r.addEventListener('pointerup', fin);
-    r.addEventListener('pointercancel', fin);
   });
+}
+
+function projDragMove(e){
+  const d = projDrag; if(!d) return;
+  if(!d.actif){
+    if(Math.abs(e.clientX-d.x) + Math.abs(e.clientY-d.y) < 8) return;
+    d.actif = true;
+    document.body.classList.add('dragging');
+    const f = document.createElement('div');
+    f.className = 'pjghost';
+    f.textContent = d.kind==='pack'
+      ? ((pack(d.key)||{}).name || '')
+      : (d.ligne.querySelector('.pjnm .t')||{}).textContent.trim();
+    document.body.appendChild(f);
+    d.fantôme = f;
+  }
+  d.fantôme.style.left = e.clientX + 'px';
+  d.fantôme.style.top  = e.clientY + 'px';
+  const dz = document.getElementById('pjdrop');
+  if(!dz) return;
+  const b = dz.getBoundingClientRect();
+  d.sur = e.clientX >= b.left && e.clientX <= b.right
+       && e.clientY >= b.top  && e.clientY <= b.bottom;
+  dz.classList.toggle('hot', d.sur);
+}
+
+/* Un glissement se termine par un « clic » que le navigateur envoie de
+   toute façon : sans ce garde-fou, déposer déclencherait le bouton +
+   qui se trouve sous le doigt au départ. */
+let projDragFini = 0;
+document.addEventListener('click', e=>{
+  if(Date.now() - projDragFini < 350 && e.target.closest('.pjsrc')){
+    e.stopPropagation(); e.preventDefault();
+  }
+}, true);
+
+function projDragEnd(){
+  const d = projDrag; projDrag = null;
+  if(!d) return;
+  if(d.actif) projDragFini = Date.now();
+  if(d.fantôme) d.fantôme.remove();
+  document.body.classList.remove('dragging');
+  const dz = document.getElementById('pjdrop');
+  if(dz) dz.classList.remove('hot');
+  if(d.actif && d.sur){ d.kind==='pack' ? projAddPack(d.key) : projMore(d.key); }
 }
 
 /* ============================================================

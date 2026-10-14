@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.22.1] — 2026-10-14
+
+### Corrigé
+
+- **Le glisser-déposer de la page Projets lâchait au bord de la
+  colonne.** Il ne s'appuyait que sur la capture de pointeur de la
+  ligne : dès que le doigt la quittait, les événements cessaient
+  d'arriver, le fantôme se figeait et le dépôt n'avait jamais lieu —
+  c'est-à-dire précisément le geste qu'on demande de faire. Les
+  écouteurs sont désormais sur la fenêtre, comme dans l'onglet Packs
+  depuis la v1.20, où la mécanique est éprouvée.
+
+- **Une caisse sortie entière était annoncée comme incomplète.** La
+  fiche de la LEASH SQ5+, partie à la Mustard Factory, affichait en
+  rouge « Missing from the rack — 3 ». Rien ne manquait : les trois
+  éléments étaient dans la caisse, à l'autre bout de Paris. Le calcul
+  confondait « absent de son rangement » et « manquant ».
+
+  Un pack est maintenant reconnu comme sorti quand son contenant est
+  parti, ou quand tout son contenu est parti ensemble — un objet seul
+  à l'atelier ne compte pas, il s'en va sans la caisse. Dans ce cas,
+  l'arborescence et la fiche affichent **Out · destination** plutôt
+  qu'une alerte, la ligne de chaque élément cesse de répéter la même
+  information, et le bouton devient **Check in pack** : une caisse
+  revient d'un geste, puisqu'elle est revenue d'un seul morceau.
+
+
 ## [1.22.0] — 2026-10-14
 
 **Migration SQL à passer : `sql/024-packs-presets-projets.sql`.**

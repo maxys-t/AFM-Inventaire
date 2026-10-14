@@ -111,10 +111,12 @@ function packRowHTML(p, niveau, aplati, nEnfants, parentId){
      une configuration qui n'est pas montée, ce n'en est pas un. Même
      chiffre, deux lectures — l'écran ne doit crier que pour la
      première. */
-  const etat = !st.absents.length
-    ? (p.permanent ? `<span class="pkok">all here</span>` : `<span class="pkok">all free</span>`)
-    : (st.manque ? `<span class="pkwarn">${st.absents.length} missing</span>`
-                 : `<span class="muted">${st.absents.length} in use</span>`);
+  const etat = st.dehors
+    ? `<span class="tag sorti">out · ${esc(st.dehors.où)}</span>`
+    : !st.absents.length
+      ? (p.permanent ? `<span class="pkok">all here</span>` : `<span class="pkok">all free</span>`)
+      : (st.manque ? `<span class="pkwarn">${st.absents.length} missing</span>`
+                   : `<span class="muted">${st.absents.length} in use</span>`);
 
   return `<div class="packrow" data-pack="${p.id}" data-drop="${p.id}" data-parent="${parentId||''}"
        style="padding-left:${12 + niveau*26}px" onclick="openPackDetail('${p.id}')"
@@ -173,7 +175,7 @@ function renderPackDetail(){
           ${sousPack ? `<span class="tag rsent">pack · ${packStatus(sousPack).total} items</span>` : ''}</div>
       </div>
       <span class="muted pkw">${esc(fweight(sousPack ? itemWeightDeep(i) : i.weight_g))}</span>
-      <span class="pkst">${dehors ? `<span class="pkwarn">⚠ ${esc(itemWhere(i))}</span>` : ''}</span>
+      <span class="pkst">${(dehors && !st.dehors) ? `<span class="pkwarn">⚠ ${esc(itemWhere(i))}</span>` : ''}</span>
       ${can('edit') ? `<button class="btn small sec" onclick="event.stopPropagation();packRemove('${p.id}','${i.id}')">✕</button>` : ''}
     </div>`;
   };
@@ -190,7 +192,10 @@ function renderPackDetail(){
       ${ph ? `<img class="pkbig" src="${ph}">` : '<span class="pkbig rnophoto"></span>'}
       <div>
         <h3 style="margin:0">${esc(p.name)}
-          <span class="tag ${p.permanent?'perm':'conf'}">${p.permanent?'assembled':'config'}</span></h3>
+          <span class="tag ${p.permanent?'perm':'conf'}">${p.permanent?'assembled':'config'}</span>
+          ${st.dehors?`<span class="tag sorti">checked out</span>`:''}</h3>
+        ${st.dehors?`<div style="margin:4px 0 0"><b>📤 Out — ${esc(st.dehors.où)}</b>${
+          st.dehors.quand?` <span class="muted">· since ${esc(fdateD(st.dehors.quand))}</span>`:''}</div>`:''}
         <div class="submuted" style="margin:3px 0 0">
           ${c ? `▣ ${esc(itemTitleText(c))} · <span class="mono">${esc(c.id)}</span> · ${esc(itemWhere(c))}`
               : 'No container — a grouping without a box'}</div>
@@ -199,8 +204,8 @@ function renderPackDetail(){
 
     <div class="repstats" style="margin:14px 0">
       <div class="repstat"><div class="k">Items</div><div class="n">${st.total}</div></div>
-      <div class="repstat"><div class="k">In the box</div>
-        <div class="n ${st.absents.length?'warnv':''}">${st.présents.length}</div></div>
+      <div class="repstat"><div class="k">${st.dehors?'Still here':'In the box'}</div>
+        <div class="n ${st.manque?'warnv':''}">${st.présents.length}</div></div>
       <div class="repstat"><div class="k">Total weight</div>
         <div class="n">${esc(fweight(packWeight(p)))}</div></div>
     </div>
@@ -208,7 +213,7 @@ function renderPackDetail(){
     <div class="fieldlbl">Contents</div>
     <div class="pklist" data-drop="${p.id}">${contenu || '<div class="muted">Empty.</div>'}</div>
 
-    ${st.absents.length ? `<div class="infoband ${st.manque?'bad':''}" style="display:block">
+    ${(st.absents.length && !st.dehors) ? `<div class="infoband ${st.manque?'bad':''}" style="display:block">
       <b>${st.manque ? `⚠ Missing from the rack — ${st.absents.length}`
                      : `In use elsewhere — ${st.absents.length}`}</b>
       <div style="margin-top:5px">${st.absents.map(m=>
@@ -227,7 +232,9 @@ function renderPackDetail(){
   document.getElementById('packActs').innerHTML = `
     ${can('edit') ? `<button class="btn sec" onclick="openPackForm('${p.id}')">Edit</button>` : ''}
     ${can('edit') ? `<button class="btn sec" onclick="openPackAdd('${p.id}')">+ Add items</button>` : ''}
-    ${can('checkout') ? `<button class="btn" onclick="packCheckout('${p.id}')">Check out pack</button>` : ''}`;
+    ${can('checkout') ? (st.dehors
+      ? `<button class="btn ok" onclick="packCheckin('${p.id}')">📥 Check in pack</button>`
+      : `<button class="btn" onclick="packCheckout('${p.id}')">Check out pack</button>`) : ''}`;
 }
 
 /* ============================================================
@@ -675,4 +682,27 @@ function packCheckout(id){
           (bloqués.length ? ` · ${bloqués.length} blocked` : ''), 'info', null, null, 7000);
   }
   openBulkCheckout();
+}
+
+/* Le retour d'une caisse partie entière. Sans lui, rentrer un pack
+   demandait de retrouver ses huit éléments un par un dans l'onglet
+   Checked out — alors qu'ils sont revenus ensemble, dans la même
+   caisse, par le même geste. */
+async function packCheckin(id){
+  const p = pack(id); if(!p) return;
+  const dehors = packAllItems(p).filter(i=>i.status === 'sorti' && !outForRepair(i));
+  if(!dehors.length){ toast('Nothing to check in.', 'warn'); return; }
+  if(!confirm(`Check in ${dehors.length} item(s) of "${p.name}"?\n\nEach one goes back to its home location.`)) return;
+  try{
+    const lignes = [];
+    for(const i of dehors){
+      i.status = 'dispo'; i.loc = i.home; i.out = null;
+      await apiUpdateItem(i.id, {status:'dispo', loc:i.loc, out:null});
+      lignes.push({itemId:i.id, type:'in', detail:`Back with ${p.name}`, cond:i.cond});
+    }
+    await histMany(lignes);
+    await refresh(); renderPacks();
+    if(packShown) renderPackDetail();
+    toast(`${dehors.length} item(s) checked in.`, 'ok');
+  }catch(err){ toast(String(err.message||err), 'error'); }
 }
