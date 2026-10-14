@@ -35,88 +35,155 @@ function renderOutList(){
 
 
 /* ============================================================
-   REGROUPEMENT PAR PACK (v1.21)
+   REGROUPEMENT PAR PACK (v1.21, arborescent en v1.22.2)
 
    Cinq lignes indépendantes alors qu'une caisse entière est partie,
    ça n'apprend rien : on relit le même emprunteur et la même
    destination cinq fois, et on clique cinq fois pour la rentrer.
-   On regroupe donc par pack — celui où l'item est rangé, ou celui
-   qu'il représente s'il en est le contenant.
+
+   Mais un regroupement à plat ment lui aussi. La LEASH SQ5+ Kit et le
+   SQ5+ s'affichaient côte à côte comme deux caisses parties
+   séparément, alors que la seconde est DANS la première. Les autres
+   onglets montrent l'imbrication ; celui-ci doit la montrer aussi,
+   sans quoi l'application raconte deux rangements différents selon
+   l'écran qu'on regarde.
    ============================================================ */
 let outOpen = new Set();
 
-function outGroupKey(i){
-  const dedans = packOfItem(i.id);
-  if(dedans) return 'p:' + dedans.id;
-  const represente = packOfContainer(i.id);
-  if(represente) return 'p:' + represente.id;
-  return null;
+/* Le pack auquel rattacher un item sorti. Un item peut appartenir à
+   plusieurs recettes depuis la v1.22 : on retient celle dont le plus
+   d'éléments sont partis en même temps — c'est celle qu'on a
+   réellement chargée. */
+function outPackOf(i, compte){
+  const siens = packsOfItem(i.id);
+  if(siens.length){
+    if(!compte) return packOfItem(i.id) || siens[0];
+    return siens.slice().sort((a,b)=>
+      (compte.get(b.id)||0) - (compte.get(a.id)||0) ||
+      a.name.localeCompare(b.name,'fr'))[0];
+  }
+  return packOfContainer(i.id);
 }
 
 function outGroupedHTML(rows){
-  /* Un groupe n'a de sens que si plusieurs items du même pack sont
-     sortis ensemble, chez la même personne. Un item isolé reste une
-     ligne ordinaire — mieux vaut pas de groupe qu'un groupe d'un. */
-  const paquets = new Map();
+  /* Une « sortie » : même emprunteur, même destination. C'est à
+     l'intérieur d'une sortie que l'arborescence a un sens — deux
+     caisses parties à deux endroits ne s'emboîtent pas. */
+  const sorties = new Map();
   rows.forEach(i=>{
-    const k = outGroupKey(i);
-    if(!k) return;
-    const cle = k + '|' + outBy(i) + '|' + (i.out.reason || '');
-    if(!paquets.has(cle)) paquets.set(cle, []);
-    paquets.get(cle).push(i);
+    const k = outBy(i) + '|' + (i.out.reason || '');
+    if(!sorties.has(k)) sorties.set(k, []);
+    sorties.get(k).push(i);
   });
-  const groupés = new Map();
-  for(const [cle, lst] of paquets) if(lst.length > 1) groupés.set(cle, lst);
-  const dansUnGroupe = new Set();
-  groupés.forEach(l=>l.forEach(i=>dansUnGroupe.add(i.id)));
 
   let html = `<table><thead><tr>
     <th>Item</th><th>Borrower</th><th>Since</th><th>Duration</th>
     <th>Due back</th><th>Destination / reason</th><th></th>
   </tr></thead><tbody>`;
 
-  const faits = new Set();
+  const vues = new Set();
   rows.forEach(i=>{
-    if(faits.has(i.id)) return;
-    const cle = (outGroupKey(i) || '') + '|' + outBy(i) + '|' + (i.out.reason || '');
-    const grp = groupés.get(cle);
-    if(grp && dansUnGroupe.has(i.id)){
-      grp.forEach(x=>faits.add(x.id));
-      html += outPackRow(cle, grp);
-      if(outOpen.has(cle)) grp.forEach(x=>{ html += outRow(x, true); });
-    }else{
-      faits.add(i.id);
-      html += outRow(i, false);
-    }
+    const k = outBy(i) + '|' + (i.out.reason || '');
+    if(vues.has(k)) return;
+    vues.add(k);
+    html += outSortieHTML(k, sorties.get(k));
   });
   return html + '</tbody></table>';
 }
 
-function outPackRow(cle, lst){
-  const p = pack(cle.split('|')[0].slice(2));
+function outSortieHTML(k, lst){
+  const compte = new Map();
+  lst.forEach(i=>packsOfItem(i.id).forEach(p=>compte.set(p.id, (compte.get(p.id)||0) + 1)));
+
+  const parPack = new Map();     // packId → items sortis qui en font partie
+  const seuls = [];
+  lst.forEach(i=>{
+    const p = outPackOf(i, compte);
+    if(!p) return seuls.push(i);
+    if(!parPack.has(p.id)) parPack.set(p.id, []);
+    parPack.get(p.id).push(i);
+  });
+
+  const présents = new Set(parPack.keys());
+  const enfantsDe = id => [...présents].filter(x=>
+    packParents(pack(x)).some(par=>par.id === id));
+  /* Racine : un pack dont aucun parent n'est parti avec lui. */
+  const racines = [...présents].filter(id=>
+    !packParents(pack(id)).some(par=>présents.has(par.id)));
+
+  /* Tout ce que porte une branche, imbriqués compris : c'est ce
+     compte-là et ce poids-là qu'on lit sur la ligne du haut. */
+  const sousArbre = (id, vus) => {
+    vus = vus || new Set();
+    if(vus.has(id)) return [];
+    vus.add(id);
+    let out = (parPack.get(id) || []).slice();
+    enfantsDe(id).forEach(e=>{ out = out.concat(sousArbre(e, vus)); });
+    return out;
+  };
+
+  let html = '';
+  const rendus = new Set();
+  const branche = (id, niveau, vus) => {
+    vus = vus || new Set();
+    if(vus.has(id)) return '';
+    vus.add(id);
+    const propres = parPack.get(id) || [];
+    const enfants = enfantsDe(id);
+    const tout = sousArbre(id);
+    tout.forEach(x=>rendus.add(x.id));
+
+    /* À la racine, un groupe d'un seul élément n'est pas un groupe :
+       on montre la ligne de l'objet. Plus bas, en revanche, la caisse
+       garde sa ligne même avec un seul objet dedans — c'est elle qui
+       dit l'emboîtement, et le masquer reviendrait à prétendre que
+       l'objet est posé en vrac dans la caisse du dessus. */
+    if(niveau === 0 && tout.length < 2 && !enfants.length){
+      return propres.length ? outRow(propres[0], false, 0) : '';
+    }
+    const cle = 'p:' + id + '|' + k;
+    let h = outPackRow(cle, pack(id), tout, niveau);
+    if(outOpen.has(cle)){
+      propres.forEach(x=>{ h += outRow(x, true, niveau + 1); });
+      enfants.forEach(e=>{ h += branche(e, niveau + 1, new Set(vus)); });
+    }
+    return h;
+  };
+
+  racines.forEach(id=>{ html += branche(id, 0); });
+  /* Les items qui ne relèvent d'aucune caisse, et ceux dont la caisse
+     n'a pas été rendue (cycle, pack supprimé) : rien ne doit
+     disparaître de la liste des sorties. */
+  lst.forEach(i=>{ if(!rendus.has(i.id) && !seuls.includes(i)) html += outRow(i, false, 0); });
+  seuls.forEach(i=>{ html += outRow(i, false, 0); });
+  return html;
+}
+
+function outPackRow(cle, p, lst, niveau){
   const i0 = lst[0];
   const d = daysSince(i0.out.date);
   const poids = lst.reduce((t,x)=>t + (x.weight_g||0), 0);
   const ouvert = outOpen.has(cle);
   const ids = lst.map(x=>x.id);
   return `<tr class="outpack" onclick="toggleOutPack('${esc(cle)}')">
-    <td data-l="Item"><span class="chev">${ouvert?'▾':'▸'}</span>
+    <td data-l="Item" style="padding-left:${10 + (niveau||0)*24}px">
+      <span class="chev">${ouvert?'▾':'▸'}</span>
       <b>${esc(p ? p.name : 'Pack')}</b>
       <span class="muted">· ${lst.length} items · ${esc(fweight(poids))}</span></td>
-    <td data-l="Borrower">${esc(outBy(i0))}</td>
-    <td data-l="Depuis">${fdate(i0.out.date)}</td>
+    <td data-l="Borrower">${(niveau||0) ? '' : esc(outBy(i0))}</td>
+    <td data-l="Depuis">${(niveau||0) ? '' : fdate(i0.out.date)}</td>
     <td data-l="Duration">${d}d</td>
     <td data-l="Due back">${i0.out.due ? esc(fdateD(i0.out.due)) : '<span class="muted">—</span>'}</td>
-    <td data-l="Raison">${esc(i0.out.reason||'')}</td>
+    <td data-l="Raison">${(niveau||0) ? '' : esc(i0.out.reason||'')}</td>
     <td onclick="event.stopPropagation()">${can('checkout')
       ? `<button class="btn small ok" onclick="checkinPack('${esc(ids.join(','))}')">Check-in all</button>` : ''}</td>
   </tr>`;
 }
 
-function outRow(i, enfant){
+function outRow(i, enfant, niveau){
   const d = daysSince(i.out.date), od = overdue(i);
   return `<tr class="rowlink${enfant?' childrow':''}" onclick="openDetail('${i.id}')">
-    <td data-l="Item">${itemTitle(i)} <span class="mono">${i.id}</span></td>
+    <td data-l="Item" style="padding-left:${10 + (niveau||0)*24}px">${itemTitle(i)} <span class="mono">${i.id}</span></td>
     <td data-l="Borrower">${enfant ? '' : esc(outBy(i))}</td>
     <td data-l="Depuis">${enfant ? '' : fdate(i.out.date)}</td>
     <td data-l="Duration"><span class="${(!i.out.due && d>=ALERT_DAYS)?'days-late':''}">${d}d</span></td>

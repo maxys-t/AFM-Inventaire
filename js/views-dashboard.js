@@ -45,11 +45,14 @@ function renderDash(){
       <h1>${esc(LABELS.appTitle)}</h1>
       <p>${esc(LABELS.tagline || '')}</p>
       <div class="heroacts">
-        <button class="btn" onclick="show('inv')">Browse inventory</button>
+        <button class="btn" onclick="show('packs')">Open packs</button>
+        <button class="btn sec" onclick="show('inv')">Browse inventory</button>
         ${can('edit')?`<button class="btn sec" onclick="openItemForm()">+ Add item</button>`:''}
         ${can('edit')?`<button class="btn sec" onclick="show('proj');openProjForm()">+ New project</button>`:''}
       </div>
     </div>
+
+    ${dashPacksHTML()}
 
     ${alerts.length ? `<div class="panel">
         <h2>Needs attention <span class="tag hs">${alerts.length}</span></h2>
@@ -68,6 +71,56 @@ function renderDash(){
              <div class="lbl">Purchase value${withPrice.length!==total?` <span class="muted">(${withPrice.length} priced)</span>`:''}</div></div>`
         : ''}
     </div>`;
+}
+
+/* ============================================================
+   ENVOYER UNE CAISSE, DEPUIS LE TABLEAU DE BORD (v1.22.2)
+
+   Les packs sont devenus l'usage principal : on sort du matériel par
+   caisse, bien plus souvent qu'à l'item. Faire ce geste demandait
+   jusqu'ici d'ouvrir l'onglet Packs, de trouver la caisse, d'ouvrir
+   sa fiche, puis de cliquer. Quatre écrans pour une action
+   quotidienne.
+
+   On ne liste que les racines : une caisse imbriquée part avec celle
+   qui la contient, la proposer séparément inviterait à défaire un
+   rangement sans le vouloir.
+   ============================================================ */
+function dashPacksHTML(){
+  if(!db.packsSupported) return '';
+  const racines = packRoots().sort((a,b)=>a.name.localeCompare(b.name,'fr'));
+  if(!racines.length) return '';
+
+  const dehors = racines.filter(p=>packStatus(p).dehors);
+  const ici    = racines.filter(p=>!packStatus(p).dehors);
+
+  const ligne = p => {
+    const st = packStatus(p);
+    const tout = packAllItems(p);
+    const ph = packPhoto(p);
+    return `<div class="dpack" onclick="show('packs');openPackDetail('${p.id}')">
+      ${ph ? `<img class="repthumb" loading="lazy" src="${ph}">`
+           : '<span class="repthumb rnophoto"></span>'}
+      <div class="repbody">
+        <div class="reptitle"><b>${esc(p.name)}</b>
+          ${st.dehors?`<span class="tag sorti">out · ${esc(st.dehors.où)}</span>`:''}</div>
+        <div class="repmeta">${tout.length} item(s) · ${esc(fweight(packWeight(p)))}${
+          st.manque?` · <span class="pkwarn">${st.absents.length} missing</span>`:''}</div>
+      </div>
+      <span onclick="event.stopPropagation()">${can('checkout')
+        ? (st.dehors
+            ? `<button class="btn small ok" onclick="packCheckin('${p.id}')">Check in</button>`
+            : `<button class="btn small" onclick="packCheckout('${p.id}')">Send out</button>`)
+        : ''}</span>
+    </div>`;
+  };
+
+  return `<div class="panel">
+    <h2>Packs ${dehors.length?`<span class="tag sorti">${dehors.length} out</span>`:''}</h2>
+    <div class="dpacks">${ici.concat(dehors).map(ligne).join('')}</div>
+    <div class="hintline" style="margin-top:8px">Sending a case takes its container,
+      its contents and any nested case with it.</div>
+  </div>`;
 }
 
 /* Ouvre l'inventaire avec un filtre déjà appliqué.

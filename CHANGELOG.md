@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.22.2] — 2026-10-14
+
+### Changé — les packs deviennent l'entrée principale
+
+- **Packs passe en deuxième position dans la navigation**, juste après
+  le tableau de bord, devant l'inventaire. C'est devenu le geste
+  quotidien : on range par caisse, on sort par caisse, on rentre par
+  caisse. Les emprunteurs, consultés bien plus rarement, descendent en
+  fin de barre.
+
+- **Envoyer une caisse depuis le tableau de bord.** Chaque caisse
+  racine y figure avec son nombre d'éléments, son poids et son état, et
+  un bouton **Send out** — ou **Check in** si elle est dehors, avec sa
+  destination. Le geste demandait jusqu'ici quatre écrans.
+
+  Seules les caisses racines sont proposées : une caisse imbriquée part
+  avec celle qui la contient, la proposer à part inviterait à défaire un
+  rangement sans le vouloir.
+
+### Corrigé
+
+- **L'onglet Checked out ignorait l'imbrication.** La LEASH SQ5+ Kit et
+  le SQ5+ s'affichaient côte à côte, comme deux caisses parties
+  séparément, alors que la seconde est dans la première. Les sorties
+  sont désormais arborescentes comme partout ailleurs : une caisse
+  racine par sortie, ses caisses imbriquées dessous et décalées,
+  chacune dépliable, et le compte comme le poids de la ligne du haut
+  englobent toute la branche.
+
+  Une caisse imbriquée garde sa ligne même avec un seul objet dedans —
+  la masquer reviendrait à prétendre que l'objet est posé en vrac dans
+  la caisse du dessus. À la racine, en revanche, un objet seul reste
+  une ligne ordinaire.
+
+
 ## [1.22.1] — 2026-10-14
 
 ### Corrigé
