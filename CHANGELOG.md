@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.21.3] — 2026-10-14
+
+### Ajouté
+
+- **Le conditionnement figure sur la fiche d'un item**, avec le nom du
+  contenant tel qu'il a été saisi : « housse Gator », « flight case
+  d'origine ». Un item coché sans précision affiche « yes, not
+  described » — ce qui se lit comme une invitation à le compléter
+  plutôt que comme une information. Sans conditionnement, « none ».
+
+
 ## [1.21.2] — 2026-10-14
 
 ### Ajouté

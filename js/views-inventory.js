@@ -1222,7 +1222,10 @@ function openDetail(id){
         :(i.purchase_date?`Bought on <b>${fdateOnly(i.purchase_date)}</b><br>`:"")}
       ${i.sales_order?`Sales order: <b>${esc(i.sales_order)}</b><br>`:""}
       Home location: <b>${esc(locLabel(i.home))}</b><br>
-      Current location: <b>${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}</b>
+      Current location: <b>${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}</b><br>
+      Packaging: <b>${i.has_case
+        ? esc(i.case_note || 'yes, not described')
+        : 'none'}</b>
     </p>
     ${i.notes?`<p class="muted" style="margin-bottom:10px">📝 ${esc(i.notes)}</p>`:""}
     <div class="modal-actions" style="justify-content:flex-start;margin:12px 0;flex-wrap:wrap">
