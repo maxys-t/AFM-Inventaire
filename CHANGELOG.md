@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.22.3] — 2026-10-14
+
+### Corrigé
+
+- **Les lignes grandissaient en dépliant une caisse.** Deux causes, les
+  mêmes à chaque fois : « Check-in all » passait à la ligne dès que la
+  colonne se resserrait, et la date se coupait entre le jour et
+  l'heure. Chaque ligne y gagnait une deuxième hauteur de texte, et la
+  liste dépliée devenait deux fois plus longue qu'elle n'avait besoin
+  de l'être.
+
+  Les cellules ne se coupent plus, sauf la première — le nom d'un item
+  doit pouvoir passer à la ligne — et les lignes enfants sont plus
+  serrées que les lignes de caisse : déplié, cela se lit comme une
+  liste, pas comme autant d'entrées pleine hauteur. Sur téléphone, où
+  le tableau devient des cartes, le découpage reprend ses droits.
+
+
 ## [1.22.2] — 2026-10-14
 
 ### Changé — les packs deviennent l'entrée principale

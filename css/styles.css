@@ -1178,3 +1178,17 @@ tr.outpack td:first-child{position:relative}
 @media(max-width:700px){
   tr.outpack td:first-child,tr.rowlink td:first-child{padding-left:8px !important}
 }
+
+/* Les sorties dépliées doivent se lire comme une liste, pas comme
+   autant de lignes pleine hauteur. Deux causes au gonflement :
+   « Check-in all » passait à la ligne dès que la colonne se
+   resserrait, et la date se coupait entre le jour et l'heure. */
+#outList .btn{white-space:nowrap}
+#outList td{white-space:nowrap}
+#outList td:first-child{white-space:normal}
+tr.childrow td{padding-top:5px;padding-bottom:5px}
+tr.childrow td:first-child{font-size:14px}
+tr.outpack td{padding-top:8px;padding-bottom:8px}
+@media(max-width:700px){
+  #outList td{white-space:normal}
+}
