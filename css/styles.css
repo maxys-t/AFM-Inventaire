@@ -1254,3 +1254,10 @@ tr.outpack td{padding-top:8px;padding-bottom:8px}
    retire l'objet du parc. */
 .tag.use{background:rgba(255,159,10,.14);color:var(--warn)}
 .tag.ko{background:rgba(175,82,222,.14);color:#bf5af2}
+
+/* --- Vignettes dans les projets (v1.24.1) ---
+   C'est en composant et en préparant qu'on cherche les objets des
+   yeux. Le carré vide tient la colonne droite quand la photo manque. */
+.pjrow .repthumb{flex:none}
+.pjrow .repthumb.sm{width:34px;height:34px}
+.pjgrab + .pjsum{margin-top:0}

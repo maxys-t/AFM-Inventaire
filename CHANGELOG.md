@@ -1,5 +1,46 @@
 # Changelog
 
+## [1.24.2] — 2026-10-15
+
+### Corrigé
+
+- **Une caisse portant deux configurations pesait sa boîte vide.** Le
+  poids d'un pack passait par « qui répond de ce contenant ». Tant
+  qu'une caisse n'appartenait qu'à un pack, c'était le même chemin ;
+  depuis la v1.24 elle peut en porter deux, plus personne ne répond,
+  et chaque configuration ne comptait plus que sa boîte. Le calcul lit
+  désormais le contenu du pack qu'on lui demande, directement.
+
+  Trouvé en écrivant le protocole de test de la v1.24, pas par les
+  tests eux-mêmes : ils ne couvraient pas encore ce croisement.
+
+
+## [1.24.1] — 2026-10-15
+
+### Changé
+
+- **Un volet « Project settings »** replie ce qu'on fait une fois sur
+  dix sorties : note de livraison, dupliquer, archiver, remettre la
+  checklist à zéro, supprimer. Ils étaient en permanence sous la
+  liste, ce qui mettait **Delete à deux centimètres de Go on show** —
+  au moment précis où l'on travaille vite, les mains prises. Sous la
+  checklist il ne reste que les transitions : *Start packing*,
+  *Go on show*, *Pause*, *Close show*.
+
+- **Remettre la checklist à zéro demande confirmation**, en disant
+  combien de lignes seront décochées. Une case cochée vaut un objet
+  posé dans la caisse ; tout effacer d'un coup au mauvais moment ne se
+  rattrape pas.
+
+### Ajouté
+
+- **Les photos reviennent dans l'onglet Projets** — composition et
+  préparation. C'est là qu'elles servent le plus : on coche un nom,
+  mais on cherche un objet des yeux sur une étagère. Les lignes
+  écartées et les doublons en ont aussi ; un consommable garde un
+  carré vide, pour que la colonne reste droite.
+
+
 ## [1.24.0] — 2026-10-15
 
 **Migration SQL à passer : `sql/026-contenants-partages.sql`.** Elle ne

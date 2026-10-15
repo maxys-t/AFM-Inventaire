@@ -362,13 +362,24 @@ function itemWeightDeep(i, vus){
   if(p) packItemsOf(p.id).forEach(m=>{ g += itemWeightDeep(m, vus); });
   return g;
 }
+/* Le poids d'un pack : son contenant, plus son contenu.
+
+   Il passait par `itemWeightDeep(contenant)`, qui retrouvait le
+   contenu via `packOfContainer`. Tant qu'un contenant n'appartenait
+   qu'à un pack, c'était le même chemin. Depuis la v1.24, une caisse
+   peut porter deux configurations : `packOfContainer` ne répond plus,
+   et chaque configuration aurait alors pesé sa boîte vide. On lit
+   donc le contenu du pack qu'on calcule, directement. */
 function packWeight(p, vus){
   if(!p) return 0;
-  if(p.container_id){
-    const c = item(p.container_id);
-    if(c) return itemWeightDeep(c, vus);
-  }
-  return packItemsOf(p.id).reduce((t,m)=>t + itemWeightDeep(m, vus || new Set()), 0);
+  vus = vus || new Set();
+  if(vus.has('p:' + p.id)) return 0;
+  vus.add('p:' + p.id);
+  let g = 0;
+  const c = p.container_id ? item(p.container_id) : null;
+  if(c && !vus.has(c.id)){ vus.add(c.id); g += c.weight_g || 0; }
+  packItemsOf(p.id).forEach(m=>{ g += itemWeightDeep(m, vus); });
+  return g;
 }
 /* Le détail, pour ne pas afficher un total qu'on ne sait pas expliquer. */
 function packWeightParts(p){

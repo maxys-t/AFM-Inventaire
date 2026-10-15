@@ -214,15 +214,15 @@ function projEditor(){
         <span class="muted">${g.items.length} item(s) · ${fweight(g.items.reduce((t,i)=>t+(i.weight_g||0),0))}</span>
         <button class="pjx" onclick="projRemovePack('${g.packId}')" title="Remove this case">✕</button></div>
       <div class="bd">
-        ${g.items.map(i=>`<div class="pjrow"><div class="pjnm"><div class="t">${itemTitle(i)}</div>
+        ${g.items.map(i=>`<div class="pjrow">${pjThumb(i)}<div class="pjnm"><div class="t">${itemTitle(i)}</div>
             <div class="s mono">${i.id}</div></div><span class="muted">${fweight(i.weight_g||0)}</span></div>`).join('')}
         ${g.écartés.length?`<div class="pjsub warntxt">Left out — unavailable</div>` +
-          g.écartés.map(i=>`<div class="pjrow off"><div class="pjnm"><div class="t">${itemTitle(i)}</div>
+          g.écartés.map(i=>`<div class="pjrow off">${pjThumb(i)}<div class="pjnm"><div class="t">${itemTitle(i)}</div>
             <div class="s">${esc(itemWhere(i))}</div></div></div>`).join(''):''}
         ${g.doublons.length?`<div class="pjsub warntxt">Already taken by another case</div>` +
           g.doublons.map(d=>{
             const libre = projFreeTwin(p, d.item);
-            return `<div class="pjrow"><div class="pjnm">
+            return `<div class="pjrow">${pjThumb(d.item)}<div class="pjnm">
               <div class="t">${itemTitle(d.item)}</div>
               <div class="s warntxt">travels in ${esc(d.ailleurs || 'another case')}${
                 libre ? '' : ' · no free copy left'}</div></div>
@@ -239,7 +239,7 @@ function projEditor(){
   if(c.loose.length){
     contenu += `<div class="pjgrp"><div class="hd"><span class="t">Loose items</span>
       <span class="muted">${c.loose.length} item(s) · ${fweight(c.loose.reduce((t,i)=>t+(i.weight_g||0),0))}</span></div>
-      <div class="bd">${c.loose.map(i=>`<div class="pjrow">
+      <div class="bd">${c.loose.map(i=>`<div class="pjrow">${pjThumb(i)}
         <div class="pjnm"><div class="t">${itemTitle(i)}</div><div class="s mono">${i.id}</div></div>
         <span class="muted">${fweight(i.weight_g||0)}</span>
         <button class="pjx" onclick="projRemoveItem('${i.id}')">✕</button></div>`).join('')}
@@ -293,6 +293,16 @@ function projDestOptions(p){
   const cible = `<option value="${esc(n)}">`;
   if(html.includes(cible)) return html.replace(cible, `<option value="${esc(n)}" selected>`);
   return html + `<option value="${esc(n)}" selected>${esc(n)} (archived)</option>`;
+}
+
+/* La vignette d'un item. C'est dans les projets qu'on en a le plus
+   besoin : on compose et on prépare en cherchant les objets des yeux,
+   sur une étagère ou dans une caisse. Le carré vide tient la colonne
+   droite quand il n'y a pas de photo. */
+function pjThumb(i){
+  return (i && i.photo)
+    ? `<img class="repthumb sm" loading="lazy" src="${i.photo}">`
+    : '<span class="repthumb sm rnophoto"></span>';
 }
 
 function projTab(t){ projView.tab = t; renderProj(); }
@@ -502,14 +512,16 @@ function projPrep(){
         ${lignes.filter(l=>!l.extra).map(l=>projLine(l, p, figé)).join('')}
         ${extras.length?'<div class="pjsub">Consumables</div>' + lignes.filter(l=>l.extra).map(l=>projLine(l, p, figé)).join(''):''}
         ${écartés.length?'<div class="pjsub warntxt">Left out — unavailable</div>' +
-          écartés.map(i=>`<div class="pjrow off"><div class="pjnm"><div class="t">${itemTitle(i)}</div>
+          écartés.map(i=>`<div class="pjrow off">
+            ${i.photo?`<img class="repthumb sm" loading="lazy" src="${i.photo}">`:'<span class="repthumb sm rnophoto"></span>'}
+            <div class="pjnm"><div class="t">${itemTitle(i)}</div>
             <div class="s">${esc(itemWhere(i))}</div></div></div>`).join(''):''}
       </div></div>`;
   };
 
   let blocs = c.groups.map(g=>bloc(
     g.name,
-    g.items.map(i=>({key:i.id, html:itemTitle(i),
+    g.items.map(i=>({key:i.id, html:itemTitle(i), photo:i.photo,
                      sub:i.id + ' · ' + fweight(i.weight_g||0)
                          + (itemFlag(i) ? ' · ⚠ ' + itemFlag(i) : '')}))
       .concat(g.extras.map(e=>({key:e.key, html:esc(e.label), sub:'× ' + e.qty, extra:true}))),
@@ -519,7 +531,7 @@ function projPrep(){
 
   if(c.loose.length){
     blocs += bloc('Loose items',
-      c.loose.map(i=>({key:i.id, html:itemTitle(i),
+      c.loose.map(i=>({key:i.id, html:itemTitle(i), photo:i.photo,
                        sub:i.id + ' · ' + fweight(i.weight_g||0)
                            + (itemFlag(i) ? ' · ⚠ ' + itemFlag(i) : '')})),
       [], [], c.loose.reduce((t,i)=>t+(i.weight_g||0), 0));
@@ -530,7 +542,6 @@ function projPrep(){
     if(p.status === 'inactif') actions = `<button class="btn" onclick="setProjStatus('${p.id}','preparation')">Start packing</button>`;
     if(p.status === 'preparation') actions =
       `<button class="btn" onclick="goShow('${p.id}')">🎪 Go on show</button>
-       <button class="btn sec small" onclick="resetPrep('${p.id}')">Reset checklist</button>
        <button class="btn sec small" onclick="setProjStatus('${p.id}','inactif')">Pause</button>`;
     if(p.status === 'show') actions = `<button class="btn ok" onclick="closeShow('${p.id}')">📥 Close show / gear back</button>`;
   }
@@ -563,22 +574,54 @@ function projPrep(){
   ${blocs || '<div class="panel"><div class="empty">This project is empty — add cases and items first.</div></div>'}
 
   <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;margin-top:12px">${actions}</div>
-  <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;gap:6px">
-    <button class="btn sec small" onclick="openDeliveryMail('${p.id}')"
-            title="Opens a pre-filled draft in your mail app">✉️ Delivery details</button>
-    ${can('edit')?`<button class="btn sec small" onclick="duplicateProj('${p.id}')">Duplicate</button>`:''}
-    ${can('edit')?`<button class="btn sec small" onclick="archiveProj('${p.id}')">${p.archived?'Restore':'Archive'}</button>`:''}
-    ${can('delete')?`<button class="btn danger small" onclick="deleteProj('${p.id}')">Delete</button>`:''}
+
+  ${projSettingsHTML(p)}`;
+}
+
+/* ---- réglages du projet ----
+   Ce qu'on fait une fois sur dix sorties : dupliquer, archiver,
+   supprimer, remettre la checklist à zéro. Les laisser en permanence
+   sous la liste mettait « Delete » à deux centimètres de « Go on
+   show », au moment précis où l'on travaille vite, avec les mains
+   prises. Ils vivent donc dans un volet replié. */
+let projSettingsOpen = false;
+function toggleProjSettings(){ projSettingsOpen = !projSettingsOpen; renderProj(); }
+
+function projSettingsHTML(p){
+  const head = `<div class="panel repfold" onclick="toggleProjSettings()" style="margin-top:12px">
+    <span class="chev">${projSettingsOpen?'▾':'▸'}</span>
+    <span>Project settings</span>
+    <span class="muted foldnote">Delivery note, duplicate, archive, reset, delete</span></div>`;
+  if(!projSettingsOpen) return head;
+  return head + `<div class="panel" style="margin-top:-8px">
+    <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;gap:6px">
+      <button class="btn sec small" onclick="openDeliveryMail('${p.id}')"
+              title="Opens a pre-filled draft in your mail app">✉️ Delivery details</button>
+      ${can('edit')?`<button class="btn sec small" onclick="duplicateProj('${p.id}')">Duplicate</button>`:''}
+      ${(can('projectPrep') && p.status!=='show')?`<button class="btn sec small" onclick="resetPrep('${p.id}')">Reset checklist</button>`:''}
+      ${can('edit')?`<button class="btn sec small" onclick="archiveProj('${p.id}')">${p.archived?'Restore':'Archive'}</button>`:''}
+      ${can('delete')?`<button class="btn danger small" onclick="deleteProj('${p.id}')">Delete</button>`:''}
+    </div>
+    <div class="hintline">Resetting the checklist unticks everything at once — the gear list itself is untouched.</div>
   </div>`;
 }
 
 function projLine(l, p, figé){
   const on = !!(p.prep && p.prep[l.key]);
+  /* La photo, surtout ici. C'est en préparant qu'on cherche l'objet
+     des yeux sur une étagère : un nom suffit à le cocher, pas à le
+     reconnaître. Un consommable n'en a pas — il garde le carré vide,
+     pour que la colonne reste droite. */
+  const vignette = l.extra
+    ? '<span class="repthumb sm rnophoto"></span>'
+    : (l.photo ? `<img class="repthumb sm" loading="lazy" src="${l.photo}">`
+               : '<span class="repthumb sm rnophoto"></span>');
   if(figé || !can('projectPrep'))
-    return `<div class="pjrow${l.extra?' extra':''}"><div class="pjnm">
+    return `<div class="pjrow${l.extra?' extra':''}">${vignette}<div class="pjnm">
       <div class="t">${l.html}</div><div class="s">${esc(l.sub)}</div></div></div>`;
   return `<label class="pjrow${l.extra?' extra':''}" style="cursor:pointer">
     <input type="checkbox" ${on?'checked':''} onchange="toggleProjItem('${p.id}','${l.key}',this.checked)">
+    ${vignette}
     <div class="pjnm"><div class="t"${on?' style="opacity:.5;text-decoration:line-through"':''}>${l.html}</div>
       <div class="s">${esc(l.sub)}</div></div></label>`;
 }
@@ -607,6 +650,13 @@ async function setProjStatus(pid, st){
 }
 async function resetPrep(pid){
   const p = project(pid); if(!p) return;
+  /* Une case cochée vaut un objet posé dans la caisse. Tout décocher
+     d'un coup, sans un mot, pouvait effacer une préparation à moitié
+     faite au mauvais moment — et rien ne permet de la retrouver. */
+  const faites = Object.keys(p.prep||{}).length;
+  if(faites && !confirm(
+      `Untick all ${faites} line(s) of this checklist?\n\n`
+    + `The gear list itself is untouched — only what you have ticked is cleared.`)) return;
   p.prep = {};
   renderProj();
   await projSave(p, {prep:{}});
