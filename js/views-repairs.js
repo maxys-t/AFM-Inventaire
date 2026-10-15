@@ -233,12 +233,19 @@ function renderReport(){
     .map(([k,l])=>`<button class="chipbtn ${reportFault===k?'on':''}"
       onclick="setReportFault('${k}')">${esc(l)}</button>`).join('');
   document.getElementById('rp-conds').innerHTML = [
-    /* Pas de « Unusable » ici : « hors service » signifie retiré du
-       parc, et un item qu'on envoie en réparation y reste. Le dire au
-       moment d'ouvrir un dossier créait un item à la fois retiré et
-       en cours de réparation — une contradiction que la base refuse.
-       L'état « hors service » se décide à la clôture, pas à l'ouverture. */
-    ['bon','Working apart from this fault'],['use','Marked, worn']
+    /* Trois états possibles au signalement, depuis la v1.23. « En
+       panne » manquait : un objet qui ne fonctionne plus est
+       exactement celui pour lequel on ouvre un dossier, et il fallait
+       jusqu'ici prétendre qu'il marchait encore.
+
+       « Hors service » reste absent : il signifie retiré du parc, or
+       un objet qu'on envoie en réparation y reste. Le dire en ouvrant
+       un dossier créait un item à la fois retiré et en cours de
+       réparation — contradiction que la base refuse. Cet état-là se
+       décide à la clôture, pas à l'ouverture. */
+    ['bon','Working apart from this fault'],
+    ['use','Damaged, still works'],
+    ['ko','Not working']
   ].map(([k,l])=>`<button class="chipbtn sq ${reportCond===k?'on':''}"
       onclick="setReportCond('${k}')">${esc(l)}</button>`).join('');
 
@@ -479,8 +486,15 @@ async function doReceive(){
       await hist(i.id, 'repair', `back, still faulty: ${OUTCOMES[recvOutcome]}${work?` — ${work}`:''}`);
       toast('Back in the queue.', 'ok');
     }else{
-      const cond = recvDest === 'hs' ? 'hs'
-                 : (recvOutcome === 'repaired' ? 'bon' : 'use');
+      /* L'état où l'objet revient. « Rien n'a changé » veut dire qu'il
+         ne marche toujours pas : depuis la v1.23 on sait le dire, au
+         lieu de le ranger parmi les objets « abîmés mais
+         fonctionnels » — ce qui laissait croire qu'on pouvait compter
+         dessus. */
+      const cond = recvDest === 'hs'              ? 'hs'
+                 : recvOutcome === 'repaired'     ? 'bon'
+                 : recvOutcome === 'unchanged'    ? 'ko'
+                 : 'use';
       await apiUpdateRepair(r.id, {
         received_at: nowIso, outcome: recvOutcome, work_done: work || null,
         photos_return: backPhotos,

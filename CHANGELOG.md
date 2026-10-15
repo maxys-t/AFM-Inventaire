@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.23.1] — 2026-10-15
+
+### Corrigé — le quatrième état manquait encore à trois endroits
+
+- **La fenêtre de signalement** ne proposait que « ça marche à part
+  cette panne » et « marqué, usé ». Or l'objet pour lequel on ouvre un
+  dossier est précisément celui qui ne fonctionne plus : il fallait
+  prétendre le contraire. Elle propose désormais
+  *Working apart from this fault · Damaged, still works · **Not
+  working***.
+
+  « Hors service » reste volontairement absent : il signifie retiré du
+  parc, et un objet qu'on envoie en réparation y reste. Cet état-là se
+  décide à la clôture.
+
+- **Au retour d'un atelier**, un objet revenu sans rien de réparé était
+  rangé parmi les « abîmés mais fonctionnels » — ce qui laissait croire
+  qu'on pouvait compter dessus. Il revient maintenant **en panne**.
+
+- **À l'import d'un fichier**, « en panne », « ko », « ne marche pas »
+  étaient rabattus sur « usé ». Ils sont reconnus.
+
+- Le tri de la colonne État lit désormais la liste des états au lieu
+  d'en garder une copie — elle ne pouvait que diverger.
+
+
 ## [1.23.0] — 2026-10-15
 
 **Migration SQL à passer : `sql/025-etats-materiel.sql`.** Elle ne

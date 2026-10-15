@@ -110,7 +110,9 @@ function sortKey(c, i){
     case 'cat':    return catIndex(i.cat) * 1000 + subIndex(i.cat, i.subcat);
     case 'family': return catIndex(i.cat);
     case 'status': return i.status === 'sorti' ? 1 : 0;
-    case 'cond':   return ['bon','use','hs'].indexOf(i.cond);
+    /* Le tri suit l'ordre des états, du meilleur au pire : il vient de
+       CONDS, pour ne pas vivre sa vie si la liste change. */
+    case 'cond':   return Object.keys(CONDS).indexOf(i.cond);
     case 'price':  return (i.price == null || i.price === '') ? null : Number(i.price);
     case 'weight': return i.weight_g || null;
     case 'case':   return i.has_case ? 0 : 1;

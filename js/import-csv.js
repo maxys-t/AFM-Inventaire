@@ -113,6 +113,10 @@ function resolveCond(v){
   for(const [k,l] of Object.entries(CONDS)) if(k===n || norm(l)===n) return k;
   if(n.startsWith('bon') || n==='ok' || n==='ras') return 'bon';
   if(n.includes('hs') || n.includes('hors service')) return 'hs';
+  /* « en panne », « ko », « ne marche pas » : l'état existe depuis la
+     v1.23, un fichier qui le dit n'a plus à être rabattu sur « usé ». */
+  if(n.includes('panne') || n==='ko' || n.includes('ne marche pas')
+     || n.includes('ne fonctionne pas') || n.includes('mort')) return 'ko';
   /* Un fichier importé ne peut pas ouvrir un dossier de réparation :
      il n'y a ni panne décrite ni état documenté. On retient donc
      l'état physique, et le signalement se fait dans l'application. */
