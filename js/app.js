@@ -4,10 +4,12 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.22.3';
+const APP_VERSION = '1.22.4';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','packs','rep','settings'];
+/* Les vues faites de tableaux ou de colonnes : elles prennent l'écran. */
+const WIDE_VIEWS = ['inv','out','packs','proj','rep','people'];
 function show(v){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
   VIEWS.forEach(x=>{ const el = document.getElementById('v-'+x); if(el) el.style.display = x===v?'':'none'; });
@@ -17,8 +19,13 @@ function show(v){
     intro.textContent = txt;
     intro.style.display = txt ? '' : 'none';
   }
-  // L'inventaire a besoin de plus de largeur que les autres vues.
-  document.body.classList.toggle('wideview', v === 'inv');
+  /* Les vues qui montrent des TABLEAUX prennent toute la largeur.
+     L'inventaire le faisait seul depuis la v1.13.1 ; les autres
+     restaient bridées à 1 100 px, et leurs colonnes se repliaient sur
+     deux lignes alors qu'un tiers de l'écran restait noir. Le tableau
+     de bord et les réglages, eux, sont du texte : on les garde
+     étroits, parce qu'une ligne de prose trop longue se lit mal. */
+  document.body.classList.toggle('wideview', WIDE_VIEWS.includes(v));
   syncStickyOffset();
   try{ window.scrollTo(0,0); }catch(e){}
   render();

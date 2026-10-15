@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.22.4] — 2026-10-15
+
+### Changé
+
+- **Toutes les vues de tableaux prennent la largeur de l'écran.**
+  L'inventaire le faisait seul depuis la v1.13.1 ; Checked out, Packs,
+  Projets, Repairs et Borrowers restaient bridés à 1 100 px. Leurs
+  colonnes se repliaient sur deux lignes pendant qu'un tiers du
+  moniteur restait noir.
+
+  Le tableau de bord et les réglages gardent leur largeur : ce sont des
+  textes, et une ligne de prose trop longue se lit mal.
+
+- **Plus aucun retour à la ligne dans un tableau.** Un en-tête coupé en
+  « DESTINATION / » puis « REASON », une date coupée entre le jour et
+  l'heure, un bouton coupé en deux : chaque fois, c'est toute la ligne
+  qui double de hauteur. Les cellules ne se replient plus ; la première
+  colonne s'abrège si besoin — le nom complet reste dans la fiche — et,
+  en dernier recours, le panneau défile horizontalement.
+
+  Sur téléphone, la règle s'inverse : le tableau y devient des cartes
+  empilées, où le texte doit justement pouvoir passer à la ligne.
+
+
 ## [1.22.3] — 2026-10-14
 
 ### Corrigé

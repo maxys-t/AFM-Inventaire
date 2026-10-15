@@ -1192,3 +1192,56 @@ tr.outpack td{padding-top:8px;padding-bottom:8px}
 @media(max-width:700px){
   #outList td{white-space:normal}
 }
+
+/* ============================================================
+   PAS DE RETOUR À LA LIGNE DANS LES TABLEAUX (v1.22.4)
+
+   Un en-tête coupé en « DESTINATION / » puis « REASON », une date
+   coupée entre le jour et l'heure, un bouton coupé en « Check-in » /
+   « all » : à chaque fois la ligne double de hauteur, et la liste
+   devient deux fois plus longue qu'elle n'a besoin de l'être.
+
+   On élargit plutôt la vue — comme l'inventaire le fait depuis la
+   v1.13.1 — et, si cela ne suffit toujours pas, le panneau défile
+   horizontalement. Jamais de repli.
+
+   Sur téléphone, où le tableau se transforme en cartes empilées, la
+   règle s'inverse : là, le texte DOIT pouvoir passer à la ligne.
+   ============================================================ */
+#v-out table th, #v-out table td,
+#v-proj table th, #v-proj table td,
+#v-rep table th, #v-rep table td,
+#v-people table th, #v-people table td{white-space:nowrap}
+
+/* La première colonne porte des noms longs : elle peut s'abréger,
+   mais pas se replier. Le nom complet reste dans la fiche. */
+#v-out table td:first-child,
+#v-proj table td:first-child,
+#v-rep table td:first-child,
+#v-people table td:first-child{max-width:46ch;overflow:hidden;text-overflow:ellipsis}
+
+/* Dernier recours plutôt qu'un repli : on fait défiler le panneau. */
+#v-out .panel, #v-rep .panel, #v-people .panel{overflow-x:auto}
+
+#v-out .btn, #v-rep .btn, #v-people .btn, #v-proj .btn{white-space:nowrap}
+
+@media(max-width:700px){
+  #v-out table th, #v-out table td,
+  #v-proj table th, #v-proj table td,
+  #v-rep table th, #v-rep table td,
+  #v-people table th, #v-people table td{white-space:normal}
+  #v-out table td:first-child,
+  #v-proj table td:first-child,
+  #v-rep table td:first-child,
+  #v-people table td:first-child{max-width:none;overflow:visible;text-overflow:clip}
+}
+
+/* L'onglet Packs est fait de lignes souples, pas d'un tableau : même
+   règle, appliquée là où le texte vit. */
+#v-packs .reptitle, #v-packs .repmeta, #v-packs .pkcont{
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#v-packs .btn{white-space:nowrap}
+@media(max-width:700px){
+  #v-packs .reptitle, #v-packs .repmeta, #v-packs .pkcont{
+    white-space:normal;overflow:visible;text-overflow:clip}
+}
