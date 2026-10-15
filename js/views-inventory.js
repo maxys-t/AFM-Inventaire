@@ -702,7 +702,18 @@ function checkoutBlockReason(i){
   if(r && r.status === 'sent') return "currently at the repair shop";
   if(r)                        return "flagged as needing repair";
   if(i.cond === 'hs')          return "marked out of service";
+  if(i.cond === 'ko')          return "marked faulty";
   return null;
+}
+
+/* Signalé n'est pas introuvable. Un objet en panne, hors service ou
+   en attente de réparation peut tout à fait partir — on emporte un
+   ampli capricieux parce qu'on en a besoin. Celui qui est CHEZ un
+   réparateur, lui, n'est pas au studio : aucune case à cocher ne le
+   fera apparaître dans la caisse. */
+function checkoutImpossible(i){
+  const r = repairOf(i.id);
+  return !!(r && r.status === 'sent');
 }
 function canCheckout(i){ return i.status === 'dispo' && !checkoutBlockReason(i); }
 

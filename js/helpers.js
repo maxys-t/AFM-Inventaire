@@ -490,14 +490,31 @@ function packWouldLoop(packId, itemId){
 
 function projPacks(p){ return (p.pack_ids||[]).map(id=>pack(id)).filter(Boolean); }
 
-/* Indisponible pour CE projet : en réparation, ou sorti ailleurs.
-   Sorti pour ce projet-ci, c'est au contraire la situation normale
-   une fois le show commencé. */
+/* Indisponible pour CE projet : physiquement ailleurs. Sorti pour
+   ce projet-ci, c'est au contraire la situation normale une fois le
+   show commencé.
+
+   Un objet signalé — en panne, hors service, dossier ouvert — n'est
+   PAS indisponible : il est au studio, on peut l'emporter si on en a
+   besoin. L'écarter d'office revenait à décider à la place de celui
+   qui charge. Il part donc avec le projet, en portant sa mention. */
 function projBusy(i, p){
   if(!i) return false;
-  if(repairOf(i.id)) return true;
+  const r = repairOf(i.id);
+  if(r && r.status === 'sent') return true;        // chez un réparateur
   if(i.status === 'sorti') return !(i.out && i.out.projectId === p.id);
   return false;
+}
+
+/* Ce qu'il faut signaler sans empêcher, en une phrase. */
+function itemFlag(i){
+  if(!i) return '';
+  const r = repairOf(i.id);
+  if(r && r.status !== 'sent') return 'repair reported';
+  if(i.cond === 'hs') return 'out of service';
+  if(i.cond === 'ko') return 'faulty';
+  if(i.cond === 'use') return 'damaged';
+  return '';
 }
 
 /* Clé de checklist d'un consommable : il n'a pas d'identifiant d'item,

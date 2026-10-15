@@ -480,7 +480,9 @@ function projPrep(){
 
   let blocs = c.groups.map(g=>bloc(
     g.name,
-    g.items.map(i=>({key:i.id, html:itemTitle(i), sub:i.id + ' · ' + fweight(i.weight_g||0)}))
+    g.items.map(i=>({key:i.id, html:itemTitle(i),
+                     sub:i.id + ' · ' + fweight(i.weight_g||0)
+                         + (itemFlag(i) ? ' · ⚠ ' + itemFlag(i) : '')}))
       .concat(g.extras.map(e=>({key:e.key, html:esc(e.label), sub:'× ' + e.qty, extra:true}))),
     g.extras, g.écartés,
     g.items.reduce((t,i)=>t+(i.weight_g||0), 0)
@@ -488,7 +490,9 @@ function projPrep(){
 
   if(c.loose.length){
     blocs += bloc('Loose items',
-      c.loose.map(i=>({key:i.id, html:itemTitle(i), sub:i.id + ' · ' + fweight(i.weight_g||0)})),
+      c.loose.map(i=>({key:i.id, html:itemTitle(i),
+                       sub:i.id + ' · ' + fweight(i.weight_g||0)
+                           + (itemFlag(i) ? ' · ⚠ ' + itemFlag(i) : '')})),
       [], [], c.loose.reduce((t,i)=>t+(i.weight_g||0), 0));
   }
 

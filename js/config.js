@@ -153,7 +153,16 @@ const CATS = {
    — signalé, chez un prestataire — vit dans un dossier à part. Les
    deux étaient confondus jusqu'ici, ce qui rendait impossible de
    dire « revenu réparé mais reste fragile ». */
-const CONDS = {bon:"Good", use:"Marked / worn", hs:"Out of service"};
+/* Quatre états depuis la v1.23. Il manquait la case du milieu :
+   entre « usé mais ça marche » et « sorti du parc », il y a l'objet
+   qui ne fonctionne plus et qu'on va réparer. Faute de pouvoir le
+   dire, on le marquait hors service — ce qui le retirait du parc.
+
+   La frontière entre `ko` et `hs` n'est pas un degré de gravité,
+   c'est une décision : `ko` se répare, `hs` a été retiré du parc.
+   L'ordre des clés est celui des menus déroulants : du meilleur au
+   pire, pour qu'on descende la liste sans réfléchir. */
+const CONDS = {bon:"Good", use:"Damaged, usable", ko:"Faulty", hs:"Out of service"};
 
 /* Les valeurs d'avant la v1.17, gardées pour relire l'historique
    déjà écrit. Ne jamais les proposer à la saisie. */

@@ -655,32 +655,96 @@ async function packAddApply(){
    On sort ce qui est dans la boîte. Ce qui est déjà dehors est
    annoncé, pas embarqué : l'inventaire ne doit jamais affirmer
    qu'un objet part alors qu'il est déjà ailleurs. */
+/* ============================================================
+   SORTIR UNE CAISSE
+
+   Les items signalés — en panne, hors service, dossier de réparation
+   ouvert — étaient retirés de la sélection sans rien demander. On
+   emporte pourtant un ampli capricieux quand on en a besoin, et
+   découvrir au déchargement qu'il est resté au studio parce que
+   l'application a décidé à notre place, c'est le pire moment.
+
+   Une fenêtre les liste donc, cochés par défaut : on part avec, sauf
+   si l'on décoche. Seul l'objet qui est CHEZ un réparateur reste
+   dehors — aucune case à cocher ne le fera apparaître dans la caisse.
+   ============================================================ */
+let packOutPending = null;
+
 function packCheckout(id){
   const p = pack(id);
   /* Tout ce qui part : le contenant, son contenu, et celui des packs
      imbriqués. Pas seulement les membres directs. */
   const tout = packAllItems(p);
-  const dehors   = tout.filter(i=>i.status === 'sorti');
-  const ici      = tout.filter(i=>i.status === 'dispo');
-  const sortables = ici.filter(canCheckout);
-  const bloqués   = ici.filter(i=>!canCheckout(i));
+  const dehors    = tout.filter(i=>i.status === 'sorti');
+  const ici       = tout.filter(i=>i.status === 'dispo');
+  const absents   = ici.filter(checkoutImpossible);
+  const possibles = ici.filter(i=>!checkoutImpossible(i));
+  const signalés  = possibles.filter(i=>checkoutBlockReason(i));
 
-  if(!sortables.length){
+  if(!possibles.length){
     toast(dehors.length
       ? 'Everything in this pack is already out.'
       : 'Nothing in this pack can be checked out.', 'error');
     return;
   }
 
-  sel = new Set(sortables.map(i=>i.id));
+  if(!signalés.length && !absents.length){
+    packOutGo(p, possibles.map(i=>i.id), dehors.length, []);
+    return;
+  }
+
+  packOutPending = {packId:p.id, ids:possibles.map(i=>i.id),
+                    dehors:dehors.length, absents:absents.map(i=>i.id)};
+  document.getElementById('poTitle').textContent = `Check out ${p.name}`;
+  document.getElementById('poBody').innerHTML = `
+    <p class="muted">${possibles.length} item(s) will be checked out.
+      ${signalés.length} ${signalés.length>1?'are':'is'} flagged — untick what should stay behind.</p>
+    <div class="pklist" style="margin-top:10px">
+      ${signalés.map(i=>`<label class="pkline" style="cursor:pointer">
+        <input type="checkbox" checked data-po="${i.id}" style="width:18px;height:18px;flex:none">
+        <div class="repbody"><div>${itemTitle(i)} <span class="mono">${esc(i.id)}</span></div>
+          <div class="submuted">${esc(checkoutBlockReason(i))}</div></div>
+        <span class="tag ${i.cond}">${esc(CONDS[i.cond]||i.cond)}</span>
+      </label>`).join('')}
+    </div>
+    ${absents.length ? `<div class="infoband bad" style="display:block;margin-top:10px">
+      <b>⚠ Not in the studio — ${absents.length}</b>
+      <div style="margin-top:5px">${absents.map(i=>
+        `${esc(itemTitleText(i))} <span class="muted">· ${esc(itemWhere(i))}</span>`
+      ).join('<br>')}</div>
+      <div class="hintline" style="margin-top:6px">These are at a repair shop — they cannot leave with the case.</div>
+    </div>` : ''}
+    ${dehors.length ? `<div class="hintline" style="margin-top:8px">${dehors.length} item(s) of this pack are already out elsewhere.</div>` : ''}`;
+  open_('ovPackOut');
+}
+
+/* Les deux raccourcis de la fenêtre : tout emporter, ou ne rien
+   emporter de ce qui est signalé. */
+function packOutTickAll(on){
+  document.querySelectorAll('#poBody input[data-po]').forEach(c=>{ c.checked = on; });
+}
+
+function packOutConfirm(){
+  const d = packOutPending; if(!d) return;
+  const refusés = new Set();
+  document.querySelectorAll('#poBody input[data-po]').forEach(c=>{
+    if(!c.checked) refusés.add(c.dataset.po);
+  });
+  const ids = d.ids.filter(x=>!refusés.has(x));
+  if(!ids.length){ toast('Nothing left to check out.', 'warn'); return; }
+  close_('ovPackOut');
+  packOutGo(pack(d.packId), ids, d.dehors, [...refusés]);
+}
+
+function packOutGo(p, ids, dehors, laissés){
+  sel = new Set(ids);
   close_('ovPack');
   show('inv');
   renderBulkBar();
-  if(dehors.length || bloqués.length){
-    toast(`${sortables.length} item(s) selected` +
-          (dehors.length ? ` · ${dehors.length} already out` : '') +
-          (bloqués.length ? ` · ${bloqués.length} blocked` : ''), 'info', null, null, 7000);
-  }
+  const bouts = [`${ids.length} item(s) selected`];
+  if(dehors) bouts.push(`${dehors} already out`);
+  if(laissés.length) bouts.push(`${laissés.length} left behind`);
+  if(bouts.length > 1) toast(bouts.join(' · '), 'info', null, null, 7000);
   openBulkCheckout();
 }
 

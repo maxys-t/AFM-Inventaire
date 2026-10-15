@@ -1,5 +1,53 @@
 # Changelog
 
+## [1.23.0] — 2026-10-15
+
+**Migration SQL à passer : `sql/025-etats-materiel.sql`.** Elle ne
+modifie aucune donnée : elle ouvre une valeur de plus.
+
+### Changé — quatre états au lieu de trois
+
+| | |
+|---|---|
+| **Good** | état correct |
+| **Damaged, usable** | abîmé, mais ça marche |
+| **Faulty** | en panne, toujours au parc |
+| **Out of service** | retiré du parc |
+
+Il manquait la case du milieu. Entre « usé mais ça marche » et « sorti
+du parc », il y a l'objet qui ne fonctionne plus et qu'on va réparer.
+Faute de pouvoir le dire, on le marquait hors service — ce qui le
+retirait du parc — ou abîmé, ce qui prétendait qu'il marche.
+
+La frontière entre les deux derniers n'est pas un degré de gravité,
+c'est une décision : **Faulty** se répare, **Out of service** a été
+retiré du parc. Les items déjà marqués hors service le restent : c'est
+la définition qu'ils portaient déjà depuis la migration 016.
+
+### Corrigé — l'application ne décide plus à votre place
+
+- **Sortir une caisse écartait en silence les items signalés.** En
+  panne, hors service, dossier de réparation ouvert : ils
+  disparaissaient de la sélection sans un mot. On emporte pourtant un
+  ampli capricieux quand on en a besoin, et découvrir au déchargement
+  qu'il est resté au studio est le pire moment pour l'apprendre.
+
+  Une fenêtre les liste désormais, **cochés par défaut** : on part
+  avec, sauf si l'on décoche. Deux raccourcis — *Take everything* et
+  *Leave the flagged ones* — et un décompte de ce qui reste. Si rien
+  n'est signalé, aucune fenêtre ne s'ouvre : on ne pose une question
+  que lorsqu'il y en a une.
+
+  Un seul cas reste sans choix : l'objet qui est **chez un
+  réparateur** n'est pas au studio, aucune case à cocher ne le fera
+  apparaître dans la caisse. Il est listé à part, avec son atelier.
+
+- **Un projet écartait de même un objet signalé.** Même règle : seul
+  ce qui est physiquement ailleurs est écarté. Le reste part, en
+  portant sa mention dans la checklist de préparation — « ⚠ faulty »,
+  « ⚠ repair reported ».
+
+
 ## [1.22.4] — 2026-10-15
 
 ### Changé
