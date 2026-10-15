@@ -1,5 +1,58 @@
 # Changelog
 
+## [1.24.0] — 2026-10-15
+
+**Migration SQL à passer : `sql/026-contenants-partages.sql`.** Elle ne
+modifie aucune donnée.
+
+### Changé
+
+- **Choisir un contenant ne propose plus les 649 items.** Trois lettres
+  et on tombait sur un micro. La fenêtre ne propose que les
+  sous-catégories de contenants — sacs, flight cases, racks studio,
+  racks 500, expansions, plateaux, mobilier — plus tout ce qui sert
+  déjà de contenant, pour ne rien casser. Une case *Show all items*
+  rouvre la liste entière pour les cas imprévus. La liste vit dans
+  `js/config.js` : l'allonger ne demande aucune migration.
+
+- **Un contenant peut porter plusieurs recettes.** La même Pelicase
+  sert à la config du trio et à celle du quintet ; l'interdire
+  obligeait à inventer deux caisses pour une seule boîte. Une seule
+  limite demeure : **un seul assemblage monté** par contenant, puisque
+  c'est lui qui répond de « qu'y a-t-il dedans » et qui porte
+  l'imbrication et le poids. L'application refuse le second en nommant
+  le premier.
+
+### Corrigé
+
+- **Un item réclamé par deux caisses d'un même projet disparaissait de
+  la seconde, sans un mot.** La première le prenait, la seconde ne le
+  montrait plus du tout — impossible de comprendre pourquoi elle était
+  incomplète.
+
+  La seconde caisse l'affiche maintenant sous **Already taken by
+  another case**, en disant dans laquelle il voyage. Et si un
+  exemplaire libre du même modèle existe, un bouton le met à sa place
+  en un clic, avec annulation.
+
+  La recette n'est pas touchée : la caisse continue de dire
+  « MSD-002 », c'est **ce projet-ci** qui note « ici, prends plutôt le
+  MSD-005 ». La tournée suivante repart du réel.
+
+### Feuille de route
+
+- **Des recettes qui demandent un modèle plutôt qu'un exemplaire.**
+  Une caisse dirait « 4 × Shure SM57 » au lieu de nommer quatre
+  identifiants ; deux recettes ne pourraient alors plus se disputer le
+  même objet, et « en ai-je assez ? » deviendrait calculable. Ne
+  concerne que les familles à plusieurs exemplaires — câbles, pieds,
+  SM57, DI. À décider après la préparation par projet, qui dira si le
+  besoin est réel.
+
+- **Ranger les items dans les caisses depuis le projet**, de sorte
+  qu'un item attribué quitte la liste des disponibles.
+
+
 ## [1.23.2] — 2026-10-15
 
 ### Corrigé

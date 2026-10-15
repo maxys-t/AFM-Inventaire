@@ -153,6 +153,26 @@ const CATS = {
    — signalé, chez un prestataire — vit dans un dossier à part. Les
    deux étaient confondus jusqu'ici, ce qui rendait impossible de
    dire « revenu réparé mais reste fragile ». */
+/* --- Ce qui peut servir de contenant à un pack (v1.24) ---
+   Proposer les 649 items pour choisir une caisse était un champ de
+   mines : on tapait trois lettres et on tombait sur un micro.
+
+   La liste n'est pas une interdiction. Une console qui porte son rack
+   d'expansion, une lunchbox qui porte ses modules : ce sont de vrais
+   contenants qui ne sont ni des sacs ni des flight cases. La fenêtre
+   garde donc une case « Show all items », et un item déjà utilisé
+   comme contenant reste toujours proposé. Ajouter une
+   sous-catégorie ici ne demande aucune migration. */
+const CONTAINER_SUBS = [
+  'housse',      // Bag
+  'flightcase',  // Flight case
+  'rack19',      // Studio rack
+  'chassis',     // 500 series rack — une lunchbox porte ses modules
+  'extension',   // Expander / rack
+  'plateau',     // Table & tray
+  'mobilier'     // Furniture — un meuble de studio porte son contenu
+];
+
 /* Quatre états depuis la v1.23. Il manquait la case du milieu :
    entre « usé mais ça marche » et « sorti du parc », il y a l'objet
    qui ne fonctionne plus et qu'on va réparer. Faute de pouvoir le

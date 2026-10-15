@@ -262,8 +262,30 @@ function histIcon(t){ return {create:"➕",out:"📤",in:"📥",move:"📍",edit
    la première venue.                                                */
 
 function pack(id){ return (db.packs||[]).find(p=>p.id === id) || null; }
+
+/* Les packs dont cet item est le contenant. Depuis la v1.24 la même
+   Pelicase peut servir à plusieurs configurations — ce sont des
+   recettes, et une seule est montée à la fois. */
+function packsOfContainer(itemId){
+  return (db.packs||[]).filter(p=>p.container_id === itemId && !p.archived);
+}
+/* Celui qui RÉPOND de la caisse : l'assemblage monté, s'il existe.
+   C'est lui qui porte l'imbrication et le poids — une configuration
+   non montée n'occupe pas la boîte, donc ne revendique rien. La base
+   garantit qu'il n'y en a qu'un (index packs_container_assembled_uniq). */
 function packOfContainer(itemId){
-  return (db.packs||[]).find(p=>p.container_id === itemId) || null;
+  const l = packsOfContainer(itemId);
+  if(!l.length) return null;
+  return l.find(p=>p.permanent) || (l.length === 1 ? l[0] : null);
+}
+
+/* Ce qui peut servir de contenant. La liste guide, elle n'interdit
+   pas : un item déjà contenant reste toujours proposé, sans quoi
+   restreindre la liste casserait les caisses existantes. */
+function isContainerKind(i){
+  if(!i) return false;
+  if(typeof CONTAINER_SUBS === 'undefined') return true;
+  return CONTAINER_SUBS.includes(i.subcat) || packsOfContainer(i.id).length > 0;
 }
 /* Le contenu d'un pack. */
 function packItemsOf(id){
@@ -521,18 +543,41 @@ function itemFlag(i){
    et `prep` est une table à plat. Le préfixe évite toute collision. */
 function extraKey(e){ return 'x:' + e.id; }
 
+/* La substitution décidée pour CE projet : « dans la caisse K, le
+   MSD-002 est remplacé par le MSD-005 ». La recette n'est pas
+   touchée — deux tournées successives peuvent substituer
+   différemment. */
+function subKey(packId, itemId){ return packId + '|' + itemId; }
+function projSub(p, packId, itemId){
+  const id = p && p.subs ? p.subs[subKey(packId, itemId)] : null;
+  return id ? item(id) : null;
+}
+
 function projContent(p){
-  if(!p) return {groups:[], loose:[], items:[], extras:[], weight:0, missing:0, frozen:false};
+  if(!p) return {groups:[], loose:[], items:[], extras:[], doublons:[],
+                 weight:0, missing:0, frozen:false};
   if(p.snapshot && p.status === 'show') return projFromSnapshot(p);
 
-  const groups = [], vus = new Set();
+  const groups = [], vus = new Set(), doublons = [];
   projPacks(p).forEach(k=>{
-    const tous = packAllItems(k).filter(i=>!vus.has(i.id));
-    tous.forEach(i=>vus.add(i.id));
+    const tous = [];
+    packAllItems(k).forEach(brut=>{
+      /* Un exemplaire remplacé pour ce projet : c'est le remplaçant
+         qui voyage, et la ligne dit d'où il vient. */
+      const r = projSub(p, k.id, brut.id);
+      const i = (r && !vus.has(r.id)) ? r : brut;
+      if(!vus.has(i.id)){ vus.add(i.id); tous.push(i); return; }
+      /* Déjà pris par une caisse précédente. Il ne doit SURTOUT pas
+         disparaître sans un mot — c'était le défaut : on ne pouvait
+         pas comprendre pourquoi la seconde caisse était incomplète. */
+      doublons.push({item:i, packId:k.id, packName:k.name,
+                     ailleurs:(groups.find(g=>g.items.some(x=>x.id===i.id))||{}).name || ''});
+    });
     groups.push({
       packId: k.id, name: k.name, permanent: !!k.permanent,
       items:   tous.filter(i=>!projBusy(i, p)),
       écartés: tous.filter(i=>projBusy(i, p)),
+      doublons: doublons.filter(d=>d.packId === k.id),
       extras:  packAllExtras(k).map(e=>({...e, key: extraKey(e)}))
     });
   });
@@ -548,9 +593,25 @@ function projContent(p){
      total baisser sans explication. */
   const missing = (p.item_ids||[]).filter(id=>!item(id)).length;
 
-  return {groups, loose, items, extras,
+  return {groups, loose, items, extras, doublons,
           weight: items.reduce((t,i)=>t + (i.weight_g||0), 0),
           missing, frozen:false};
+}
+
+/* Un exemplaire libre du même modèle, pour prendre la place de celui
+   qu'une autre caisse a déjà pris. « Libre » veut dire : ni déjà
+   engagé dans ce projet, ni physiquement ailleurs. */
+function projFreeTwin(p, i){
+  if(!i) return null;
+  const c = projContent(p);
+  const pris = new Set(c.items.map(x=>x.id));
+  (p.item_ids||[]).forEach(id=>pris.add(id));
+  const base = groupKeyOf(i.name) || i.name;
+  return db.items.find(x=>
+    x.id !== i.id && !pris.has(x.id) &&
+    x.subcat === i.subcat && (x.brand||'') === (i.brand||'') &&
+    (groupKeyOf(x.name) || x.name) === base &&
+    !projBusy(x, p)) || null;
 }
 
 /* Le contenu figé, relu tel quel. Un item disparu de l'inventaire
@@ -564,13 +625,13 @@ function projFromSnapshot(p){
 
   const groups = (s.packs||[]).map(g=>({
     packId: g.id, name: g.name, permanent: !!g.permanent,
-    items: résoudre(g.items), écartés: [],
+    items: résoudre(g.items), écartés: [], doublons: [],
     extras: (g.extras||[]).map(e=>({...e, key: extraKey(e)}))
   }));
   const loose  = résoudre(s.items);
   const items  = groups.reduce((a,g)=>a.concat(g.items), []).concat(loose);
   const extras = groups.reduce((a,g)=>a.concat(g.extras), []);
-  return {groups, loose, items, extras,
+  return {groups, loose, items, extras, doublons:[],
           weight: items.reduce((t,i)=>t + (i.weight_g||0), 0),
           missing, frozen:true};
 }

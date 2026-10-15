@@ -104,7 +104,7 @@ async function openProjForm(id){
   if(id){ projGo('edit', id); return; }
   if(!can('edit')) return;
   const p = {id:"p"+Date.now(), name:"New project", description:"", status:'inactif',
-             item_ids:[], pack_ids:[], prep:{}, snapshot:null, last_used:null,
+             item_ids:[], pack_ids:[], prep:{}, snapshot:null, subs:{}, last_used:null,
              created_at:now(), loc_name:'', starts_on:null, ends_on:null, archived:false};
   db.projects.push(p);
   projGo('edit', p.id);
@@ -115,7 +115,7 @@ async function openProjForm(id){
 async function duplicateProj(id){
   const s = project(id); if(!s) return;
   const p = {...s, id:"p"+Date.now(), name:s.name + ' (copy)', status:'inactif',
-             prep:{}, snapshot:null, last_used:null, created_at:now(), archived:false,
+             prep:{}, snapshot:null, subs:{}, last_used:null, created_at:now(), archived:false,
              item_ids:[...(s.item_ids||[])], pack_ids:[...(s.pack_ids||[])]};
   db.projects.push(p);
   projGo('edit', p.id);
@@ -219,6 +219,17 @@ function projEditor(){
         ${g.écartés.length?`<div class="pjsub warntxt">Left out — unavailable</div>` +
           g.écartés.map(i=>`<div class="pjrow off"><div class="pjnm"><div class="t">${itemTitle(i)}</div>
             <div class="s">${esc(itemWhere(i))}</div></div></div>`).join(''):''}
+        ${g.doublons.length?`<div class="pjsub warntxt">Already taken by another case</div>` +
+          g.doublons.map(d=>{
+            const libre = projFreeTwin(p, d.item);
+            return `<div class="pjrow"><div class="pjnm">
+              <div class="t">${itemTitle(d.item)}</div>
+              <div class="s warntxt">travels in ${esc(d.ailleurs || 'another case')}${
+                libre ? '' : ' · no free copy left'}</div></div>
+              ${libre?`<button class="btn small sec" onclick="projSwap('${g.packId}','${d.item.id}','${libre.id}')"
+                 title="Use ${esc(itemTitleText(libre))} here instead">Use ${esc(libre.id)}</button>`:''}
+            </div>`;
+          }).join(''):''}
         ${g.extras.length?`<div class="pjsub">Consumables</div>` +
           g.extras.map(e=>`<div class="pjrow extra"><div class="pjnm"><div class="t">${esc(e.label)}</div>
             <div class="s">× ${e.qty} · not counted in the weight</div></div></div>`).join(''):''}
@@ -365,6 +376,24 @@ async function projAddPack(id){
   const ind = packAllItems(k).filter(i=>projBusy(i, p));
   if(ind.length) toast(`${k.name} added — ${ind.length} item(s) unavailable, left out of the checklist.`, 'warn');
 }
+/* Deux caisses du projet réclament le même exemplaire : on en donne
+   un autre à la seconde. La recette n'est pas touchée — la Pelicase
+   continue de dire « MSD-002 » ; c'est ce projet-ci qui note « ici,
+   prends plutôt le MSD-005 ». La tournée suivante repart du réel. */
+async function projSwap(packId, ancien, nouveau){
+  const p = project(projView.id); if(!p || !can('projectPrep')) return;
+  p.subs = p.subs || {};
+  p.subs[subKey(packId, ancien)] = nouveau;
+  renderProj();
+  await projSave(p, {subs:p.subs});
+  toast(`${nouveau} takes the place of ${ancien} in this project.`, 'ok',
+        'Undo', async ()=>{
+          delete p.subs[subKey(packId, ancien)];
+          renderProj();
+          await projSave(p, {subs:p.subs});
+        }, 10000);
+}
+
 async function projRemovePack(id){
   const p = project(projView.id); if(!p || !can('edit')) return;
   p.pack_ids = (p.pack_ids||[]).filter(x=>x !== id);

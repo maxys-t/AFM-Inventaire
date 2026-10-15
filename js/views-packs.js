@@ -522,19 +522,29 @@ let packEditing = null;
    par un chiffre (« 500-001 ») suffisait à tout faire échouer. */
 let packContChoix = new Map();
 
+/* Proposer les 649 items pour choisir une caisse était un champ de
+   mines : trois lettres et on tombait sur un micro. On ne propose
+   donc que les sous-catégories de contenants (CONTAINER_SUBS), plus
+   ce qui sert déjà de contenant. La case ci-dessous rouvre la liste
+   entière pour les cas qu'on n'a pas prévus. */
+let packFormAll = false;
+function packFormShowAll(on){ packFormAll = !!on; openPackForm(packEditing); }
+
 function openPackForm(id){
   packEditing = id || null;
   const p = id ? pack(id) : null;
-  /* Un contenant déjà pris par un autre pack ne doit pas être
-     proposé : « qu'y a-t-il dans cette caisse » n'aurait plus de
-     réponse unique. */
-  const libres = db.items.filter(i=>{
-    const d = packOfContainer(i.id);
-    return !d || (p && d.id === p.id);
-  });
+  /* Depuis la v1.24, un contenant peut porter plusieurs recettes : on
+     ne l'écarte plus parce qu'un autre pack s'en sert. Seul un
+     deuxième assemblage MONTÉ est refusé, et c'est packSave qui le
+     dit — avec la raison. */
+  const libres = db.items.filter(i=>packFormAll || isContainerKind(i));
   packContChoix = new Map();
   const étiquette = i => `${itemTitleText(i)} · ${i.id}`;
   libres.forEach(i=>packContChoix.set(étiquette(i).toLowerCase(), i.id));
+  /* Le contenant déjà choisi doit rester reconnaissable même s'il
+     sort de la liste courte. */
+  if(p && p.container_id && item(p.container_id))
+    packContChoix.set(étiquette(item(p.container_id)).toLowerCase(), p.container_id);
 
   document.getElementById('pfTitle').textContent = p ? 'Edit pack' : 'New pack';
   document.getElementById('pfBody').innerHTML = `
@@ -546,7 +556,10 @@ function openPackForm(id){
         <input id="pf-cont" list="pf-list" placeholder="Type a name or an ID — leave empty for a grouping without a box"
                value="${p && p.container_id ? esc(étiquette(item(p.container_id))) : ''}">
         <datalist id="pf-list">${libres.map(i=>
-          `<option value="${esc(étiquette(i))}">`).join('')}</datalist></div>
+          `<option value="${esc(étiquette(i))}">`).join('')}</datalist>
+        <label class="checkline">
+          <input type="checkbox" ${packFormAll?'checked':''} onchange="packFormShowAll(this.checked)">
+          Show all items (${db.items.length}) — not just bags, cases and racks</label></div>
       <div class="field full"><label>Notes</label>
         <input id="pf-notes" value="${esc(p ? (p.notes||'') : '')}"></div>
       <div class="field full">
@@ -584,8 +597,21 @@ async function packSave(){
   const brut = document.getElementById('pf-cont').value.trim();
   const cont = brut ? packPickId(brut) : null;
   if(brut && !cont){ toast('Container not found — pick one from the list.', 'error'); return; }
+  const monté = !!(document.getElementById('pf-perm')||{}).checked;
+  /* Un contenant peut servir à plusieurs configurations, mais n'être
+     monté qu'une fois : deux assemblages montés autour du même meuble
+     décriraient deux contenus simultanés du même objet. La base le
+     refuse aussi ; on le dit ici, avec le nom du coupable. */
+  if(cont && monté){
+    const déjà = packsOfContainer(cont).find(x=>x.permanent && x.id !== packEditing);
+    if(déjà){
+      toast(`${itemTitleText(item(cont))} is already assembled as "${déjà.name}". `
+          + `Leave this one as a configuration, or unassemble the other.`, 'error', null, null, 9000);
+      return;
+    }
+  }
   const row = {name, container_id: cont, notes: document.getElementById('pf-notes').value.trim() || null,
-               permanent: !!(document.getElementById('pf-perm')||{}).checked};
+               permanent: monté};
   try{
     if(packEditing) await apiUpdatePack(packEditing, row);
     else { const p = await apiInsertPack(row); packShown = p.id; }

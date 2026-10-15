@@ -152,7 +152,7 @@ async function loadAll(){
     /* pack_ids et snapshot n'existent qu'après la 024 : on les
        normalise ici pour que le reste du code n'ait jamais à se
        demander si la migration est passée. */
-    pack_ids:p.pack_ids||[], snapshot:p.snapshot||null,
+    pack_ids:p.pack_ids||[], snapshot:p.snapshot||null, subs:p.subs||{},
     loc_name:p.loc_name||'', starts_on:p.starts_on||null, ends_on:p.ends_on||null,
     archived: !!p.archived
   }));
