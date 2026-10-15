@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.23.2] — 2026-10-15
+
+### Corrigé
+
+- **Les menus d'état affichaient toujours les trois anciens.** Les
+  options étaient écrites à la main dans `index.html` : passer de
+  trois à quatre états n'a donc rien changé à l'écran, alors que tout
+  le reste du code suivait déjà. Deux menus étaient concernés —
+  modifier un item, et le retour de matériel.
+
+  Les deux sont désormais remplis depuis `CONDS`, comme le reste de
+  l'application. Une liste recopiée finit toujours par diverger de
+  l'originale ; un test vérifie maintenant qu'il n'en reste aucune
+  dans le HTML.
+
+
 ## [1.23.1] — 2026-10-15
 
 ### Corrigé — le quatrième état manquait encore à trois endroits

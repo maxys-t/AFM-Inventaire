@@ -708,6 +708,18 @@ function repairStale(r){ return repairDays(r) >= REPAIR_STALE_DAYS; }
 /* Relit un état physique, y compris les valeurs d'avant la v1.17
    encore présentes dans l'historique déjà écrit. */
 function condLabel(c){ return CONDS[c] || CONDS_LEGACY[c] || c || ''; }
+
+/* Remplit un menu d'états depuis CONDS. Les deux menus de l'appli
+   portaient leurs options écrites en dur dans index.html : passer de
+   trois à quatre états n'a donc rien changé à l'écran, alors que le
+   reste du code suivait. Une liste recopiée finit toujours par
+   diverger de l'originale. */
+function fillConds(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.innerHTML = Object.entries(CONDS)
+    .map(([k,l])=>`<option value="${k}">${esc(l)}</option>`).join('');
+}
 function faultLabel(f){ return FAULTS[f] || f || ''; }
 
 function histBy(h){ return h.actorName ? ` <span class="muted">· by ${esc(h.actorName)}</span>` : ""; }

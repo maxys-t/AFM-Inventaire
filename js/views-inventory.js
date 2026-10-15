@@ -905,6 +905,7 @@ function openItemForm(id){
   document.getElementById('i-casenote').value = (i && i.case_note) || "";
   toggleCaseNote();
   document.getElementById('i-date').value = i?(i.purchase_date||""):"";
+  fillConds('i-cond');
   document.getElementById('i-cond').value = i?i.cond:"bon";
   if(i) document.getElementById('i-home').value = i.home;
   document.getElementById('i-notes').value = i?i.notes:"";
@@ -1165,6 +1166,7 @@ function openCheckin(id){
   actionId = id; bulkMode = false; checkinTargets = null;
   const i = item(id);
   document.getElementById('in-item').textContent = i.name;
+  fillConds('in-cond');
   document.getElementById('in-cond').value = i.cond;
   document.getElementById('in-note').value = "";
   /* Un incident ouvert pendant la sortie ne se referme pas tout seul
@@ -1186,6 +1188,7 @@ function openBulkCheckin(){
   if(!n){ toast("No checked-out item in the selection.", 'error'); return; }
   actionId = null; bulkMode = true; checkinTargets = null;
   document.getElementById('in-item').textContent = `${n} item(s)`;
+  fillConds('in-cond');
   document.getElementById('in-cond').value = 'bon';
   document.getElementById('in-note').value = "";
   open_('ovIn');
@@ -1201,6 +1204,7 @@ function checkInAllFor(userId){
   actionId = null; bulkMode = false;
   checkinTargets = its.map(i=>i.id);
   document.getElementById('in-item').textContent = `${its.length} item(s)${who?` from ${who}`:''}`;
+  fillConds('in-cond');
   document.getElementById('in-cond').value = 'bon';
   document.getElementById('in-note').value = "";
   open_('ovIn');
