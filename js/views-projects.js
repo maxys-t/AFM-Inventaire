@@ -610,10 +610,13 @@ function projLine(l, p, figé){
   const on = !!(p.prep && p.prep[l.key]);
   /* La photo, surtout ici. C'est en préparant qu'on cherche l'objet
      des yeux sur une étagère : un nom suffit à le cocher, pas à le
-     reconnaître. Un consommable n'en a pas — il garde le carré vide,
-     pour que la colonne reste droite. */
-  const vignette = l.extra
-    ? '<span class="repthumb sm rnophoto"></span>'
+     reconnaître.
+
+     Un consommable n'a pas de vignette du tout — pas même un carré
+     vide. Il n'a pas de fiche, donc jamais de photo : lui réserver la
+     place reviendrait à promettre une image qui n'arrivera pas, et à
+     le faire ressembler à un item. */
+  const vignette = l.extra ? ''
     : (l.photo ? `<img class="repthumb sm" loading="lazy" src="${l.photo}">`
                : '<span class="repthumb sm rnophoto"></span>');
   if(figé || !can('projectPrep'))

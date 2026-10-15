@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.24.3] — 2026-10-15
+
+### Changé
+
+- **Plus de carré vide devant un consommable** dans la checklist. Il
+  n'a pas de fiche, donc jamais de photo : lui réserver la place
+  revenait à promettre une image qui n'arriverait pas, et à le faire
+  ressembler à un item. Le décalage avec les lignes d'items dit
+  justement qu'il n'en est pas un.
+
+
 ## [1.24.2] — 2026-10-15
 
 ### Corrigé
