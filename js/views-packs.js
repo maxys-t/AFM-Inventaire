@@ -122,6 +122,7 @@ function packRowHTML(p, niveau, aplati, nEnfants, parentId){
        style="padding-left:${12 + niveau*26}px" onclick="openPackDetail('${p.id}')"
        onpointerdown="packDragStart(event,'pack','${p.id}')">
     ${chev}
+    <span class="pkgrip" title="Drag to move this pack">⠿</span>
     ${ph ? `<img class="repthumb" loading="lazy" src="${ph}">`
          : '<span class="repthumb rnophoto"></span>'}
     <div class="repbody">
@@ -168,6 +169,7 @@ function renderPackDetail(){
     const dehors = i.status === 'sorti' || repairOf(i.id);
     return `<div class="pkline${sous?' sub':''}" data-item="${i.id}"
          onpointerdown="packDragStart(event,'item','${i.id}')">
+      <span class="pkgrip" title="Drag to move this item">⠿</span>
       ${i.photo ? `<img class="repthumb sm" loading="lazy" src="${i.photo}">`
                 : '<span class="repthumb sm rnophoto"></span>'}
       <div class="repbody">
@@ -312,6 +314,11 @@ document.addEventListener('click', e=>{
 function packDragStart(e, type, id){
   if(!can('edit')) return;
   if(e.button !== undefined && e.button !== 0) return;
+  /* Au doigt, seule la poignée lance un glissement : partout ailleurs
+     la liste doit pouvoir défiler. À la souris, la ligne entière
+     reste saisissable — le défilement s'y fait à la molette, et rien
+     ne se gêne. */
+  if(e.pointerType === 'touch' && !(e.target.closest && e.target.closest('.pkgrip'))) return;
   const depart = {x:e.clientX, y:e.clientY};
   /* La liste d'où part le geste : c'est en haut d'ELLE que la zone de
      sortie doit apparaître, pas en haut de la fenêtre. Une bande
@@ -352,6 +359,9 @@ function packDragMove(e){
   }
   drag.fantome.style.left = (e.clientX + 14) + 'px';
   drag.fantome.style.top  = (e.clientY + 14) + 'px';
+  /* La caisse d'arrivée est souvent hors de l'écran : on fait défiler
+     tout seul quand le doigt approche d'un bord. */
+  dragScrollMove(e);
 
   const sous = document.elementFromPoint(e.clientX, e.clientY);
   const zone = sous && sous.closest('[data-drop]');
@@ -422,6 +432,7 @@ function packDragLabel(cibleId, boucle){
 
 async function packDragEnd(e){
   const d = drag; drag = null;
+  dragScrollStop();
   if(d && d.actif) dragFini = Date.now();
   packOutBar(false);
   document.body.classList.remove('dragging');

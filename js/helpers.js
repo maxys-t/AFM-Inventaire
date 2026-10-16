@@ -327,6 +327,62 @@ function packRoots(){
   return (db.packs||[]).filter(p=>!p.archived && !packParents(p).length);
 }
 
+/* ---- Défilement pendant un glissement (v1.25.2) ----
+
+   Un glissement interdit à la page de bouger — c'est ce qui le rend
+   possible. Mais la caisse où l'on veut déposer est souvent hors de
+   l'écran, et l'on se retrouvait à tenir un objet sans pouvoir aller
+   là où il va. Le choix était : faire défiler, ou glisser.
+
+   La liste défile donc toute seule quand le doigt approche d'un bord,
+   d'autant plus vite qu'il en est près. C'est le conteneur sous le
+   doigt qui défile s'il le peut, la page sinon — ainsi le contenu
+   d'une caisse défile dans sa fenêtre, et l'arbre défile dans la
+   page.                                                            */
+const _dragScroll = {raf:0, el:null, v:0};
+
+function _scrollableAncestor(node){
+  while(node && node !== document.body && node !== document.documentElement){
+    const s = getComputedStyle(node);
+    if(/auto|scroll/.test(s.overflowY) && node.scrollHeight > node.clientHeight + 2) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function dragScrollMove(e){
+  const ZONE = 72;           // la bande sensible, en pixels
+  let cible = null;
+  try{ cible = _scrollableAncestor(document.elementFromPoint(e.clientX, e.clientY)); }catch(err){}
+  let haut = 0, bas = window.innerHeight;
+  if(cible){ const b = cible.getBoundingClientRect(); haut = b.top; bas = b.bottom; }
+
+  let v = 0;
+  if(e.clientY < haut + ZONE)      v = -Math.ceil((haut + ZONE - e.clientY) / 3);
+  else if(e.clientY > bas - ZONE)  v =  Math.ceil((e.clientY - (bas - ZONE)) / 3);
+
+  _dragScroll.el = cible;
+  _dragScroll.v  = Math.max(-28, Math.min(28, v));
+  if(_dragScroll.v && !_dragScroll.raf) _dragScrollLoop();
+  if(!_dragScroll.v) dragScrollStop();
+}
+
+function _dragScrollLoop(){
+  _dragScroll.raf = requestAnimationFrame(()=>{
+    _dragScroll.raf = 0;
+    const v = _dragScroll.v;
+    if(!v) return;
+    if(_dragScroll.el) _dragScroll.el.scrollTop += v;
+    else window.scrollBy(0, v);
+    _dragScrollLoop();
+  });
+}
+
+function dragScrollStop(){
+  if(_dragScroll.raf) cancelAnimationFrame(_dragScroll.raf);
+  _dragScroll.raf = 0; _dragScroll.el = null; _dragScroll.v = 0;
+}
+
 /* ---- Consommables (v1.22) ----
    Gaffer, colliers, piles, un multitool. Des lignes de checklist, pas
    des items : ni identifiant, ni fiche, ni historique, ni poids. Le

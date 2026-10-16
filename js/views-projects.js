@@ -431,6 +431,9 @@ function bindProjDrag(){
       if(e.button !== undefined && e.button !== 0) return;
       if(e.target.closest('button')) return;
       if(r.classList.contains('off')) return;
+      /* Au doigt, seule la poignée retient le glissement : sinon la
+         colonne de gauche ne peut plus défiler du tout. */
+      if(e.pointerType === 'touch' && !e.target.closest('.pjgrip')) return;
       projDrag = {kind:r.dataset.kind, key:r.dataset.key, ligne:r,
                   x:e.clientX, y:e.clientY, actif:false, fantôme:null, sur:false};
       const move = ev => projDragMove(ev);
@@ -461,6 +464,7 @@ function projDragMove(e){
   }
   d.fantôme.style.left = e.clientX + 'px';
   d.fantôme.style.top  = e.clientY + 'px';
+  dragScrollMove(e);
   const dz = document.getElementById('pjdrop');
   if(!dz) return;
   const b = dz.getBoundingClientRect();
@@ -481,6 +485,7 @@ document.addEventListener('click', e=>{
 
 function projDragEnd(){
   const d = projDrag; projDrag = null;
+  dragScrollStop();
   if(!d) return;
   if(d.actif) projDragFini = Date.now();
   if(d.fantôme) d.fantôme.remove();

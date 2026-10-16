@@ -1,5 +1,44 @@
 # Changelog
 
+## [1.25.2] — 2026-10-16
+
+### Corrigé
+
+- **Il fallait choisir entre faire défiler et glisser.** Un glissement
+  interdit à la page de bouger — c'est ce qui le rend possible. Mais
+  la caisse où l'on veut déposer est souvent plus bas que l'écran : on
+  se retrouvait à tenir un objet sans pouvoir aller là où il va, et à
+  reposer pour faire défiler, puis à reprendre.
+
+  La liste défile maintenant toute seule quand le doigt approche d'un
+  bord, d'autant plus vite qu'il en est près, et jusqu'à une vitesse
+  plafond. C'est le conteneur sous le doigt qui défile s'il le peut,
+  la page sinon : le contenu d'une caisse défile donc dans sa fenêtre,
+  et l'arbre des packs défile dans la page. Même mécanique dans la
+  composition d'un projet.
+
+
+## [1.25.1] — 2026-10-16
+
+### Corrigé
+
+- **Sur iPad, le doigt ne faisait plus défiler les listes.** La règle
+  `touch-action:none`, qui empêche la page de glisser sous le doigt
+  pendant qu'on déplace un objet, était posée sur **toutes les
+  lignes**, en permanence. Or l'onglet Packs et la page de préparation
+  ne sont faits que de lignes : le doigt ne trouvait plus nulle part
+  où s'appuyer. En haut et en bas de liste, où les quelques espaces
+  libres disparaissent derrière l'en-tête et le bandeau, l'écran
+  restait bloqué.
+
+  La règle ne vit plus que sur une **poignée ⠿**, ajoutée à chaque
+  ligne déplaçable. Au doigt, on glisse par la poignée et on défile
+  partout ailleurs ; à la souris, la ligne entière reste saisissable,
+  puisque la molette ne se gêne avec rien. La poignée a un second
+  mérite : c'est désormais la seule chose à l'écran qui dise qu'une
+  ligne se déplace.
+
+
 ## [1.25.0] — 2026-10-16
 
 ### Changé — une place pour chaque chose
