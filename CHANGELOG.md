@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.25.3] — 2026-10-16
+
+### Ajouté
+
+- **L'appui long saisit un objet**, sur tablette, en plus de la
+  poignée ⠿. On pose le doigt, la ligne se soulève — un léger relief
+  et une ombre le disent — et on l'emmène. C'est le geste que la
+  tablette a déjà appris à ses utilisateurs ; la poignée reste là pour
+  qui préfère saisir sans attendre.
+
+  La subtilité tient à l'ordre des choses : le navigateur décide de
+  faire défiler dès le premier mouvement, et une fois qu'il a
+  commencé, on ne peut plus le lui reprendre. L'appui long attend donc
+  **sans bouger** — si le doigt se déplace avant la fin du délai,
+  c'est un défilement et il a lieu normalement ; s'il tient, le
+  défilement est bloqué à partir de là, alors que rien n'a encore
+  commencé.
+
+  Après un appui long, l'objet part au premier millimètre : il est
+  déjà soulevé, et la personne l'a voulu. À la souris, le seuil de
+  huit pixels demeure, pour qu'un clic tremblant ne déplace rien.
+
+
 ## [1.25.2] — 2026-10-16
 
 ### Corrigé

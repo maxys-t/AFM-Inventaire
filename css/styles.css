@@ -1281,3 +1281,8 @@ tr.outpack td{padding-top:8px;padding-bottom:8px}
   color:var(--border2);font-size:16px;line-height:1;padding:4px 2px}
 .pkgrip:active,.pjgrip:active{cursor:grabbing}
 .packrow:hover .pkgrip,.pkline:hover .pkgrip,.pjrow:hover .pjgrip{color:var(--muted)}
+
+/* L'objet se soulève au bout de l'appui long : sans ce signal, on ne
+   sait pas si l'on tient quelque chose ou si l'on attend encore. */
+.lifted{background:var(--panel2) !important;box-shadow:0 6px 18px rgba(0,0,0,.45);
+  transform:scale(.99);border-radius:10px;position:relative;z-index:2}

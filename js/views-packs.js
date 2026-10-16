@@ -314,11 +314,25 @@ document.addEventListener('click', e=>{
 function packDragStart(e, type, id){
   if(!can('edit')) return;
   if(e.button !== undefined && e.button !== 0) return;
-  /* Au doigt, seule la poignée lance un glissement : partout ailleurs
-     la liste doit pouvoir défiler. À la souris, la ligne entière
-     reste saisissable — le défilement s'y fait à la molette, et rien
-     ne se gêne. */
-  if(e.pointerType === 'touch' && !(e.target.closest && e.target.closest('.pkgrip'))) return;
+  /* Deux façons de saisir au doigt : la poignée ⠿, immédiate, et
+     l'appui long sur la ligne — le geste que la tablette a déjà
+     appris à ses utilisateurs. Partout ailleurs, le doigt fait
+     défiler. À la souris, la ligne entière reste saisissable : le
+     défilement s'y fait à la molette, rien ne se gêne. */
+  const parPoignée = !!(e.target.closest && e.target.closest('.pkgrip'));
+  if(e.pointerType === 'touch' && !parPoignée){
+    const ligne = e.target.closest('.packrow, .pkline');
+    armerAppuiLong(e, ()=>packDragArm(e, type, id, 0), ligne);
+    return;
+  }
+  packDragArm(e, type, id);
+}
+
+/* La saisie proprement dite. `seuil` est la distance avant que le
+   glissement se voie : huit pixels à la souris, pour qu'un clic un
+   peu tremblant ne déplace rien — zéro après un appui long, puisque
+   l'objet est déjà soulevé et que la personne l'a voulu. */
+function packDragArm(e, type, id, seuil){
   const depart = {x:e.clientX, y:e.clientY};
   /* La liste d'où part le geste : c'est en haut d'ELLE que la zone de
      sortie doit apparaître, pas en haut de la fenêtre. Une bande
@@ -333,7 +347,8 @@ function packDragStart(e, type, id){
   const source = (conteneur && conteneur.classList.contains('pklist'))
     ? (conteneur.dataset.drop || null)
     : (ligne ? (ligne.dataset.parent || null) : null);
-  drag = {type, id, depart, actif:false, cible:null, fantome:null, conteneur, source};
+  drag = {type, id, depart, actif:false, cible:null, fantome:null, conteneur, source,
+          seuil: (seuil === undefined ? 8 : seuil)};
   e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId);
   const move = ev => packDragMove(ev);
   const up   = ev => { packDragEnd(ev); window.removeEventListener('pointermove', move);
@@ -345,9 +360,9 @@ function packDragStart(e, type, id){
 function packDragMove(e){
   if(!drag) return;
   const d = Math.hypot(e.clientX - drag.depart.x, e.clientY - drag.depart.y);
-  /* Huit pixels avant de considérer que c'est un glissement : sinon
-     le moindre tremblement pendant un clic déplacerait du matériel. */
-  if(!drag.actif && d < 8) return;
+  /* Un seuil avant de considérer que c'est un glissement : sinon le
+     moindre tremblement pendant un clic déplacerait du matériel. */
+  if(!drag.actif && d < drag.seuil) return;
   if(!drag.actif){
     drag.actif = true;
     document.body.classList.add('dragging');
@@ -433,6 +448,8 @@ function packDragLabel(cibleId, boucle){
 async function packDragEnd(e){
   const d = drag; drag = null;
   dragScrollStop();
+  annulerAppuiLong();
+  document.querySelectorAll('.lifted').forEach(x=>x.classList.remove('lifted'));
   if(d && d.actif) dragFini = Date.now();
   packOutBar(false);
   document.body.classList.remove('dragging');

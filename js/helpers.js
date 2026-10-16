@@ -383,6 +383,63 @@ function dragScrollStop(){
   _dragScroll.raf = 0; _dragScroll.el = null; _dragScroll.v = 0;
 }
 
+/* ---- Appui long pour saisir un objet (v1.25.3) ----
+
+   La poignée ⠿ règle le conflit entre défiler et glisser, mais elle
+   oblige à viser un petit repère. Sur tablette, le geste qu'on
+   connaît déjà est l'appui long : on pose le doigt, l'objet se
+   soulève, on l'emmène.
+
+   La difficulté tient à l'ordre des choses. Le navigateur décide de
+   faire défiler dès le premier mouvement, et une fois qu'il a
+   commencé on ne peut plus le lui reprendre. On attend donc SANS
+   bouger : si le doigt se déplace avant la fin du délai, l'appui long
+   est abandonné et le défilement a lieu normalement ; s'il tient, on
+   bloque le défilement à partir de là — rien n'a encore commencé,
+   donc le blocage prend.                                           */
+let _appuiLong = null;
+
+function armerAppuiLong(e, demarrer, ligne, delai){
+  annulerAppuiLong();
+  const x = e.clientX, y = e.clientY;
+
+  const bloquer = ev => { if(_appuiLong && _appuiLong.armé) ev.preventDefault(); };
+  const bouge = ev => {
+    if(!_appuiLong || _appuiLong.armé) return;
+    if(Math.hypot(ev.clientX - x, ev.clientY - y) > 10) annulerAppuiLong();
+  };
+  const fin = () => annulerAppuiLong();
+
+  _appuiLong = {armé:false, bloquer, bouge, fin, ligne, t:0};
+  /* `passive:false` est la clé : sans lui le navigateur ignore
+     `preventDefault` et fait défiler malgré tout. */
+  window.addEventListener('touchmove', bloquer, {passive:false});
+  window.addEventListener('pointermove', bouge);
+  window.addEventListener('pointerup', fin);
+  window.addEventListener('pointercancel', fin);
+
+  _appuiLong.t = setTimeout(()=>{
+    if(!_appuiLong) return;
+    _appuiLong.armé = true;
+    if(ligne) ligne.classList.add('lifted');
+    /* Un retour physique quand l'objet se soulève. Absent d'iOS
+       Safari, présent ailleurs : on essaie, sans rien en attendre. */
+    try{ if(navigator.vibrate) navigator.vibrate(12); }catch(err){}
+    demarrer();
+  }, delai || 400);
+}
+
+function annulerAppuiLong(){
+  if(!_appuiLong) return;
+  clearTimeout(_appuiLong.t);
+  window.removeEventListener('touchmove', _appuiLong.bloquer, {passive:false});
+  window.removeEventListener('pointermove', _appuiLong.bouge);
+  window.removeEventListener('pointerup', _appuiLong.fin);
+  window.removeEventListener('pointercancel', _appuiLong.fin);
+  if(_appuiLong.ligne) _appuiLong.ligne.classList.remove('lifted');
+  _appuiLong = null;
+}
+
 /* ---- Consommables (v1.22) ----
    Gaffer, colliers, piles, un multitool. Des lignes de checklist, pas
    des items : ni identifiant, ni fiche, ni historique, ni poids. Le

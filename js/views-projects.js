@@ -431,19 +431,28 @@ function bindProjDrag(){
       if(e.button !== undefined && e.button !== 0) return;
       if(e.target.closest('button')) return;
       if(r.classList.contains('off')) return;
-      /* Au doigt, seule la poignée retient le glissement : sinon la
-         colonne de gauche ne peut plus défiler du tout. */
-      if(e.pointerType === 'touch' && !e.target.closest('.pjgrip')) return;
-      projDrag = {kind:r.dataset.kind, key:r.dataset.key, ligne:r,
-                  x:e.clientX, y:e.clientY, actif:false, fantôme:null, sur:false};
-      const move = ev => projDragMove(ev);
-      const up   = ev => { projDragEnd(ev);
-                           window.removeEventListener('pointermove', move);
-                           window.removeEventListener('pointercancel', up);
-                           window.removeEventListener('pointerup', up); };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
-      window.addEventListener('pointercancel', up);
+
+      const saisir = seuil => {
+        projDrag = {kind:r.dataset.kind, key:r.dataset.key, ligne:r,
+                    x:e.clientX, y:e.clientY, actif:false, fantôme:null, sur:false,
+                    seuil: (seuil === undefined ? 8 : seuil)};
+        const move = ev => projDragMove(ev);
+        const up   = ev => { projDragEnd(ev);
+                             window.removeEventListener('pointermove', move);
+                             window.removeEventListener('pointercancel', up);
+                             window.removeEventListener('pointerup', up); };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+        window.addEventListener('pointercancel', up);
+      };
+
+      /* Au doigt : la poignée ⠿ saisit tout de suite, l'appui long
+         sur la ligne aussi — partout ailleurs, la colonne défile. */
+      if(e.pointerType === 'touch' && !e.target.closest('.pjgrip')){
+        armerAppuiLong(e, ()=>saisir(0), r);
+        return;
+      }
+      saisir();
     });
   });
 }
@@ -451,7 +460,7 @@ function bindProjDrag(){
 function projDragMove(e){
   const d = projDrag; if(!d) return;
   if(!d.actif){
-    if(Math.abs(e.clientX-d.x) + Math.abs(e.clientY-d.y) < 8) return;
+    if(Math.abs(e.clientX-d.x) + Math.abs(e.clientY-d.y) < d.seuil) return;
     d.actif = true;
     document.body.classList.add('dragging');
     const f = document.createElement('div');
@@ -486,6 +495,8 @@ document.addEventListener('click', e=>{
 function projDragEnd(){
   const d = projDrag; projDrag = null;
   dragScrollStop();
+  annulerAppuiLong();
+  document.querySelectorAll('.lifted').forEach(x=>x.classList.remove('lifted'));
   if(!d) return;
   if(d.actif) projDragFini = Date.now();
   if(d.fantôme) d.fantôme.remove();
