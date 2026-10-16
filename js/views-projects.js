@@ -107,7 +107,7 @@ async function openProjForm(id){
   if(id){ projGo('edit', id); return; }
   if(!can('edit')) return;
   const p = {id:"p"+Date.now(), name:"New project", description:"", status:'inactif',
-             item_ids:[], pack_ids:[], prep:{}, snapshot:null, subs:{}, last_used:null,
+             item_ids:[], pack_ids:[], prep:{}, snapshot:null, subs:{}, placements:{}, last_used:null,
              created_at:now(), loc_name:'', starts_on:null, ends_on:null, archived:false};
   db.projects.push(p);
   projGo('edit', p.id);
@@ -118,7 +118,7 @@ async function openProjForm(id){
 async function duplicateProj(id){
   const s = project(id); if(!s) return;
   const p = {...s, id:"p"+Date.now(), name:s.name + ' (copy)', status:'inactif',
-             prep:{}, snapshot:null, subs:{}, last_used:null, created_at:now(), archived:false,
+             prep:{}, snapshot:null, subs:{}, placements:{}, last_used:null, created_at:now(), archived:false,
              item_ids:[...(s.item_ids||[])], pack_ids:[...(s.pack_ids||[])]};
   db.projects.push(p);
   projGo('edit', p.id);
@@ -207,14 +207,24 @@ function projEditor(){
         ${dedans ? '<span class="muted">in project</span>'
                  : `<button class="pjadd" onclick="projAddPack('${k.id}')">+</button>`}
       </div>`;
-    }).join('') || '<div class="empty">No pack yet — build one in the Packs tab.</div>';
+    }).join('') || '<div class="empty">No pack matches.</div>';
+    /* Monter une caisse sans quitter le projet. C'en est une vraie :
+       elle vivra dans l'onglet Packs et resservira. Une caisse
+       jetable, visible nulle part ailleurs, ferait une seconde sorte
+       de caisse — et c'est ce genre de doublon de concept qui avait
+       rendu la v1.20 illisible. */
+    if(can('edit')) src += `<div style="padding:10px 2px 2px">
+      <button class="btn sec small" onclick="projNewPack()">+ New case</button>
+      <div class="hintline">It becomes a real pack, reusable next time.</div></div>`;
   }
 
   /* ---- colonne de droite ---- */
-  let contenu = c.groups.map(g=>`
-    <div class="pjgrp">
+  let contenu = c.groups.map(g=>{
+    const dedans = g.items.concat(g.rangés);
+    return `
+    <div class="pjgrp" data-pjcase="${g.packId}">
       <div class="hd"><span class="t">${esc(g.name)}</span>
-        <span class="muted">${g.items.length} item(s) · ${fweight(g.items.reduce((t,i)=>t+(i.weight_g||0),0))}</span>
+        <span class="muted">${dedans.length} item(s) · ${fweight(dedans.reduce((t,i)=>t+(i.weight_g||0),0))}</span>
         <button class="pjx" onclick="projRemovePack('${g.packId}')" title="Remove this case">✕</button></div>
       <div class="bd">
         ${g.items.map(i=>`<div class="pjrow">${pjThumb(i)}<div class="pjnm"><div class="t">${itemTitle(i)}</div>
@@ -233,20 +243,30 @@ function projEditor(){
                  title="Use ${esc(itemTitleText(libre))} here instead">Use ${esc(libre.id)}</button>`:''}
             </div>`;
           }).join(''):''}
+        ${g.rangés.length?`<div class="pjsub">Added for this project</div>` +
+          g.rangés.map(i=>`<div class="pjrow">${pjThumb(i)}<div class="pjnm">
+            <div class="t">${itemTitle(i)}</div><div class="s mono">${i.id}</div></div>
+            <span class="muted">${fweight(i.weight_g||0)}</span>
+            <button class="pjx" onclick="projUnplace('${i.id}')" title="Take it back out of this case">⤺</button>
+            </div>`).join(''):''}
         ${g.extras.length?`<div class="pjsub">Consumables</div>` +
           g.extras.map(e=>`<div class="pjrow extra"><div class="pjnm"><div class="t">${esc(e.label)}</div>
             <div class="s">× ${e.qty} · not counted in the weight</div></div></div>`).join(''):''}
       </div>
-    </div>`).join('');
+    </div>`; }).join('');
 
   if(c.loose.length){
     contenu += `<div class="pjgrp"><div class="hd"><span class="t">Loose items</span>
       <span class="muted">${c.loose.length} item(s) · ${fweight(c.loose.reduce((t,i)=>t+(i.weight_g||0),0))}</span></div>
-      <div class="bd">${c.loose.map(i=>`<div class="pjrow">${pjThumb(i)}
+      <div class="bd">${c.loose.map(i=>`<div class="pjrow" data-kind="placer" data-key="${i.id}">
+        ${c.groups.length?'<span class="pjgrip" title="Drag into a case">⠿</span>':''}${pjThumb(i)}
         <div class="pjnm"><div class="t">${itemTitle(i)}</div><div class="s mono">${i.id}</div></div>
         <span class="muted">${fweight(i.weight_g||0)}</span>
         <button class="pjx" onclick="projRemoveItem('${i.id}')">✕</button></div>`).join('')}
-      </div></div>`;
+      </div>
+      ${c.groups.length?`<div class="hintline" style="padding:0 10px 8px">Drag one into a case
+        to say it travels in there — the case's own contents are untouched.</div>`:''}
+      </div>`;
   }
   if(!contenu) contenu = `<div class="empty">Drag a case or an item from the left,<br>or use the + button.</div>`;
 
@@ -336,15 +356,20 @@ async function projSetField(f, v){
 /* Ajouter un exemplaire : l'application choisit lequel, parmi ceux
    qui sont réellement disponibles. Demander « lequel des douze XLR »
    n'apporte rien à qui charge un camion. */
-async function projMore(key){
+async function projMore(key, caisse){
   const p = project(projView.id); if(!p || !can('edit')) return;
   const g = projGroups().find(x=>x.key === key); if(!g) return;
   const pris = projFromPacks(p);
   const libre = g.all.find(i=>!pris.has(i.id) && !(p.item_ids||[]).includes(i.id) && !projBusy(i, p));
   if(!libre){ toast('No free copy left of ' + g.name + '.', 'warn'); return; }
   p.item_ids = [...(p.item_ids||[]), libre.id];
+  const champs = {item_ids:p.item_ids};
+  if(caisse && (p.pack_ids||[]).includes(caisse)){
+    p.placements = {...(p.placements||{}), [libre.id]: caisse};
+    champs.placements = p.placements;
+  }
   renderProj();
-  await projSave(p, {item_ids:p.item_ids});
+  await projSave(p, champs);
 }
 async function projLess(key){
   const p = project(projView.id); if(!p || !can('edit')) return;
@@ -361,14 +386,24 @@ async function projRemoveItem(id){
   const p = project(projView.id); if(!p || !can('edit')) return;
   p.item_ids = (p.item_ids||[]).filter(x=>x !== id);
   if(p.prep) delete p.prep[id];
+  if(p.placements && p.placements[id]){
+    p.placements = {...p.placements}; delete p.placements[id];
+  }
   renderProj();
-  await projSave(p, {item_ids:p.item_ids, prep:p.prep||{}});
+  await projSave(p, {item_ids:p.item_ids, prep:p.prep||{}, placements:p.placements||{}});
 }
 
 /* Ajouter une caisse. Deux garde-fous visibles plutôt qu'un refus :
    on dit ce qui est écarté et ce qui a été retiré du hors-caisse, et
    on laisse partir. Le studio anticipe ses croisements ; l'application
    n'a pas à décider à sa place. */
+/* La même fenêtre que l'onglet Packs : un seul formulaire à
+   connaître, et la caisse rejoint le projet une fois créée. */
+function projNewPack(){
+  if(!can('edit')) return;
+  openPackForm(null, async id => { await projAddPack(id); });
+}
+
 async function projAddPack(id){
   const p = project(projView.id); if(!p || !can('edit')) return;
   const k = pack(id); if(!k) return;
@@ -405,11 +440,47 @@ async function projSwap(packId, ancien, nouveau){
         }, 10000);
 }
 
+/* ---- ranger un item dans une caisse, pour ce projet ----
+
+   Un item isolé part « en vrac » : c'est à celui qui charge de se
+   souvenir où il l'a mis. Le ranger répond à la question une fois
+   pour toutes, et la checklist le demande alors au bon moment — avec
+   la caisse, pas trois sections plus bas.
+
+   La recette de la caisse n'est pas touchée. Elle ne contient
+   toujours pas ce pied ; c'est CE projet qui dit qu'il voyage
+   dedans. La tournée suivante repart du réel. */
+async function projPlace(itemId, packId){
+  const p = project(projView.id); if(!p || !can('projectPrep')) return;
+  if(!(p.pack_ids||[]).includes(packId)) return;
+  if(!(p.item_ids||[]).includes(itemId)) return;
+  p.placements = {...(p.placements||{}), [itemId]: packId};
+  renderProj();
+  await projSave(p, {placements:p.placements});
+}
+
+async function projUnplace(itemId){
+  const p = project(projView.id); if(!p || !can('projectPrep')) return;
+  if(!p.placements || !p.placements[itemId]) return;
+  p.placements = {...p.placements};
+  delete p.placements[itemId];
+  renderProj();
+  await projSave(p, {placements:p.placements});
+}
+
 async function projRemovePack(id){
   const p = project(projView.id); if(!p || !can('edit')) return;
   p.pack_ids = (p.pack_ids||[]).filter(x=>x !== id);
+  /* Ce qu'on avait rangé dedans retombe en vrac plutôt que de
+     désigner une caisse qui n'est plus du voyage. */
+  const libérés = Object.keys(p.placements||{}).filter(k=>p.placements[k] === id);
+  if(libérés.length){
+    p.placements = {...p.placements};
+    libérés.forEach(k=>delete p.placements[k]);
+  }
   renderProj();
-  await projSave(p, {pack_ids:p.pack_ids});
+  await projSave(p, {pack_ids:p.pack_ids, placements:p.placements||{}});
+  if(libérés.length) toast(`${libérés.length} item(s) are loose again.`, 'info');
 }
 
 /* ---- glisser-déposer ----
@@ -426,7 +497,10 @@ async function projRemovePack(id){
 let projDrag = null;
 function bindProjDrag(){
   if(!can('edit')) return;
-  document.querySelectorAll('.pjsrc .pjrow').forEach(r=>{
+  /* Deux familles de lignes glissables : celles de l'inventaire, à
+     gauche, et les items isolés du projet, à droite, qu'on range dans
+     une caisse. */
+  document.querySelectorAll('.pjsrc .pjrow, #pjdrop .pjrow[data-kind="placer"]').forEach(r=>{
     r.addEventListener('pointerdown', e=>{
       if(e.button !== undefined && e.button !== 0) return;
       if(e.target.closest('button')) return;
@@ -479,7 +553,17 @@ function projDragMove(e){
   const b = dz.getBoundingClientRect();
   d.sur = e.clientX >= b.left && e.clientX <= b.right
        && e.clientY >= b.top  && e.clientY <= b.bottom;
-  dz.classList.toggle('hot', d.sur);
+
+  /* Sur QUELLE caisse. Déposer sur le panneau ajoute au projet ;
+     déposer sur une caisse ajoute ET range dedans, du même geste. */
+  let sous = null;
+  try{ sous = document.elementFromPoint(e.clientX, e.clientY); }catch(err){}
+  const caisse = sous && sous.closest ? sous.closest('[data-pjcase]') : null;
+  d.caisse = (d.sur && caisse) ? caisse.getAttribute('data-pjcase') : null;
+
+  document.querySelectorAll('.pjgrp.hot').forEach(x=>x.classList.remove('hot'));
+  if(d.caisse && caisse) caisse.classList.add('hot');
+  dz.classList.toggle('hot', d.sur && !d.caisse);
 }
 
 /* Un glissement se termine par un « clic » que le navigateur envoie de
@@ -497,13 +581,21 @@ function projDragEnd(){
   dragScrollStop();
   annulerAppuiLong();
   document.querySelectorAll('.lifted').forEach(x=>x.classList.remove('lifted'));
+  document.querySelectorAll('.pjgrp.hot').forEach(x=>x.classList.remove('hot'));
   if(!d) return;
   if(d.actif) projDragFini = Date.now();
   if(d.fantôme) d.fantôme.remove();
   document.body.classList.remove('dragging');
   const dz = document.getElementById('pjdrop');
   if(dz) dz.classList.remove('hot');
-  if(d.actif && d.sur){ d.kind==='pack' ? projAddPack(d.key) : projMore(d.key); }
+  if(!d.actif || !d.sur) return;
+
+  if(d.kind === 'pack')  return projAddPack(d.key);
+  /* Un item déjà dans le projet qu'on déplace vers une caisse. */
+  if(d.kind === 'placer') return d.caisse ? projPlace(d.key, d.caisse) : projUnplace(d.key);
+  /* Un item de l'inventaire : on l'ajoute, et s'il a été lâché sur
+     une caisse, on l'y range dans la foulée. */
+  projMore(d.key, d.caisse);
 }
 
 /* ============================================================
@@ -536,14 +628,23 @@ function projPrep(){
       </div></div>`;
   };
 
+  /* Les items rangés dans la caisse pour ce projet se cochent avec
+     elle : c'est bien dans cette caisse-là qu'on les met. La mention
+     « added for this project » dit qu'ils ne sont pas de la recette,
+     et qu'on ne les retrouvera pas là la prochaine fois. */
+  const ligne = (i, ajouté) => ({
+    key:i.id, html:itemTitle(i), photo:i.photo,
+    sub: i.id + ' · ' + fweight(i.weight_g||0)
+       + (ajouté ? ' · added for this project' : '')
+       + (itemFlag(i) ? ' · ⚠ ' + itemFlag(i) : '')
+  });
   let blocs = c.groups.map(g=>bloc(
     g.name,
-    g.items.map(i=>({key:i.id, html:itemTitle(i), photo:i.photo,
-                     sub:i.id + ' · ' + fweight(i.weight_g||0)
-                         + (itemFlag(i) ? ' · ⚠ ' + itemFlag(i) : '')}))
+    g.items.map(i=>ligne(i, false))
+      .concat(g.rangés.map(i=>ligne(i, true)))
       .concat(g.extras.map(e=>({key:e.key, html:esc(e.label), sub:'× ' + e.qty, extra:true}))),
     g.extras, g.écartés,
-    g.items.reduce((t,i)=>t+(i.weight_g||0), 0)
+    g.items.concat(g.rangés).reduce((t,i)=>t+(i.weight_g||0), 0)
   )).join('');
 
   if(c.loose.length){

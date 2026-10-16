@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.27.0';
+const APP_VERSION = '1.28.0';
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','packs','rep','settings'];
@@ -325,6 +325,7 @@ function importJSON(inp){
         item_ids:p.item_ids||[],prep:p.prep||{},last_used:p.last_used||null,
         // v1.22 : les caisses du projet, et le contenu figé au départ.
         pack_ids:p.pack_ids||[],snapshot:p.snapshot||null,subs:p.subs||{},
+        placements:p.placements||{},
         // Destination, dates et archivage : ajoutés en v1.11, ils étaient
         // perdus à la restauration jusqu'ici.
         loc_name:p.loc_name||null,starts_on:p.starts_on||null,

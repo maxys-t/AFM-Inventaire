@@ -702,15 +702,32 @@ function projContent(p){
       items:   tous.filter(i=>!projBusy(i, p)),
       écartés: tous.filter(i=>projBusy(i, p)),
       doublons: doublons.filter(d=>d.packId === k.id),
+      /* Les items isolés que l'on a rangés dans cette caisse pour ce
+         projet-ci. Ils voyagent avec elle, pèsent avec elle et se
+         cochent avec elle — mais ne font pas partie de sa recette. */
+      rangés:  [],
       extras:  packAllExtras(k).map(e=>({...e, key: extraKey(e)}))
     });
   });
 
-  const loose = (p.item_ids||[])
+  let loose = (p.item_ids||[])
     .filter(id=>!vus.has(id)).map(id=>item(id)).filter(Boolean);
   loose.forEach(i=>vus.add(i.id));
 
-  const items  = groups.reduce((a,g)=>a.concat(g.items), []).concat(loose);
+  /* Répartition des items isolés dans les caisses où on les a rangés.
+     Un rangement qui désigne une caisse absente du projet est ignoré :
+     l'item retombe en vrac plutôt que de disparaître. */
+  const plac = p.placements || {};
+  const parPack = new Map(groups.map(g=>[g.packId, g]));
+  const restants = [];
+  loose.forEach(i=>{
+    const g = parPack.get(plac[i.id]);
+    if(g && !projBusy(i, p)) g.rangés.push(i);
+    else restants.push(i);
+  });
+  loose = restants;
+
+  const items  = groups.reduce((a,g)=>a.concat(g.items, g.rangés), []).concat(loose);
   const extras = groups.reduce((a,g)=>a.concat(g.extras), []);
   /* Les items supprimés de l'inventaire depuis la création du projet.
      On les compte pour pouvoir le dire, plutôt que de laisser le
@@ -749,7 +766,7 @@ function projFromSnapshot(p){
 
   const groups = (s.packs||[]).map(g=>({
     packId: g.id, name: g.name, permanent: !!g.permanent,
-    items: résoudre(g.items), écartés: [], doublons: [],
+    items: résoudre(g.items), écartés: [], doublons: [], rangés: [],
     extras: (g.extras||[]).map(e=>({...e, key: extraKey(e)}))
   }));
   const loose  = résoudre(s.items);
@@ -767,7 +784,10 @@ function projSnapshot(p){
     frozen_at: new Date().toISOString(),
     packs: c.groups.map(g=>({
       id: g.packId, name: g.name, permanent: g.permanent,
-      items: g.items.map(i=>i.id),
+      /* Ce qui part dans cette caisse, recette et rangements
+         confondus : au retour, c'est le chargement réel qui compte,
+         pas la distinction entre les deux. */
+      items: g.items.concat(g.rangés).map(i=>i.id),
       extras: g.extras.map(e=>({id:e.id, label:e.label, qty:e.qty}))
     })),
     items: c.loose.map(i=>i.id)

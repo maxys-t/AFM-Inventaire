@@ -556,10 +556,17 @@ let packContChoix = new Map();
    ce qui sert déjà de contenant. La case ci-dessous rouvre la liste
    entière pour les cas qu'on n'a pas prévus. */
 let packFormAll = false;
-function packFormShowAll(on){ packFormAll = !!on; openPackForm(packEditing); }
+function packFormShowAll(on){ packFormAll = !!on; openPackForm(packEditing, packFormAprès); }
 
-function openPackForm(id){
+/* Ce qu'on fait de la caisse une fois créée. La fenêtre sert aussi
+   depuis la composition d'un projet, où la caisse doit rejoindre le
+   projet dans la foulée : sans quoi il faudrait la créer ici, aller
+   la chercher là-bas, et se souvenir de son nom entre les deux. */
+let packFormAprès = null;
+
+function openPackForm(id, après){
   packEditing = id || null;
+  packFormAprès = après || null;
   const p = id ? pack(id) : null;
   /* Depuis la v1.24, un contenant peut porter plusieurs recettes : on
      ne l'écarte plus parce qu'un autre pack s'en sert. Seul un
@@ -641,13 +648,15 @@ async function packSave(){
   const row = {name, container_id: cont, notes: document.getElementById('pf-notes').value.trim() || null,
                permanent: monté};
   try{
+    let neuf = null;
     if(packEditing) await apiUpdatePack(packEditing, row);
-    else { const p = await apiInsertPack(row); packShown = p.id; }
+    else { neuf = await apiInsertPack(row); packShown = neuf.id; }
     close_('ovPackForm');
     await refresh();
     renderPacks();
     if(packShown && document.getElementById('ovPack').classList.contains('open')) renderPackDetail();
     toast('Saved.', 'ok');
+    if(neuf && packFormAprès){ const f = packFormAprès; packFormAprès = null; await f(neuf.id); }
   }catch(err){ toast(String(err.message||err), 'error'); }
 }
 

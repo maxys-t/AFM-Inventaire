@@ -1,5 +1,64 @@
 # Changelog
 
+## [1.28.0] — 2026-10-16
+
+**Migration SQL à passer : `sql/027-rangements-projet.sql`.** Elle ne
+modifie aucune donnée.
+
+### Ajouté — ranger les items d'un projet dans ses caisses
+
+Un projet mêle des caisses et des items isolés. Les caisses savent ce
+qu'elles contiennent ; les items isolés ne savaient rien. Ils
+partaient « en vrac », et c'était à celui qui charge de se souvenir où
+il les avait mis — puis de le redécouvrir au déchargement.
+
+- **On range un item dans une caisse en l'y glissant.** Dans la
+  composition, chaque caisse s'allume quand le doigt la survole :
+  déposer dessus range dedans, déposer à côté ajoute simplement au
+  projet. Un item de l'inventaire lâché directement sur une caisse y
+  atterrit du même geste — ajouté au projet et rangé.
+
+- **La recette de la caisse n'est pas touchée.** La Pelicase ne
+  contient toujours pas ce pied ; c'est **ce projet-ci** qui dit qu'il
+  voyage dedans. La tournée suivante repart du réel. Les items rangés
+  s'affichent sous **Added for this project**, et un ⤺ les ressort.
+
+- **La checklist les demande avec leur caisse**, plus trois sections
+  plus bas, et le poids de la caisse les compte. Au départ, le gel
+  enregistre le chargement réel — recette et rangements confondus :
+  c'est ce qui est parti qui compte, pas la distinction entre les
+  deux.
+
+- **Retirer une caisse du projet libère ce qu'on y avait rangé** : les
+  items retombent en vrac, et l'application le dit. Un rangement qui
+  désignerait une caisse absente est ignoré plutôt que de faire
+  disparaître l'item.
+
+Un item ne peut être rangé que dans une caisse à la fois — la forme
+même de l'enregistrement l'impose, une clé pour une valeur. C'est
+exactement le genre de contradiction qu'on ne veut pas pouvoir
+écrire.
+
+### Ajouté — monter une caisse sans quitter le projet
+
+- Sous l'onglet Packs de la composition, un bouton **+ New case**
+  ouvre le même formulaire que l'onglet Packs — nom, contenant, monté
+  ou configuration — et la caisse rejoint le projet une fois créée.
+
+  **C'en est une vraie** : elle vit dans l'onglet Packs et resservira.
+  Pas de contenant jetable visible nulle part ailleurs — ce serait une
+  seconde sorte de caisse, et c'est exactement le genre de doublon de
+  concept qui avait rendu la v1.20 illisible.
+
+  À ne pas confondre avec les rangements ci-dessus : **ranger** un
+  item dans une caisse ne touche pas à sa recette et ne vaut que pour
+  ce projet ; **créer** une caisse, si.
+
+### Ajouté
+
+- **`tests/t128.js`**, dix sections. Vingt harnais au total.
+
+
 ## [1.27.0] — 2026-10-16
 
 Le CSS est consolidé. C'est la condition d'un thème clair, et plus
