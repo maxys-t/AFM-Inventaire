@@ -56,7 +56,9 @@ exactement le genre de contradiction qu'on ne veut pas pouvoir
 
 ### Ajouté
 
-- **`tests/t128.js`**, dix sections. Vingt harnais au total.
+- **`tests/t128.js`**, dix sections. Vingt harnais au total, et
+  `tests/manuel/TEST-v1.28.md` pour ce que les harnais ne voient
+  pas — le geste, et ce qui s'allume sous le doigt.
 
 
 ## [1.27.0] — 2026-10-16

@@ -208,14 +208,18 @@ function projEditor(){
                  : `<button class="pjadd" onclick="projAddPack('${k.id}')">+</button>`}
       </div>`;
     }).join('') || '<div class="empty">No pack matches.</div>';
-    /* Monter une caisse sans quitter le projet. C'en est une vraie :
-       elle vivra dans l'onglet Packs et resservira. Une caisse
-       jetable, visible nulle part ailleurs, ferait une seconde sorte
-       de caisse — et c'est ce genre de doublon de concept qui avait
-       rendu la v1.20 illisible. */
-    if(can('edit')) src += `<div style="padding:10px 2px 2px">
+    /* Monter une caisse sans quitter le projet, EN TÊTE de liste :
+       on cherche d'abord une caisse existante, on en crée une quand
+       on ne la trouve pas — et c'est à ce moment-là qu'on regarde en
+       haut, pas après avoir fait défiler toutes les autres.
+
+       C'en est une vraie : elle vivra dans l'onglet Packs et
+       resservira. Une caisse jetable, visible nulle part ailleurs,
+       ferait une seconde sorte de caisse — et c'est ce genre de
+       doublon de concept qui avait rendu la v1.20 illisible. */
+    if(can('edit')) src = `<div class="pjnewcase">
       <button class="btn sec small" onclick="projNewPack()">+ New case</button>
-      <div class="hintline">It becomes a real pack, reusable next time.</div></div>`;
+      <span class="hintline">A real pack — it stays, and serves again.</span></div>` + src;
   }
 
   /* ---- colonne de droite ---- */
