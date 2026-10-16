@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.25.0] — 2026-10-16
+
+### Changé — une place pour chaque chose
+
+L'application va accueillir d'autres fonctions. Si chacune ajoute son
+bouton là où il y avait de la place, l'écran finit en boîte à outils
+renversée. La règle posée ici, et qui vaudra pour les autres onglets :
+**une page par objet, et derrière un engrenage, une page de réglages**
+qui réunit ses métadonnées et ses gestes rares — le même geste que les
+réglages de l'application, donc une seule chose à apprendre.
+
+- **La carte d'un projet est elle-même le bouton.** Un « Open » posé à
+  côté de deux autres boutons obligeait à viser, alors que la carte
+  fait trois cents pixels de large et ne veut dire qu'une chose. Elle
+  s'ouvre aussi au clavier.
+
+- **« Edit gear » ne vit plus que dans le projet concerné**, plus sur
+  sa vignette.
+
+- **Les réglages d'un projet sont une page**, ouverte par ⚙ en haut, et
+  non plus un volet déplié sous la checklist. Elle réunit trois
+  blocs — les informations du projet, les actions, puis archiver et
+  supprimer à part.
+
+- **La destination, les dates et la description** y ont déménagé. Elles
+  traînaient dans l'en-tête de la composition, entre deux boutons, sur
+  un écran qui sert à tout autre chose. Le nom reste là-haut : c'est le
+  titre de ce qu'on est en train de monter.
+
+
 ## [1.24.3] — 2026-10-15
 
 ### Changé

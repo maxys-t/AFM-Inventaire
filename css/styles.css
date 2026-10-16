@@ -1261,3 +1261,8 @@ tr.outpack td{padding-top:8px;padding-bottom:8px}
 .pjrow .repthumb{flex:none}
 .pjrow .repthumb.sm{width:34px;height:34px}
 .pjgrab + .pjsum{margin-top:0}
+
+/* --- La carte d'un projet est elle-même le bouton (v1.25) --- */
+.pjcard.clickable{cursor:pointer;transition:border-color .15s,background .15s}
+.pjcard.clickable:hover{border-color:var(--border2);background:var(--panel2)}
+.pjcard.clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

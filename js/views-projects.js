@@ -33,6 +33,7 @@ function renderProj(){
   if(projView.mode !== 'list' && !project(projView.id)) projView.mode = 'list';
 
   if(projView.mode === 'edit'){ box.innerHTML = projEditor(); bindProjDrag(); return; }
+  if(projView.mode === 'settings'){ box.innerHTML = projSettings(); return; }
   if(projView.mode === 'prep'){ box.innerHTML = projPrep(); return; }
   box.innerHTML = projList();
 }
@@ -64,7 +65,14 @@ function projList(){
       const c = projContent(p);
       const pr = projProgress(p);
       const d = projDates(p);
-      return `<div class="pjcard${p.archived?' arch':''}">
+      /* La carte entière est le bouton. Un « Open » à côté de deux
+         autres boutons obligeait à viser, alors que la carte fait
+         trois cents pixels de large et ne veut dire qu'une chose. Le
+         reste — modifier le matériel, dupliquer — vit dans le projet
+         lui-même, pas sur sa vignette. */
+      return `<div class="pjcard${p.archived?' arch':''} clickable"
+           onclick="projGo('prep','${p.id}')" role="button" tabindex="0"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();projGo('prep','${p.id}')}">
         <div class="pjcard-top">
           <div style="flex:1;min-width:0">
             <h3>${esc(p.name)}</h3>
@@ -79,11 +87,6 @@ function projList(){
           <div><b>${fweight(c.weight)}</b>total</div>
         </div>
         ${p.status==='preparation'?`<div class="pline"><div class="pbar"><div style="width:${pr.total?Math.round(pr.done/pr.total*100):0}%"></div></div><span class="muted">${pr.done}/${pr.total}</span></div>`:''}
-        <div class="pjacts">
-          <button class="btn small" onclick="projGo('prep','${p.id}')">Open</button>
-          ${(can('edit') && p.status!=='show')?`<button class="btn sec small" onclick="projGo('edit','${p.id}')">Edit gear</button>`:''}
-          ${can('edit')?`<button class="btn sec small" onclick="duplicateProj('${p.id}')">Duplicate</button>`:''}
-        </div>
         ${p.archived?'<span class="tag pinactif">archived</span>':''}
       </div>`;
     }).join('') + '</div>';
@@ -249,12 +252,10 @@ function projEditor(){
 
   return `
   <div class="pjhead">
-    <button class="btn sec small" onclick="projBack()">← Projects</button>
+    <button class="btn sec small" onclick="projGo('prep','${p.id}')">← Project</button>
     <input id="pj-name" value="${esc(p.name)}" onchange="projSetName(this.value)"
            class="pjname" placeholder="Project name">
-    <select id="pj-dest" onchange="projSetField('loc_name', this.value)">${projDestOptions(p)}</select>
-    <input type="date" value="${p.starts_on||''}" onchange="projSetField('starts_on', this.value||null)">
-    <input type="date" value="${p.ends_on||''}"   onchange="projSetField('ends_on', this.value||null)">
+    <span class="muted">Gear list</span>
     <button class="btn ok" onclick="projGo('prep','${p.id}')">Packing →</button>
   </div>
 
@@ -552,6 +553,8 @@ function projPrep(){
     <h2 class="pjtitle">${esc(p.name)} <span class="tag ${PTAG[p.status]}">${PSTAT[p.status]}</span>
       ${p.archived?'<span class="tag pinactif">archived</span>':''}</h2>
     ${(can('edit') && !figé)?`<button class="btn sec small" onclick="projGo('edit','${p.id}')">Edit gear</button>`:''}
+    <button class="btn sec small" onclick="projGo('settings','${p.id}')"
+            title="Project settings">⚙ Settings</button>
   </div>
 
   <div class="panel">
@@ -575,35 +578,70 @@ function projPrep(){
 
   <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;margin-top:12px">${actions}</div>
 
-  ${projSettingsHTML(p)}`;
+`;
 }
 
-/* ---- réglages du projet ----
-   Ce qu'on fait une fois sur dix sorties : dupliquer, archiver,
-   supprimer, remettre la checklist à zéro. Les laisser en permanence
-   sous la liste mettait « Delete » à deux centimètres de « Go on
-   show », au moment précis où l'on travaille vite, avec les mains
-   prises. Ils vivent donc dans un volet replié. */
-let projSettingsOpen = false;
-function toggleProjSettings(){ projSettingsOpen = !projSettingsOpen; renderProj(); }
+/* ============================================================
+   4. Les réglages du projet — une PAGE, pas un volet
 
-function projSettingsHTML(p){
-  const head = `<div class="panel repfold" onclick="toggleProjSettings()" style="margin-top:12px">
-    <span class="chev">${projSettingsOpen?'▾':'▸'}</span>
-    <span>Project settings</span>
-    <span class="muted foldnote">Delivery note, duplicate, archive, reset, delete</span></div>`;
-  if(!projSettingsOpen) return head;
-  return head + `<div class="panel" style="margin-top:-8px">
+   Un volet replié sous la checklist reste un bouton de plus au
+   milieu des autres. L'application va accueillir d'autres fonctions ;
+   si chacune ajoute son bouton quelque part, l'écran devient une
+   boîte à outils renversée.
+
+   La règle, désormais : une page par objet, et derrière un engrenage,
+   une page de réglages qui réunit ses métadonnées et ses gestes
+   rares. C'est le même geste que les réglages de l'application — il
+   n'y a donc qu'une seule chose à apprendre.
+   ============================================================ */
+function projSettings(){
+  const p = project(projView.id);
+  return `
+  <div class="pjhead">
+    <button class="btn sec small" onclick="projGo('prep','${p.id}')">← Project</button>
+    <h2 class="pjtitle">${esc(p.name)} <span class="muted">— settings</span></h2>
+  </div>
+
+  <div class="panel">
+    <h2>Details</h2>
+    <div class="form-grid">
+      <div class="field full"><label>Name</label>
+        <input value="${esc(p.name)}" onchange="projSetName(this.value)"></div>
+      <div class="field full"><label>Description</label>
+        <input value="${esc(p.description||'')}" placeholder="optional"
+               onchange="projSetField('description', this.value)"></div>
+      <div class="field full"><label>Destination</label>
+        <select id="pj-dest" onchange="projSetField('loc_name', this.value)">${projDestOptions(p)}</select>
+        <div class="hintline">Add off-site addresses in Settings → Locations.</div></div>
+      <div class="field"><label>Start date</label>
+        <input type="date" value="${p.starts_on||''}"
+               onchange="projSetField('starts_on', this.value||null)"></div>
+      <div class="field"><label>End date</label>
+        <input type="date" value="${p.ends_on||''}"
+               onchange="projSetField('ends_on', this.value||null)"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Actions</h2>
     <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;gap:6px">
       <button class="btn sec small" onclick="openDeliveryMail('${p.id}')"
               title="Opens a pre-filled draft in your mail app">✉️ Delivery details</button>
       ${can('edit')?`<button class="btn sec small" onclick="duplicateProj('${p.id}')">Duplicate</button>`:''}
       ${(can('projectPrep') && p.status!=='show')?`<button class="btn sec small" onclick="resetPrep('${p.id}')">Reset checklist</button>`:''}
-      ${can('edit')?`<button class="btn sec small" onclick="archiveProj('${p.id}')">${p.archived?'Restore':'Archive'}</button>`:''}
-      ${can('delete')?`<button class="btn danger small" onclick="deleteProj('${p.id}')">Delete</button>`:''}
     </div>
     <div class="hintline">Resetting the checklist unticks everything at once — the gear list itself is untouched.</div>
-  </div>`;
+  </div>
+
+  ${(can('edit') || can('delete')) ? `<div class="panel">
+    <h2>Archive &amp; delete</h2>
+    <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;gap:6px">
+      ${can('edit')?`<button class="btn sec small" onclick="archiveProj('${p.id}')">${p.archived?'Restore':'Archive'}</button>`:''}
+      ${can('delete')?`<button class="btn danger small" onclick="deleteProj('${p.id}')">Delete this project</button>`:''}
+    </div>
+    <div class="hintline">Archiving keeps the project and its history, out of the list.
+      Deleting removes the project only — the gear and its history are untouched.</div>
+  </div>` : ''}`;
 }
 
 function projLine(l, p, figé){
