@@ -135,9 +135,39 @@ dom.window.eval([
   R.push([/await apiInsertPack\(row\)/.test(vpk),
           'créée par le même chemin que depuis l’onglet Packs — donc visible partout']);
 
-  R.push([null,'7. Cohérence des fichiers']);
   const h = read('index.html'),
         app = read('js/app.js'), dbjs = read('js/db.js'), css = read('css/styles.css');
+  /* La 027 avait ouvert un rangement « pour ce projet seulement ».
+     Faute de cas d'usage, la 028 le retire : une caisse, c'est ce
+     qu'il y a dedans. Une colonne inutilisée finit toujours par être
+     réemployée pour autre chose. */
+  R.push([null,'7. Les projets passent devant les caisses']);
+  /* L'ordre de la barre dit la hiérarchie du travail : le projet est
+     la fin, les caisses et l'inventaire existent pour le servir. */
+  const nav = h.slice(h.indexOf('<nav'), h.indexOf('</nav>'));
+  const ordre = [...nav.matchAll(/data-v="(\w+)"/g)].map(m=>m[1]);
+  R.push([ordre[1] === 'proj', 'Projects vient juste après le tableau de bord']);
+  R.push([ordre.indexOf('proj') < ordre.indexOf('packs'), 'devant les packs']);
+  R.push([ordre.indexOf('packs') < ordre.indexOf('inv'), 'eux-mêmes devant l’inventaire']);
+  R.push([/class="navmain">Projects/.test(h), 'et Projects porte la mise en avant']);
+  const dash = read('js/views-dashboard.js');
+  R.push([/function dashProjectsHTML/.test(dash) &&
+          dash.indexOf('dashProjectsHTML()') < dash.indexOf('dashPacksHTML()'),
+          'le tableau de bord montre les projets en cours avant les caisses']);
+  R.push([/p\.status !== 'inactif'/.test(dash),
+          'et seulement ceux qui se préparent ou qui roulent']);
+
+  R.push([null,'8. Photos et consommables depuis le projet']);
+  R.push([(vp.match(/pjThumb\(/g)||[]).length >= 8,
+          'les vignettes sont des deux côtés, items comme caisses']);
+  R.push([/pjThumb\(\{photo:packPhoto\(k\)\}\)/.test(vp),
+          'une caisse montre la photo de son contenant']);
+  R.push([/function projAddExtra/.test(vp) && /apiInsertPackExtra/.test(vp),
+          'on ajoute un consommable à une caisse depuis le projet']);
+  R.push([/it stays/.test(vp),
+          'et il y reste — même règle que les items']);
+
+  R.push([null,'9. Cohérence des fichiers']);
   /* La 027 avait ouvert un rangement « pour ce projet seulement ».
      Faute de cas d'usage, la 028 le retire : une caisse, c'est ce
      qu'il y a dedans. Une colonne inutilisée finit toujours par être

@@ -253,10 +253,13 @@ dom.window.eval([
   const app = read('js/app.js'), h = read('index.html'),
         dbjs = read('js/db.js'), sql = read('sql/024-packs-presets-projets.sql');
 
-  R.push([null,'12bis. Les packs passent en usage principal']);
+  R.push([null,'12bis. Les packs sont une surface principale']);
+  /* La v1.22 les avait mis en tête. La v1.29.1 a replacé les projets
+     devant : le projet est la fin, les caisses existent pour le
+     servir. Les packs restent en haut de barre, deuxième. */
   const nav = h.slice(h.indexOf('<nav'), h.indexOf('</nav>'));
   const ordre = [...nav.matchAll(/data-v="(\w+)"/g)].map(m=>m[1]);
-  R.push([ordre[1] === 'packs', 'Packs vient juste après le tableau de bord']);
+  R.push([ordre[2] === 'packs', 'Packs vient juste après les projets']);
   R.push([ordre.indexOf('packs') < ordre.indexOf('inv'), 'avant l’inventaire']);
   R.push([ordre.indexOf('packs') < ordre.indexOf('people'), 'et avant les emprunteurs']);
   const dash = read('js/views-dashboard.js');

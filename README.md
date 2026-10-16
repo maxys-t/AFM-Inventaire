@@ -4,7 +4,7 @@ Application web de gestion de l'inventaire du studio AFM : matériel, prêts,
 réparations, emplacements et projets de tournée. Réservée au personnel du studio,
 utilisable sur ordinateur comme sur mobile.
 
-> Version actuelle : **1.29.0** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
+> Version actuelle : **1.29.1** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
 
 ## À quoi ça sert
 

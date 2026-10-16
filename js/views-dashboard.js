@@ -45,13 +45,15 @@ function renderDash(){
       <h1>${esc(LABELS.appTitle)}</h1>
       <p>${esc(LABELS.tagline || '')}</p>
       <div class="heroacts">
-        <button class="btn" onclick="show('packs')">Open packs</button>
+        ${can('edit')?`<button class="btn" onclick="show('proj');openProjForm()">+ New project</button>`:
+                      `<button class="btn" onclick="show('proj')">Open projects</button>`}
+        <button class="btn sec" onclick="show('packs')">Packs</button>
         <button class="btn sec" onclick="show('inv')">Browse inventory</button>
         ${can('edit')?`<button class="btn sec" onclick="openItemForm()">+ Add item</button>`:''}
-        ${can('edit')?`<button class="btn sec" onclick="show('proj');openProjForm()">+ New project</button>`:''}
       </div>
     </div>
 
+    ${dashProjectsHTML()}
     ${dashPacksHTML()}
 
     ${alerts.length ? `<div class="panel">
@@ -71,6 +73,48 @@ function renderDash(){
              <div class="lbl">Purchase value${withPrice.length!==total?` <span class="muted">(${withPrice.length} priced)</span>`:''}</div></div>`
         : ''}
     </div>`;
+}
+
+/* ============================================================
+   LES PROJETS EN COURS, EN TÊTE DU TABLEAU DE BORD (v1.29.1)
+
+   Le projet est la fin : c'est lui qui part, et les caisses comme
+   l'inventaire existent pour le servir. Le tableau de bord le dit
+   dans son ordre — ce qui se prépare ou ce qui roule avant ce qui
+   attend sur une étagère.
+
+   Le bloc ne s'affiche que s'il y a quelque chose en cours. Un
+   panneau vide en permanence n'apprend rien et prend la place de ce
+   qui en apprend.
+   ============================================================ */
+function dashProjectsHTML(){
+  if(db.projectsError) return '';
+  const actifs = db.projects.filter(p=>!p.archived && p.status !== 'inactif');
+  if(!actifs.length) return '';
+
+  const ordre = {show:0, preparation:1};
+  const ligne = p => {
+    const c = projContent(p);
+    const pr = projProgress(p);
+    const d = projDates(p);
+    return `<div class="dpack" onclick="show('proj');projGo('prep','${p.id}')">
+      <div class="repbody">
+        <div class="reptitle"><b>${esc(p.name)}</b>
+          <span class="tag ${PTAG[p.status]}">${PSTAT[p.status]||p.status}</span></div>
+        <div class="repmeta">${c.groups.length} case(s) · ${c.items.length} item(s) ·
+          ${esc(fweight(c.weight))}${p.loc_name?' · '+esc(p.loc_name):''}${d?' · '+esc(d):''}</div>
+      </div>
+      ${p.status==='preparation'
+        ? `<div class="pbar" style="max-width:90px"><div style="width:${pr.total?Math.round(pr.done/pr.total*100):0}%"></div></div>
+           <span class="muted" style="font-size:12px">${pr.done}/${pr.total}</span>`
+        : '<span class="muted" style="font-size:12px">on the road</span>'}
+    </div>`;
+  };
+
+  return `<div class="panel">
+    <h2>In progress <span class="tag pprep">${actifs.length}</span></h2>
+    <div class="dpacks">${actifs.sort((a,b)=>(ordre[a.status]??9)-(ordre[b.status]??9)).map(ligne).join('')}</div>
+  </div>`;
 }
 
 /* ============================================================

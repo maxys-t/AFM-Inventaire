@@ -209,8 +209,12 @@ function projEditor(){
         enRep ? enRep + ' in repair' : ''
       ].filter(Boolean).join(' · ');
       const mort = !libres.length && !posés;
+      /* La photo du premier exemplaire qui en a une : c'est le même
+         modèle, donc la même image — et c'est elle qu'on reconnaît
+         avant d'avoir lu le nom. */
+      const photo = (g.all.find(i=>i.photo)||{}).photo || null;
       return `<div class="pjrow${mort?' off':''}" data-kind="item" data-key="${esc(g.key)}">
-        <span class="pjgrip">⠿</span>
+        <span class="pjgrip">⠿</span>${pjThumb({photo})}
         <div class="pjnm"><div class="t">${g.brand?`<b>${esc(g.brand)}</b> `:''}${esc(g.name)}</div>
           <div class="s">${esc(sous)} · ${fweight(g.all[0].weight_g||0)} each</div></div>
         ${posés
@@ -228,7 +232,7 @@ function projEditor(){
       const dedans = (p.pack_ids||[]).includes(k.id);
       const ex = packExtrasOf(k.id).length;
       return `<div class="pjrow${dedans?' off':''}" data-kind="pack" data-key="${k.id}">
-        <span class="pjgrip">⠿</span>
+        <span class="pjgrip">⠿</span>${pjThumb({photo:packPhoto(k)})}
         <div class="pjnm"><div class="t">${esc(k.name)}
             <span class="tag ${k.permanent?'perm':'conf'}">${k.permanent?'assembled':'config'}</span></div>
           <div class="s">${tous.length} item(s) · ${fweight(tous.reduce((t,i)=>t+(i.weight_g||0),0))}${
@@ -257,7 +261,7 @@ function projEditor(){
     const dedans = g.items;
     return `
     <div class="pjgrp" data-pjcase="${g.packId}">
-      <div class="hd"><span class="t">${esc(g.name)}</span>
+      <div class="hd">${pjThumb({photo:packPhoto(pack(g.packId))})}<span class="t">${esc(g.name)}</span>
         <span class="muted">${dedans.length} item(s) · ${fweight(dedans.reduce((t,i)=>t+(i.weight_g||0),0))}</span>
         <button class="pjx" onclick="projRemovePack('${g.packId}')" title="Remove this case">✕</button></div>
       <div class="bd">
@@ -277,9 +281,13 @@ function projEditor(){
                  title="Use ${esc(itemTitleText(libre))} here instead">Use ${esc(libre.id)}</button>`:''}
             </div>`;
           }).join(''):''}
-        ${g.extras.length?`<div class="pjsub">Consumables</div>` +
-          g.extras.map(e=>`<div class="pjrow extra"><div class="pjnm"><div class="t">${esc(e.label)}</div>
-            <div class="s">× ${e.qty} · not counted in the weight</div></div></div>`).join(''):''}
+        ${(g.extras.length || can('edit'))?`<div class="pjsub">Consumables</div>`:''}
+        ${g.extras.map(e=>`<div class="pjrow extra"><div class="pjnm"><div class="t">${esc(e.label)}</div>
+            <div class="s">× ${e.qty} · not counted in the weight</div></div>
+            ${(can('edit') && e.pack_id === g.packId)
+              ? `<button class="pjx" onclick="projDelExtra('${e.id}')" title="Remove from this case">✕</button>` : ''}
+          </div>`).join('')}
+        ${can('edit')?projExtraForm(g.packId):''}
       </div>
     </div>`; }).join('');
 
@@ -348,6 +356,69 @@ function projDestOptions(p){
    besoin : on compose et on prépare en cherchant les objets des yeux,
    sur une étagère ou dans une caisse. Le carré vide tient la colonne
    droite quand il n'y a pas de photo. */
+/* ---- ajouter un consommable à une caisse, depuis le projet ----
+
+   Même logique que les items depuis la v1.29 : ce qu'on met dans une
+   caisse y reste. Si l'on pense au gaffer en préparant une tournée,
+   c'est qu'il manquait à la recette — et il manquera encore la
+   prochaine fois si on ne l'y met pas.
+
+   Le formulaire reste replié : une caisse en porte rarement, et une
+   ligne de saisie par caisse, en permanence, transformerait le
+   panneau en formulaire. */
+let projExtraOuvert = null;
+function projToggleExtra(packId){
+  projExtraOuvert = (projExtraOuvert === packId) ? null : packId;
+  renderProj();
+  const el = document.getElementById('px-proj-label');
+  if(el) el.focus();
+}
+
+function projExtraForm(packId){
+  if(projExtraOuvert !== packId)
+    return `<div class="pjrow" style="border:none">
+      <button class="btn sec small" onclick="projToggleExtra('${packId}')">+ Consumable</button>
+      <span class="hintline" style="margin:0">Tape, ties, batteries — a checklist line, no weight.</span>
+    </div>`;
+  return `<div class="pjrow" style="border:none;gap:6px;flex-wrap:wrap">
+    <input id="px-proj-label" placeholder="e.g. Black gaffer tape" style="flex:1;min-width:140px"
+           onkeydown="if(event.key==='Enter')projAddExtra('${packId}');if(event.key==='Escape')projToggleExtra('${packId}')">
+    <input id="px-proj-qty" type="number" min="1" max="9999" value="1" style="width:74px">
+    <button class="btn small" onclick="projAddExtra('${packId}')">Add</button>
+    <button class="btn sec small" onclick="projToggleExtra('${packId}')">Cancel</button>
+  </div>`;
+}
+
+async function projAddExtra(packId){
+  if(!can('edit')) return;
+  const el = document.getElementById('px-proj-label');
+  const label = ((el||{}).value||'').trim();
+  if(!label){ toast('Type a name first.', 'warn'); return; }
+  const qty = Math.max(1, Math.min(9999,
+    parseInt((document.getElementById('px-proj-qty')||{}).value, 10) || 1));
+  try{
+    const row = await apiInsertPackExtra({pack_id:packId, label, qty,
+                                          pos:packExtrasOf(packId).length});
+    db.packExtras.push(row);
+    projExtraOuvert = null;
+    renderProj();
+    const k = pack(packId);
+    toast(`${label} added to ${k?k.name:'the case'} — it stays.`, 'ok', 'Undo', async ()=>{
+      await projDelExtra(row.id, true);
+    }, 12000);
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
+async function projDelExtra(id, silencieux){
+  if(!can('edit')) return;
+  try{
+    await apiDeletePackExtra(id);
+    db.packExtras = db.packExtras.filter(e=>e.id !== id);
+    renderProj();
+    if(!silencieux) toast('Removed.', 'ok');
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
 function pjThumb(i){
   return (i && i.photo)
     ? `<img class="repthumb sm" loading="lazy" src="${i.photo}">`

@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.29.1] — 2026-10-16
+
+### Changé — le projet passe devant la caisse
+
+L'ordre de la barre dit la hiérarchie du travail. **Le projet est la
+fin** : c'est lui qui part, et les caisses comme l'inventaire
+existent pour le servir. La barre le dit désormais —
+Dashboard · **Projects** · Packs · Inventory · Checked out · Repairs ·
+Borrowers — et c'est Projects qui porte la mise en avant.
+
+- Le tableau de bord ouvre sur **+ New project**, et un bloc **In
+  progress** liste ce qui se prépare ou ce qui roule, avec sa
+  progression, **avant** le bloc des caisses. Il ne s'affiche que
+  s'il y a quelque chose en cours : un panneau vide en permanence
+  n'apprend rien et prend la place de ce qui en apprend.
+
+### Ajouté
+
+- **Les photos des deux côtés de la composition.** La colonne de
+  gauche en avait perdu : les modèles montrent la photo du premier
+  exemplaire qui en a une, les caisses celle de leur contenant, et
+  l'en-tête d'une caisse la reprend à droite. On reconnaît un objet
+  avant d'avoir lu son nom.
+
+- **Ajouter un consommable à une caisse depuis le projet.** Même règle
+  que les items depuis la v1.29 : ce qu'on met dans une caisse y
+  reste. Si l'on pense au gaffer en préparant une tournée, c'est qu'il
+  manquait à la recette — et il manquera encore la fois suivante si on
+  ne l'y met pas. Le formulaire reste replié derrière un
+  **+ Consumable**, avec annulation.
+
+
 ## [1.29.0] — 2026-10-16
 
 **Migration SQL à passer : `sql/028-rangements-retires.sql`**, après
