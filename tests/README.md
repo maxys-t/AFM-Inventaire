@@ -1,6 +1,6 @@
 # Les tests
 
-Dix-huit harnais, un par version qui a introduit quelque chose de
+Dix-neuf harnais, un par version qui a introduit quelque chose de
 délicat. Ils ne remplacent pas l'essai à la main : ils garantissent
 qu'une correction d'hier n'est pas défaite aujourd'hui.
 
@@ -56,6 +56,7 @@ continue de servir l'ancien fichier.
 | t122 | Packs-recettes, consommables, composition d'un projet |
 | t123 | Les quatre états, sortie d'une caisse signalée |
 | t124 | Contenants, caisse partagée, doublons de projet |
+| t127 | La feuille de style : toutes les couleurs dans la palette |
 
 ## En écrire un
 

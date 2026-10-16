@@ -1,36 +1,123 @@
 :root{
-  --bg:#161617; --panel:#1d1d1f; --panel2:#2c2c2e; --border:#3a3a3c; --border2:#48484a;
-  --txt:#f5f5f7; --muted:#86868b; --accent:#0a84ff; --accent2:#409cff;
-  --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a; --radius:16px;
+  /* ============================================================
+     LA PALETTE — un seul endroit où les couleurs sont décidées
+
+     Tout le reste de cette feuille lit ces variables, et aucune
+     couleur n'est écrite ailleurs. C'est ce qui rendra un thème clair
+     possible : il suffira d'un second bloc comme celui-ci.
+
+     Les teintes de fond (--t-*) en font partie. Elles étaient
+     jusqu'ici écrites à la main, à partir d'une palette antérieure :
+     deux bleus, deux verts, deux ambres et deux rouges coexistaient,
+     et les fonds ne s'accordaient plus avec le texte qu'ils
+     portaient. Elles dérivent maintenant des mêmes couleurs.
+     ============================================================ */
+
+  /* Surfaces, du plus sombre au plus clair */
+  --bg:#161617; --panel:#1d1d1f; --panel2:#2c2c2e;
+  --border:#3a3a3c; --border2:#48484a;
+
+  /* Textes */
+  --txt:#f5f5f7; --muted:#86868b; --muted2:#b0b0b6;
+  --on-accent:#fff;      /* texte posé sur une couleur pleine */
+  --ink:#000;            /* impression, et fond d'une photo */
+
+  /* Couleurs de sens */
+  --accent:#0a84ff; --accent2:#409cff;
+  --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a;
+  --info:#bf5af2;        /* réparations, et matériel en panne */
+
+  /* Teintes de fond, dérivées des couleurs ci-dessus.
+     faint : rayures de lignes · soft : survol et zones de dépôt ·
+     plein : étiquettes · strong : bouton d'alerte au survol. */
+  --t-accent-faint:rgba(10,132,255,.05);
+  --t-accent-soft:rgba(10,132,255,.08);
+  --t-accent:rgba(10,132,255,.14);
+  --t-ok:rgba(48,209,88,.14);
+  --t-warn:rgba(255,159,10,.14);
+  --t-warn-strong:rgba(255,159,10,.26);
+  --t-bad-faint:rgba(255,69,58,.06);
+  --t-bad:rgba(255,69,58,.12);
+  --t-info:rgba(191,90,242,.14);
+  --t-neutral:rgba(110,110,115,.15);
+  --t-light:rgba(255,255,255,.02);
+
+  /* Voiles et ombres */
+  --veil:rgba(0,0,0,.35);
+  --veil-strong:rgba(0,0,0,.55);
+  --veil-photo:rgba(0,0,0,.72);
+  --glass:rgba(29,29,31,.8);      /* en-tête et navigation, translucides */
+  --sh-hair:rgba(0,0,0,.04);
+  --sh-soft:rgba(0,0,0,.18);
+  --sh-mid:rgba(0,0,0,.40);
+  --sh-deep:rgba(0,0,0,.55);
+
+  --radius:16px;
 }
+
+/* ============================================================
+   COMMENT CE FICHIER EST ORGANISÉ
+
+   Il se lit de haut en bas, et l'ordre compte : plusieurs blocs
+   corrigent volontairement des règles écrites plus haut. Déplacer
+   une section change donc le rendu. Les deux endroits où c'est
+   explicitement le cas sont signalés sur place.
+
+   Les en-têtes de section disaient jusqu'ici « À COLLER À LA FIN » :
+   c'étaient des instructions de livraison, adressées à quelqu'un qui
+   recopiait des blocs à la main. Elles ne décrivaient rien du
+   contenu. Elles sont remplacées par ce qu'on y trouve.
+
+     1. La palette, ci-dessus — toutes les couleurs, et rien ailleurs
+     2. Base : corps, en-tête, navigation, boutons, champs, tableaux
+     3. Fenêtres, formulaires, et la grille des champs
+     4. Connexion et comptes
+     5. Sélection multiple et groupes d'exemplaires
+     6. Messages passagers (toasts) et barre de mise à jour
+     7. Photos : import groupé, vignettes, recadrage
+     8. Tableau de bord et réglages
+     9. Inventaire : le tableau en colonnes, tri et filtres
+    10. Lieux, adresses et projets
+    11. Emprunteurs et retour groupé
+    12. Mobile, tablette et infobulles
+    13. Réparations
+    14. Packs : arbre, fiche, glisser-déposer
+    15. Projets : liste, composition, préparation
+
+   Une poignée de sélecteurs sont déclarés à deux ou trois endroits
+   — `.invwrap`, `.invtable th`, `select`. Ce n'est pas un oubli :
+   la seconde déclaration corrige la première pour un cas précis,
+   expliqué sur place. Les fusionner demanderait de vérifier chaque
+   règle intermédiaire, et n'apporterait rien au rendu.
+   ============================================================ */
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.47;-webkit-font-smoothing:antialiased}
-header{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:14px 22px;background:rgba(29,29,31,.8);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border);flex-wrap:wrap}
+header{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;padding:14px 22px;background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border);flex-wrap:wrap}
 header h1{font-size:19px;font-weight:600;letter-spacing:-.02em}
 header .spacer{flex:1}
-nav{display:flex;gap:6px;padding:12px 18px;background:rgba(29,29,31,.8);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border);overflow-x:auto;justify-content:center}
+nav{display:flex;gap:6px;padding:12px 18px;background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border);overflow-x:auto;justify-content:center}
 nav button{background:none;border:none;color:var(--txt);padding:7px 16px;border-radius:980px;cursor:pointer;font-size:14px;font-weight:500;white-space:nowrap;transition:background .15s}
-nav button.active{background:var(--txt);color:#1d1d1f}
+nav button.active{background:var(--txt);color:var(--panel)}
 nav button:hover:not(.active){background:var(--border)}
 main{padding:22px 16px;max-width:1100px;margin:0 auto}
-.btn{background:var(--accent);color:#fff;border:none;border-radius:980px;padding:9px 18px;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s}
+.btn{background:var(--accent);color:var(--on-accent);border:none;border-radius:980px;padding:9px 18px;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s}
 .btn:hover{background:var(--accent2)}
-.btn.sec{background:#2c2c2e;color:var(--txt)}
-.btn.sec:hover{background:#3a3a3c;}
+.btn.sec{background:var(--panel2);color:var(--txt)}
+.btn.sec:hover{background:var(--border);}
 .btn.danger{background:var(--bad)}
 .btn.small{padding:6px 13px;font-size:13px}
-.btn.ok{background:var(--ok);color:#fff}
+.btn.ok{background:var(--ok);color:var(--on-accent)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:20px}
-.stat{background:var(--panel);border-radius:var(--radius);padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.stat{background:var(--panel);border-radius:var(--radius);padding:18px;box-shadow:0 1px 3px var(--sh-hair)}
 .stat .num{font-size:30px;font-weight:700;letter-spacing:-.02em}
 .stat .lbl{color:var(--muted);font-size:13px;margin-top:2px}
 .stat.warn .num{color:var(--warn)}
 .stat.bad .num{color:var(--bad)}
 .stat.ok .num{color:var(--ok)}
-.panel{background:var(--panel);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.panel{background:var(--panel);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:0 1px 3px var(--sh-hair)}
 .panel h2{font-size:13px;margin-bottom:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
-input,select,textarea{background:#2c2c2e;border:1px solid var(--border2);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:14px;font-family:inherit;appearance:none;-webkit-appearance:none}
+input,select,textarea{background:var(--panel2);border:1px solid var(--border2);color:var(--txt);border-radius:10px;padding:8px 12px;font-size:14px;font-family:inherit;appearance:none;-webkit-appearance:none}
 /* La flèche faisait 10 px de large dans un gris à peine plus clair que
    le fond : au doigt sur une tablette, rien n'indiquait qu'on pouvait
    ouvrir la liste. Elle est désormais plus grande, plus contrastée, et
@@ -38,7 +125,7 @@ input,select,textarea{background:#2c2c2e;border:1px solid var(--border2);color:v
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10'%3E%3Cpath d='M2 2l6 6 6-6' stroke='%23b0b0b6' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:38px;min-height:40px;cursor:pointer}
 select:hover{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10'%3E%3Cpath d='M2 2l6 6 6-6' stroke='%23f5f5f7' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
 input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;width:16px;height:16px;accent-color:var(--accent)}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,113,227,.15)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--t-accent)}
 input[type=search]{min-width:180px;flex:1}
 table{width:100%;border-collapse:collapse}
 th{text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:1px solid var(--border);font-weight:600}
@@ -47,20 +134,20 @@ tr:last-child td{border-bottom:none}
 tr.rowlink{cursor:pointer}
 tr.rowlink:hover td{background:var(--panel2)}
 .tag{display:inline-block;padding:3px 10px;border-radius:980px;font-size:12px;font-weight:500}
-.tag.dispo{background:rgba(52,199,89,.14);color:var(--ok)}
-.tag.sorti{background:rgba(255,149,0,.14);color:var(--warn)}
-.tag.bon{background:rgba(52,199,89,.14);color:var(--ok)}
-.tag.attente{background:rgba(255,149,0,.14);color:var(--warn)}
-.tag.reparation{background:rgba(175,82,222,.13);color:#bf5af2;}
-.tag.hs{background:rgba(255,59,48,.12);color:var(--bad)}
-.tag.cat{background:rgba(0,113,227,.10);color:var(--accent)}
+.tag.dispo{background:var(--t-ok);color:var(--ok)}
+.tag.sorti{background:var(--t-warn);color:var(--warn)}
+.tag.bon{background:var(--t-ok);color:var(--ok)}
+.tag.attente{background:var(--t-warn);color:var(--warn)}
+.tag.reparation{background:var(--t-info);color:var(--info);}
+.tag.hs{background:var(--t-bad);color:var(--bad)}
+.tag.cat{background:var(--t-accent);color:var(--accent)}
 .muted{color:var(--muted);font-size:13px}
 .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13px;color:var(--accent)}
 .alert{border-left:3px solid var(--warn);background:var(--panel2);padding:10px 14px;border-radius:10px;margin-bottom:8px;font-size:14px}
 .alert.bad{border-color:var(--bad)}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-start;justify-content:center;padding:28px 12px;z-index:50;overflow-y:auto;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.overlay{position:fixed;inset:0;background:var(--veil);display:none;align-items:flex-start;justify-content:center;padding:28px 12px;z-index:50;overflow-y:auto;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
 .overlay.open{display:flex}
-.modal{background:var(--panel);border-radius:20px;width:100%;max-width:540px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal{background:var(--panel);border-radius:20px;width:100%;max-width:540px;padding:24px;box-shadow:0 20px 60px var(--sh-soft)}
 .modal h3{margin-bottom:16px;font-size:19px;font-weight:600;letter-spacing:-.01em}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-grid .full{grid-column:1/-1}
@@ -74,7 +161,7 @@ tr.rowlink:hover td{background:var(--panel2)}
 .hist .when{color:var(--muted);font-size:12px}
 .thumb{width:42px;height:42px;object-fit:cover;border-radius:10px;background:var(--panel2)}
 .itemphoto{max-width:100%;max-height:220px;border-radius:14px;margin-bottom:10px}
-#qrbox{background:#fff;border:1px solid var(--border);padding:14px;border-radius:14px;display:inline-block;margin:8px 0}
+#qrbox{background:var(--on-accent);border:1px solid var(--border);padding:14px;border-radius:14px;display:inline-block;margin:8px 0}
 .days-late{color:var(--bad);font-weight:600}
 .empty{color:var(--muted);text-align:center;padding:30px 0}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border-radius:980px;padding:5px 13px;margin:3px;font-size:13px}
@@ -83,17 +170,17 @@ tr.rowlink:hover td{background:var(--panel2)}
 .pbar{height:8px;background:var(--border);border-radius:99px;overflow:hidden;flex:1;min-width:80px}
 .pbar>div{height:100%;background:var(--accent);border-radius:99px;transition:width .2s}
 .pline{display:flex;align-items:center;gap:10px;margin:8px 0}
-.tag.pinactif{background:rgba(110,110,115,.12);color:var(--muted)}
-.tag.pprep{background:rgba(255,149,0,.14);color:var(--warn)}
-.tag.pshow{background:rgba(0,113,227,.12);color:var(--accent)}
-.picker{max-height:260px;overflow-y:auto;border:1px solid var(--border2);border-radius:10px;padding:6px;background:#1d1d1f;}
+.tag.pinactif{background:var(--t-neutral);color:var(--muted)}
+.tag.pprep{background:var(--t-warn);color:var(--warn)}
+.tag.pshow{background:var(--t-accent);color:var(--accent)}
+.picker{max-height:260px;overflow-y:auto;border:1px solid var(--border2);border-radius:10px;padding:6px;background:var(--panel);}
 .picker label{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:14px}
 .picker label:hover{background:var(--panel2)}
 .clist label{display:flex;gap:10px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px}
 .clist label:last-child{border:none}
 #setup{max-width:520px;margin:40px auto;padding:0 16px}
 #syncdot{width:8px;height:8px;border-radius:50%;background:var(--border2);display:inline-block}
-#syncdot.on{background:#34c759}
+#syncdot.on{background:var(--ok)}
 @media(max-width:700px){
   main{padding:12px}
   nav{justify-content:flex-start}
@@ -109,7 +196,7 @@ tr.rowlink:hover td{background:var(--panel2)}
 @media print{
   body *{visibility:hidden}
   #labelPrint,#labelPrint *{visibility:visible}
-  #labelPrint{position:fixed;left:0;top:0;background:#fff;color:#000}
+  #labelPrint{position:fixed;left:0;top:0;background:var(--on-accent);color:var(--ink)}
 }
 
 #toasts{
@@ -122,7 +209,7 @@ tr.rowlink:hover td{background:var(--panel2)}
   background:var(--panel); color:var(--txt);
   border:1px solid var(--border); border-radius:14px;
   padding:11px 14px; font-size:14px;
-  box-shadow:0 8px 30px rgba(0,0,0,.35);
+  box-shadow:0 8px 30px var(--sh-mid);
   pointer-events:auto;
   animation:toastIn .18s ease-out;
 }
@@ -134,7 +221,7 @@ tr.rowlink:hover td{background:var(--panel2)}
 .toast.error{ border-color:var(--bad) }
 .toast.error .ic{ color:var(--bad) }
 .toast .act{
-  flex:none; background:var(--accent); color:#fff; border:none;
+  flex:none; background:var(--accent); color:var(--on-accent); border:none;
   border-radius:980px; padding:5px 12px; font-size:13px; font-weight:500; cursor:pointer;
 }
 .toast .act:hover{ background:var(--accent2) }
@@ -153,8 +240,7 @@ tr.rowlink:hover td{background:var(--panel2)}
   .toast{ font-size:13px; padding:10px 12px }
 }
 /* ============================================================
-   v1.0 — Connexion et comptes
-   À COLLER À LA FIN de css/styles.css (ne rien remplacer)
+   CONNEXION ET COMPTES
    ============================================================ */
 
 /* Écrans de connexion / accès refusé */
@@ -177,8 +263,7 @@ tr.rowlink:hover td{background:var(--panel2)}
   #userChip .who{ max-width:90px }
 }
 /* ============================================================
-   v1.1 — Sélection multiple et groupes d'exemplaires
-   À COLLER À LA FIN de css/styles.css (ne rien remplacer)
+   SÉLECTION MULTIPLE ET GROUPES D'EXEMPLAIRES
    ============================================================ */
 
 /* Barre d'actions groupées (bas d'écran) */
@@ -186,20 +271,20 @@ tr.rowlink:hover td{background:var(--panel2)}
   position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
   z-index:90; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
   background:var(--panel); border:1px solid var(--border); border-radius:980px;
-  padding:9px 16px; box-shadow:0 8px 30px rgba(0,0,0,.35);
+  padding:9px 16px; box-shadow:0 8px 30px var(--sh-mid);
   max-width:calc(100% - 24px);
 }
 #bulkbar .count{ font-size:14px; margin-right:4px; white-space:nowrap }
 
 /* Lignes sélectionnées */
-tr.selrow td{ background:rgba(0,113,227,.10) }
+tr.selrow td{ background:var(--t-accent) }
 
 /* Groupes d'exemplaires */
 tr.grouprow{ cursor:pointer }
 tr.grouprow td{ background:var(--panel2); font-size:14px }
 tr.grouprow:hover td{ background:var(--border) }
 /* Même raison : un chevron de 12 px ne se voit pas, et ne se vise pas. */
-.chev{ color:#b0b0b6; font-size:15px; line-height:1 }
+.chev{ color:var(--muted2); font-size:15px; line-height:1 }
 tr.childrow td:nth-child(3){ padding-left:26px }
 tr.childrow td{ background:transparent }
 
@@ -227,13 +312,13 @@ tr.childrow td{ background:transparent }
 .photozone{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:40px }
 
 /* Fenêtre imbriquée (recadrage par-dessus le formulaire) */
-.overlay.stacked{ z-index:70; background:rgba(0,0,0,.55) }
+.overlay.stacked{ z-index:70; background:var(--veil-strong) }
 
 /* Recadrage */
 .cropwrap{
   width:300px; max-width:100%; margin:0 auto;
   border-radius:14px; overflow:hidden; border:1px solid var(--border2);
-  position:relative; background:#000;
+  position:relative; background:var(--ink);
 }
 #crop-canvas{ display:block; width:100%; height:auto; cursor:grab; touch-action:none }
 #crop-canvas:active{ cursor:grabbing }
@@ -244,16 +329,14 @@ tr.childrow td{ background:transparent }
 .csv-table{ max-height:340px; overflow:auto; border:1px solid var(--border); border-radius:12px }
 .csv-table table{ font-size:13px }
 .csv-table th{ position:sticky; top:0; background:var(--panel); z-index:1 }
-tr.csv-err td{ background:rgba(255,59,48,.07) }
+tr.csv-err td{ background:var(--t-bad-faint) }
 
 @media(max-width:700px){
   .itemphoto{ width:100%; height:auto }
   .csv-table{ max-height:260px }
 }
 /* ============================================================
-   Complément CSS v1.5 → v1.7
-   À COLLER À LA FIN de css/styles.css (ne rien remplacer).
-   Si tu as déjà collé le CSS de la v1.5, c'est tout ce qu'il manque.
+   PHOTOS — IMPORT GROUPÉ ET VIGNETTES
    ============================================================ */
 
 /* v1.6 — import groupé de photos */
@@ -266,16 +349,13 @@ tr.csv-err td{ background:rgba(255,59,48,.07) }
 .sortbox{ display:inline-flex; align-items:center; gap:4px }
 .sortbox #sortDir{ min-width:34px; font-size:15px; line-height:1 }
 #invSummary{ font-size:13px }
-#invSummary b{ color:var(--text) }
+#invSummary b{ color:var(--txt) }
 @media(max-width:700px){
   .sortbox{ width:100% }
   .sortbox select{ flex:1 }
 }
 /* ============================================================
-   Complément CSS v1.7 → v1.8.1
-   À COLLER À LA FIN de css/styles.css.
-   Si tu avais déjà collé le bloc v1.8, remplace-le par celui-ci
-   (il le contient, plus les corrections de la 1.8.1).
+   PHOTOS — RECADRAGE ET FENÊTRE IMBRIQUÉE
    ============================================================ */
 
 /* v1.8 — sélecteur de matériel façon Finder + checklist groupée */
@@ -287,12 +367,12 @@ tr.csv-err td{ background:rgba(255,59,48,.07) }
 .pitem{ display:flex; align-items:center; gap:6px; padding:7px 10px; cursor:pointer;
         border-bottom:1px solid var(--border); font-size:13px }
 .pitem:hover{ background:var(--border) }
-.pitem.on{ background:var(--accent); color:#fff }
-.pitem.on .cnt, .pitem.on .arr{ color:#fff; opacity:.85 }
+.pitem.on{ background:var(--accent); color:var(--on-accent) }
+.pitem.on .cnt, .pitem.on .arr{ color:var(--on-accent); opacity:.85 }
 .pitem .nm{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .pitem .cnt{ font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums }
 .pitem .cnt b{ color:var(--accent) }
-.pitem.on .cnt b{ color:#fff }
+.pitem.on .cnt b{ color:var(--on-accent) }
 .pitem .arr{ color:var(--muted); font-size:14px }
 
 .phead{ position:sticky; top:0; z-index:1; background:var(--panel); padding:6px 10px;
@@ -304,7 +384,7 @@ tr.csv-err td{ background:rgba(255,59,48,.07) }
 .prow{ display:flex; align-items:center; gap:7px; padding:4px 10px; font-size:13px;
        border-bottom:1px solid var(--border); cursor:pointer; min-height:30px }
 .prow:hover{ background:var(--border) }
-.prow.on{ background:rgba(10,132,255,.10) }
+.prow.on{ background:var(--t-accent) }
 .prow input[type=checkbox]{ margin:0; flex:none }
 .prow img, .prow .ph{ width:24px; height:24px; border-radius:5px; object-fit:cover; flex:none }
 .prow .ph{ background:var(--border) }
@@ -314,7 +394,7 @@ tr.csv-err td{ background:rgba(255,59,48,.07) }
 
 .pchips{ display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; max-height:74px; overflow-y:auto }
 .pchips .chip{ cursor:pointer; font-size:11px }
-.pchips .chip:hover{ background:var(--danger); color:#fff }
+.pchips .chip:hover{ background:var(--bad); color:var(--on-accent) }
 
 .cgroup{ margin-bottom:10px; border:1px solid var(--border); border-radius:10px; overflow:hidden }
 .chead{ display:flex; justify-content:space-between; gap:8px; padding:6px 10px;
@@ -381,13 +461,13 @@ nav .navgear{ padding:6px 14px }
 .setcard{ background:var(--panel); border:1px solid var(--border); border-radius:14px;
           padding:6px; overflow:hidden }
 .setitem{ display:flex; align-items:center; gap:10px; width:100%; text-align:left;
-          background:none; border:0; color:var(--text); font:inherit; font-size:14px;
+          background:none; border:0; color:var(--txt); font:inherit; font-size:14px;
           padding:10px 12px; border-radius:10px; cursor:pointer }
 .setitem:hover{ background:var(--border) }
-.setitem.on{ background:var(--accent); color:#fff }
+.setitem.on{ background:var(--accent); color:var(--on-accent) }
 .setitem .ic{ width:18px; text-align:center; opacity:.85 }
-.setitem.out{ color:var(--danger) }
-.setitem.out:hover{ background:var(--danger); color:#fff }
+.setitem.out{ color:var(--bad) }
+.setitem.out:hover{ background:var(--bad); color:var(--on-accent) }
 .setbody .panel{ margin-bottom:14px }
 #v-settings h2{ margin-bottom:4px }
 .setgrid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px }
@@ -398,16 +478,16 @@ nav .navgear{ padding:6px 14px }
 
 /* --- Borrowers : repli par emprunteur --- */
 .bsum{ display:inline-flex; align-items:center; gap:7px; background:none; border:0;
-       color:var(--text); font:inherit; font-size:13px; cursor:pointer;
+       color:var(--txt); font:inherit; font-size:13px; cursor:pointer;
        padding:4px 8px; border-radius:8px }
 .bsum:hover{ background:var(--border) }
 .bsum.on{ background:var(--border) }
-.bsum .chev{ color:#b0b0b6; font-size:14px }
+.bsum .chev{ color:var(--muted2); font-size:14px }
 tr.bdetail td{ padding-top:0; border-top:0 }
 .bchips{ display:flex; flex-wrap:wrap; gap:5px; padding:2px 0 8px }
 .bchips .chip{ cursor:pointer; font-size:12px }
-.bchips .chip:hover{ background:var(--accent); color:#fff }
-.bchips .chip.late{ border-color:var(--danger); color:var(--danger) }
+.bchips .chip:hover{ background:var(--accent); color:var(--on-accent) }
+.bchips .chip.late{ border-color:var(--bad); color:var(--bad) }
 .bchips .chip .mono{ font-size:10px; opacity:.7 }
 
 /* --- champ emprunteur avec suggestions --- */
@@ -425,8 +505,7 @@ tr.bdetail td{ padding-top:0; border-top:0 }
   nav .navspace{ display:none }
 }
 /* ============================================================
-   v1.10 — À COLLER À LA FIN DE css/styles.css
-   Ne rien supprimer de l'existant : tout est en ajout.
+   INVENTAIRE — LE TABLEAU EN COLONNES
    ============================================================ */
 
 /* --- Tableau d'inventaire en colonnes ---
@@ -458,7 +537,7 @@ tr.bdetail td{ padding-top:0; border-top:0 }
 .colmenu{display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:30;
   background:var(--panel);border:1px solid var(--border2);border-radius:12px;
   padding:6px;min-width:212px;max-height:340px;overflow-y:auto;
-  box-shadow:0 12px 34px rgba(0,0,0,.14)}
+  box-shadow:0 12px 34px var(--sh-soft)}
 .colmenu.open{display:block}
 .colmenu label{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:8px;
   font-size:14px;cursor:pointer;white-space:nowrap}
@@ -468,7 +547,7 @@ tr.bdetail td{ padding-top:0; border-top:0 }
 
 /* --- Bouton de remise à zéro des filtres --- */
 #btnReset:disabled{opacity:.45;cursor:default}
-#btnReset.on{background:rgba(0,113,227,.12);color:var(--accent)}
+#btnReset.on{background:var(--t-accent);color:var(--accent)}
 
 /* --- L'inventaire respire mieux en large --- */
 body.wideview main{max-width:1380px}
@@ -483,8 +562,7 @@ body.wideview main{max-width:1380px}
   .colmenu{right:auto;left:0}
 }
 /* ============================================================
-   v1.11 — À COLLER À LA FIN DE css/styles.css
-   (après le bloc v1.10). Tout est en ajout.
+   LIEUX, ADRESSES ET PROJETS
    ============================================================ */
 
 /* --- Adresse sous le nom d'un lieu --- */
@@ -509,8 +587,7 @@ body.wideview main{max-width:1380px}
   .locact .btn{margin:2px 4px 2px 0}
 }
 /* ============================================================
-   v1.12 — À COLLER À LA FIN DE css/styles.css
-   (après les blocs v1.10 et v1.11). Tout est en ajout.
+   CONNEXION, EMPRUNTEURS ET RETOUR GROUPÉ
    ============================================================ */
 
 /* --- Messages de l'écran de connexion --- */
@@ -524,15 +601,14 @@ body.wideview main{max-width:1380px}
 .btable th{font-size:11px;padding:6px 10px;background:var(--panel)}
 .btable td{padding:7px 10px;font-size:14px;white-space:nowrap}
 .btable tr:last-child td{border-bottom:none}
-.btable tr.lateraw td{background:rgba(255,59,48,.05)}
+.btable tr.lateraw td{background:var(--t-bad-faint)}
 
 @media(max-width:700px){
   .btable td{white-space:normal}
   .bdetail > td{padding:6px}
 }
 /* ============================================================
-   v1.13 — À COLLER À LA FIN DE css/styles.css
-   (après les blocs v1.10, v1.11 et v1.12). Tout est en ajout.
+   BARRE DE RECHERCHE ET MISE EN PAGE
    ============================================================ */
 
 /* --- Recherche seule sur sa ligne, avec l'ajout d'item ---
@@ -578,9 +654,10 @@ td,input,textarea,select,.addr,.mono{-webkit-user-select:text;user-select:text}
 /* Un bouton d'action désactivé doit se lire comme désactivé */
 .btn:disabled{opacity:.45;cursor:not-allowed}
 /* ============================================================
-   v1.13.1 — À COLLER À LA FIN DE css/styles.css
-   Ce bloc CORRIGE le bloc v1.13 : garde les deux, celui-ci est
-   plus bas dans le fichier et l'emporte donc sur le précédent.
+   INVENTAIRE PLEINE LARGEUR, EN-TÊTES COLLANTS
+
+   Ce bloc corrige volontairement le précédent : il est plus bas dans
+   le fichier, donc il l'emporte. Ne pas le remonter.
    ============================================================ */
 
 /* --- L'inventaire prend tout l'écran ---
@@ -619,8 +696,8 @@ body.wideview #v-inv .panel{padding:10px}
 }
 
 /* --- Bouton d'une sortie à confirmer --- */
-.btn.warn{background:rgba(255,149,0,.16);color:var(--warn)}
-.btn.warn:hover{background:rgba(255,149,0,.26)}
+.btn.warn{background:var(--t-warn);color:var(--warn)}
+.btn.warn:hover{background:var(--t-warn-strong)}
 
 /* --- Fenêtre d'avertissement sur le matériel abîmé --- */
 #ovWarn .modal{max-width:560px}
@@ -629,9 +706,10 @@ body.wideview #v-inv .panel{padding:10px}
 .warnlist li:last-child{border-bottom:none}
 .warnlist .mono{margin:0 6px}
 /* ============================================================
-   v1.15 — À COLLER À LA FIN DE css/styles.css
-   (après les blocs v1.10 à v1.13.1). Tout est en ajout ;
-   quelques règles corrigent volontairement les précédentes.
+   TRI ET FILTRES DEPUIS LES EN-TÊTES
+
+   Quelques règles d'ici corrigent volontairement des règles plus
+   haut dans le fichier. Leur position en dépend.
    ============================================================ */
 
 /* --- Barre du haut --- */
@@ -645,16 +723,16 @@ body.wideview #v-inv .panel{padding:10px}
   border:1px solid var(--border2);border-radius:980px;padding:3px}
 .viewsw .btn{background:transparent;color:var(--muted)}
 .viewsw .btn:hover{background:var(--panel2);color:var(--txt)}
-.viewsw .btn.on{background:var(--accent);color:#fff}
+.viewsw .btn.on{background:var(--accent);color:var(--on-accent)}
 
 /* --- Bandeau des filtres actifs ---
    Il ne s'affiche que s'il y a quelque chose à montrer. Sans lui, un
    filtre posé puis oublié disparaîtrait de la vue dès qu'on fait
    défiler le tableau. */
 .filterbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.fchip{display:inline-flex;align-items:center;gap:6px;background:rgba(0,113,227,.10);
+.fchip{display:inline-flex;align-items:center;gap:6px;background:var(--t-accent);
   color:var(--accent);border-radius:980px;padding:4px 6px 4px 12px;font-size:13px}
-.fchip.sortchip{background:rgba(110,110,115,.14);color:var(--txt)}
+.fchip.sortchip{background:var(--t-neutral);color:var(--txt)}
 .fchip button{border:none;background:none;color:inherit;cursor:pointer;
   font-size:13px;line-height:1;padding:2px 4px;opacity:.65}
 .fchip button:hover{opacity:1}
@@ -678,7 +756,7 @@ body.wideview #v-inv .panel{padding:10px}
    couperait. */
 .hdrmenu{display:none;position:fixed;z-index:60;background:var(--panel);
   border:1px solid var(--border2);border-radius:12px;width:280px;
-  box-shadow:0 14px 40px rgba(0,0,0,.18);overflow:hidden}
+  box-shadow:0 14px 40px var(--sh-soft);overflow:hidden}
 .hdrmenu.open{display:block}
 .hm-sec{padding:6px;border-bottom:1px solid var(--border)}
 .hm-sec:last-child{border-bottom:none}
@@ -709,8 +787,8 @@ body.wideview #v-inv .panel{padding:10px}
 .invtable tbody tr.seprow:first-child td{border-top:none;padding-top:10px}
 
 /* --- Modèle ou exemplaire : la nuance se voit --- */
-.invtable tr.grouprow td{background:rgba(0,113,227,.045)}
-.invtable tr.grouprow:hover td{background:rgba(0,113,227,.08)}
+.invtable tr.grouprow td{background:var(--t-accent-faint)}
+.invtable tr.grouprow:hover td{background:var(--t-accent-soft)}
 .invtable tr.childrow td{background:var(--panel2)}
 .invtable tr.childrow .col-item{padding-left:26px}
 
@@ -720,8 +798,7 @@ body.wideview #v-inv .panel{padding:10px}
   .invtable .seprow td{font-size:14px;padding:12px 10px 6px}
 }
 /* ============================================================
-   v1.16 — À COLLER À LA FIN DE css/styles.css
-   Mobile, tablette et infobulles.
+   MOBILE, TABLETTE ET INFOBULLES
    ============================================================ */
 
 /* --- Infobulles ---
@@ -731,7 +808,7 @@ body.wideview #v-inv .panel{padding:10px}
 #tipbox{position:fixed;z-index:200;max-width:280px;pointer-events:none;
   background:var(--txt);color:var(--bg);font-size:13px;line-height:1.4;
   padding:8px 11px;border-radius:9px;opacity:0;transform:translateY(-3px);
-  transition:opacity .12s,transform .12s;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  transition:opacity .12s,transform .12s;box-shadow:0 8px 24px var(--sh-soft)}
 #tipbox.on{opacity:1;transform:translateY(0)}
 [data-tip]{cursor:help}
 button[data-tip],label[data-tip]{cursor:pointer}
@@ -744,9 +821,9 @@ button[data-tip],label[data-tip]{cursor:pointer}
   background:var(--panel);border-radius:12px;cursor:pointer;
   border:1px solid var(--border)}
 .mcard:active{background:var(--panel2)}
-.mcard.msel{border-color:var(--accent);background:rgba(0,113,227,.06)}
+.mcard.msel{border-color:var(--accent);background:var(--t-accent-faint)}
 .mcard.mchild{margin-left:16px;background:var(--panel2)}
-.mcard.mgroup{background:rgba(0,113,227,.05)}
+.mcard.mgroup{background:var(--t-accent-faint)}
 
 /* Cible tactile confortable sans grossir la carte : la zone cliquable
    déborde de la case elle-même. */
@@ -829,10 +906,10 @@ button[data-tip],label[data-tip]{cursor:pointer}
    ============================================================ */
 
 /* L'état physique « marqué, usé » : ni bon, ni hors service. */
-.tag.use{background:rgba(255,159,10,.13);color:var(--warn)}
-.tag.ropen{background:rgba(255,159,10,.14);color:var(--warn)}
-.tag.rsent{background:rgba(10,132,255,.14);color:var(--accent2)}
-.tag.rout{background:rgba(10,132,255,.10);color:var(--accent2)}
+.tag.use{background:var(--t-warn);color:var(--warn)}
+.tag.ropen{background:var(--t-warn);color:var(--warn)}
+.tag.rsent{background:var(--t-accent);color:var(--accent2)}
+.tag.rout{background:var(--t-accent);color:var(--accent2)}
 
 .repbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
   flex-wrap:wrap;margin-bottom:14px}
@@ -902,8 +979,8 @@ button[data-tip],label[data-tip]{cursor:pointer}
   border-radius:980px;padding:9px 15px;font-size:13.5px;cursor:pointer;
   min-height:42px;font-family:inherit;text-align:center}
 .chipbtn.sq{border-radius:10px}
-.chipbtn:hover{border-color:var(--accent);background:rgba(10,132,255,.07)}
-.chipbtn.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.chipbtn:hover{border-color:var(--accent);background:var(--t-accent-soft)}
+.chipbtn.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:500}
 
 /* La photo : une cible franche, pas un lien discret. `capture` ouvre
    l'appareil photo directement sur tablette et téléphone. */
@@ -911,7 +988,7 @@ button[data-tip],label[data-tip]{cursor:pointer}
   border:1px dashed var(--border2);border-radius:12px;padding:16px;
   color:var(--txt);font-size:14px;cursor:pointer;min-height:58px}
 .photobtn.compact{padding:11px;min-height:46px;font-size:13px}
-.photobtn:hover{border-color:var(--accent);background:rgba(10,132,255,.06)}
+.photobtn:hover{border-color:var(--accent);background:var(--t-accent-faint)}
 .photobtn .pi{font-size:19px;line-height:1}
 
 /* Une panne se documente rarement en une image. Les vignettes
@@ -926,20 +1003,20 @@ button[data-tip],label[data-tip]{cursor:pointer}
   border-radius:50%;border:1px solid var(--border2);background:var(--panel);
   color:var(--txt);font-size:12px;line-height:1;cursor:pointer;
   display:flex;align-items:center;justify-content:center;padding:0}
-.phdrop:hover{background:var(--bad);border-color:var(--bad);color:#fff}
+.phdrop:hover{background:var(--bad);border-color:var(--bad);color:var(--on-accent)}
 
 /* Une vignette de 78 px ne montre pas une rayure. */
-.overlay.photoview{align-items:center;background:rgba(0,0,0,.72)}
+.overlay.photoview{align-items:center;background:var(--veil-photo)}
 .pvbox{max-width:min(92vw,900px);display:flex;flex-direction:column;gap:10px}
 .pvbox img{max-width:100%;max-height:76vh;object-fit:contain;border-radius:12px;
-  background:#000;display:block;margin:0 auto}
+  background:var(--ink);display:block;margin:0 auto}
 .pvbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .pvbar #pv-nav{display:flex;align-items:center;gap:10px}
 .pvbar .btn{min-height:40px;min-width:44px}
 
-.infoband{display:flex;align-items:flex-start;gap:8px;background:rgba(10,132,255,.10);
+.infoband{display:flex;align-items:flex-start;gap:8px;background:var(--t-accent);
   color:var(--accent2);border-radius:10px;padding:10px 12px;font-size:12.5px;margin-top:16px}
-.infoband.bad{background:rgba(255,59,48,.10);color:var(--bad)}
+.infoband.bad{background:var(--t-bad);color:var(--bad)}
 
 /* L'état documenté et l'état constaté côte à côte : c'est la
    comparaison qui fait foi, pas l'un ou l'autre pris seul. Un filet
@@ -965,7 +1042,7 @@ button[data-tip],label[data-tip]{cursor:pointer}
 /* Un poids estimé reste lisible mais se distingue d'une pesée :
    il compte dans les totaux, et on doit savoir ce qu'il vaut. */
 .west{color:var(--muted)}
-.tag.wtag{background:rgba(110,110,115,.16);color:#b0b0b6}
+.tag.wtag{background:var(--t-neutral);color:var(--muted2)}
 .invtable .col-weight{text-align:right;white-space:nowrap}
 .invtable th.col-weight{text-align:right}
 
@@ -987,7 +1064,7 @@ button[data-tip],label[data-tip]{cursor:pointer}
 #updbar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:90;
   display:flex;align-items:center;gap:12px;max-width:calc(100vw - 24px);
   background:var(--panel);border:1px solid var(--accent);border-radius:12px;
-  padding:11px 13px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+  padding:11px 13px;font-size:13px;box-shadow:0 10px 30px var(--sh-mid)}
 #updbar b{font-weight:600}
 #updbar .cl{background:none;border:0;color:var(--muted);font-size:14px;cursor:pointer;
   padding:4px 2px;min-height:32px}
@@ -1020,7 +1097,7 @@ button[data-tip],label[data-tip]{cursor:pointer}
 .pkline{display:flex;align-items:center;gap:10px;padding:8px 0;
   border-bottom:1px solid var(--border);font-size:13px}
 .pkline:last-child{border-bottom:0}
-.pkline.sub{padding-left:26px;background:rgba(255,255,255,.02)}
+.pkline.sub{padding-left:26px;background:var(--t-light)}
 .pkline .repthumb.sm{width:28px;height:28px}
 .pkw{font-size:12px;white-space:nowrap}
 .pkst{width:112px;text-align:right;flex-shrink:0;font-size:11.5px}
@@ -1039,14 +1116,14 @@ button[data-tip],label[data-tip]{cursor:pointer}
 body.dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 .dragghost{position:fixed;z-index:120;pointer-events:none;
   background:var(--panel2);border:1px solid var(--accent);border-radius:9px;
-  padding:8px 12px;font-size:12.5px;box-shadow:0 12px 28px rgba(0,0,0,.5);
+  padding:8px 12px;font-size:12.5px;box-shadow:0 12px 28px var(--sh-mid);
   transform:rotate(-1.5deg);max-width:min(80vw,340px)}
 .dragghost .ok{display:block;color:var(--accent2);margin-top:3px}
 .dragghost .no{display:block;color:var(--bad);margin-top:3px}
 .dropok{outline:2px dashed var(--accent);outline-offset:-2px;
-  background:rgba(10,132,255,.08);border-radius:9px}
+  background:var(--t-accent-soft);border-radius:9px}
 .dropno{outline:2px dashed var(--bad);outline-offset:-2px;
-  background:rgba(255,59,48,.07);border-radius:9px}
+  background:var(--t-bad-faint);border-radius:9px}
 
 @media(max-width:700px){
   .pkst{width:auto}
@@ -1060,13 +1137,13 @@ body.dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
   padding:11px;margin:6px 0;font-size:12.5px;color:var(--muted)}
 .packoutrow b{color:var(--txt)}
 .packoutrow.dropok{border-color:var(--accent);color:var(--txt);
-  background:rgba(10,132,255,.12)}
+  background:var(--t-accent)}
 
-.tag.stale{background:rgba(255,159,10,.14);color:var(--warn);cursor:help}
+.tag.stale{background:var(--t-warn);color:var(--warn);cursor:help}
 
 /* --- Sorties regroupées par pack (v1.21) --- */
-tr.outpack{cursor:pointer;background:rgba(10,132,255,.05)}
-tr.outpack:hover{background:rgba(10,132,255,.09)}
+tr.outpack{cursor:pointer;background:var(--t-accent-faint)}
+tr.outpack:hover{background:var(--t-accent-soft)}
 tr.outpack .chev{margin-right:7px}
 
 /* ============================================================
@@ -1100,7 +1177,7 @@ tr.outpack .chev{margin-right:7px}
 .pjtabs{display:flex;gap:6px;margin-bottom:10px}
 .pjtabs button{flex:1;background:var(--panel2);border:1px solid var(--border);color:var(--muted);
   padding:9px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:500;font-family:inherit}
-.pjtabs button.on{background:var(--txt);color:#1d1d1f;border-color:var(--txt)}
+.pjtabs button.on{background:var(--txt);color:var(--panel);border-color:var(--txt)}
 .pjcol input[type=search]{width:100%}
 .pjsrc{margin-top:10px;max-height:60vh;overflow:auto}
 
@@ -1129,10 +1206,10 @@ tr.outpack .chev{margin-right:7px}
 
 #pjdrop{transition:background .15s,outline-color .15s;
   outline:2px dashed transparent;outline-offset:-6px;border-radius:var(--radius)}
-#pjdrop.hot{outline-color:var(--accent);background:rgba(10,132,255,.07)}
-.pjghost{position:fixed;z-index:200;pointer-events:none;background:var(--accent);color:#fff;
+#pjdrop.hot{outline-color:var(--accent);background:var(--t-accent-soft)}
+.pjghost{position:fixed;z-index:200;pointer-events:none;background:var(--accent);color:var(--on-accent);
   padding:7px 14px;border-radius:980px;font-size:13px;font-weight:500;
-  box-shadow:0 8px 24px rgba(0,0,0,.45);transform:translate(-50%,-50%);max-width:70vw;
+  box-shadow:0 8px 24px var(--sh-mid);transform:translate(-50%,-50%);max-width:70vw;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .pjgrp{border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden}
@@ -1151,8 +1228,8 @@ tr.outpack .chev{margin-right:7px}
 .pjx:hover{color:var(--bad)}
 .pjgrab{display:none}
 .pbar.done>div{background:var(--ok)}
-.tag.perm{background:rgba(0,113,227,.12);color:var(--accent2)}
-.tag.conf{background:rgba(110,110,115,.16);color:var(--muted)}
+.tag.perm{background:var(--t-accent);color:var(--accent2)}
+.tag.conf{background:var(--t-neutral);color:var(--muted)}
 .toast.warn{border-color:var(--warn)}
 .toast.warn .ic{color:var(--warn)}
 
@@ -1162,7 +1239,7 @@ tr.outpack .chev{margin-right:7px}
   .pjsrc{max-height:none}
   .pjcol.prj{position:fixed;left:0;right:0;bottom:0;z-index:60;margin:0;
     border-radius:18px 18px 0 0;border-top:1px solid var(--border2);
-    box-shadow:0 -10px 34px rgba(0,0,0,.55);max-height:40vh;overflow:auto;padding:8px 14px 16px}
+    box-shadow:0 -10px 34px var(--sh-deep);max-height:40vh;overflow:auto;padding:8px 14px 16px}
   #v-proj{padding-bottom:44vh}
   .pjgrab{display:block;width:40px;height:4px;border-radius:99px;
     background:var(--border2);margin:2px auto 8px;cursor:pointer}
@@ -1260,8 +1337,8 @@ tr.outpack td{padding-top:8px;padding-bottom:8px}
    ce qui part à l'atelier, autant le dire avec la même couleur.
    « Hors service » garde le rouge : c'est le seul des quatre qui
    retire l'objet du parc. */
-.tag.use{background:rgba(255,159,10,.14);color:var(--warn)}
-.tag.ko{background:rgba(175,82,222,.14);color:#bf5af2}
+.tag.use{background:var(--t-warn);color:var(--warn)}
+.tag.ko{background:var(--t-info);color:var(--info)}
 
 /* --- Vignettes dans les projets (v1.24.1) ---
    C'est en composant et en préparant qu'on cherche les objets des
@@ -1284,5 +1361,5 @@ tr.outpack td{padding-top:8px;padding-bottom:8px}
 
 /* L'objet se soulève au bout de l'appui long : sans ce signal, on ne
    sait pas si l'on tient quelque chose ou si l'on attend encore. */
-.lifted{background:var(--panel2) !important;box-shadow:0 6px 18px rgba(0,0,0,.45);
+.lifted{background:var(--panel2) !important;box-shadow:0 6px 18px var(--sh-mid);
   transform:scale(.99);border-radius:10px;position:relative;z-index:2}

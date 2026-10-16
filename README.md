@@ -4,28 +4,35 @@ Application web de gestion de l'inventaire du studio AFM : matériel, prêts,
 réparations, emplacements et projets de tournée. Réservée au personnel du studio,
 utilisable sur ordinateur comme sur mobile.
 
-> Version actuelle : **1.26.0** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
+> Version actuelle : **1.27.0** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
 
 ## À quoi ça sert
 
 - **Inventaire** : répertorier tout le matériel, chaque pièce ayant un identifiant
-  unique, une catégorie à deux niveaux, un emplacement, un état et un historique.
+  unique, une catégorie à deux niveaux, un emplacement, un poids, un état et un
+  historique.
+- **Packs** : regrouper ce qui voyage ensemble — un rack, une Pelicase, une lunchbox
+  et ses modules. Un pack est une **recette réutilisable**, pas un rangement : le même
+  préampli peut figurer dans la config studio et dans la config tournée, une seule
+  étant montée à la fois. Les packs s'imbriquent, et portent leurs **consommables**
+  (gaffer, piles, colliers) — des lignes de checklist, sans identifiant ni poids.
+- **Projets / tournées** : un mélange de packs et d'items isolés, composé en pleine
+  page par glisser-déposer. Checklist de préparation groupée par caisse, poids total
+  et nombre de colis, et contenu **figé au départ** pour que vider une caisse le
+  lendemain ne réécrive pas ce qui est parti.
 - **Check-out / check-in** : suivre qui a emprunté quoi, depuis quand, avec date de
-  retour prévue et alerte en cas de retard — comme un prêt de bibliothèque.
-- **Réparations** : suivre le matériel en attente de réparation, en réparation ou
-  hors service, avec un journal détaillé.
-- **Emplacements** : localiser chaque pièce, avec des lieux et des sous-emplacements
-  (ex : Studio A › Rack synthés).
-- **Projets / tournées** : regrouper une liste fixe de matériel en template réutilisable,
-  avec checklist de préparation et passage automatique en mode « Show » (check-out groupé).
-  Sert aussi pour les artistes de passage : un projet à leur nom, auquel on ajoute le
-  matériel au fur et à mesure.
+  retour prévue et alerte en cas de retard. Une caisse sort et rentre d'un geste.
+- **Réparations** : dossier d'incident par panne, prestataires, photos avant et après,
+  contrôle au retour. L'état physique et l'étape de réparation sont deux choses
+  distinctes : **Good · Damaged, usable · Faulty · Out of service** d'un côté,
+  un dossier ouvert de l'autre.
+- **Emplacements** : localiser chaque pièce, avec des lieux, des sous-emplacements
+  (ex : Studio A › Rack synthés) et des adresses hors-site.
 - **Sélection multiple** : agir sur plusieurs items d'un coup (sortie, retour,
   emplacement, état, catégorie, corbeille).
 - **QR codes** : scanner une étiquette ouvre la fiche de l'item dans l'application,
   prête pour un check-out.
-- **Tableau de bord** : vue d'ensemble, alertes (retards, matériel à réparer),
-  activité récente.
+- **Tableau de bord** : vue d'ensemble, alertes, et l'envoi direct d'une caisse.
 - **Corbeille** : un item supprimé reste récupérable 30 jours, avec tout son historique.
 
 Les données sont partagées en temps réel entre tous les utilisateurs : une action
@@ -90,16 +97,23 @@ js/config.js            ⚙️  RÉGLAGES — catégories, textes, seuils, clés
 js/auth.js              Connexion, session, rôles (fonction can())
 js/helpers.js           Utilitaires : dates, texte, identifiants, catégories, emplacements
 js/db.js                État en mémoire + SEUL fichier qui communique avec Supabase
-js/views-dashboard.js   Écran Tableau de bord
+js/views-dashboard.js   Tableau de bord, et l'envoi direct d'une caisse
 js/views-inventory.js   Inventaire : liste, groupes, sélection multiple, fiche, QR, check-in/out
-js/views-projects.js    Écran Projets (templates de tournée, checklist, mode Show)
-js/views-out.js         Écran Sortis
-js/views-repairs.js     Écran Réparations
-js/views-people-loc.js  Écrans Personnes & Emplacements
+js/views-packs.js       Packs : arbre, fiche, consommables, glisser-déposer
+js/views-projects.js    Projets : liste, composition, préparation, réglages
+js/views-out.js         Sorties, groupées par caisse et arborescentes
+js/views-repairs.js     Réparations : dossiers, prestataires, contrôle au retour
+js/views-people-loc.js  Emprunteurs & Emplacements
 js/views-trash.js       Corbeille (restauration, purge)
-js/views-users.js       Écran Utilisateurs (comptes et rôles, admins uniquement)
+js/views-users.js       Utilisateurs (comptes et rôles, admins uniquement)
+js/import-csv.js        Import d'un fichier d'inventaire
+js/import-weights.js    Import des poids par marque et modèle
+js/photos-bulk.js       Import groupé de photos
+js/crop.js              Recadrage carré d'une photo
+js/prefs.js             Préférences d'affichage, enregistrées par utilisateur
 js/app.js               Navigation, fenêtres, notifications, export/import, démarrage
 sql/                    Scripts de la base de données, à exécuter dans l'ordre
+tests/                  Les harnais de test — voir tests/README.md
 ```
 
 **Règle d'architecture** : les fichiers `views-*` ne communiquent jamais avec Supabase
@@ -118,7 +132,9 @@ config → auth → helpers → db → vues → app. Ne pas le modifier.
 
 | Je veux…                                    | Fichier                              |
 |---------------------------------------------|--------------------------------------|
-| Changer une couleur, une taille             | `css/styles.css` (bloc `:root`)      |
+| Changer une couleur                         | `css/styles.css`, bloc `:root` — **toutes** les couleurs y sont, et aucune ailleurs |
+| Changer les sous-catégories pouvant servir de contenant | `js/config.js` (`CONTAINER_SUBS`) |
+| Changer les états du matériel               | `js/config.js` (`CONDS`) — les menus s'y adaptent seuls |
 | Ajouter / renommer une catégorie            | `js/config.js` (`CATS`)              |
 | Changer le titre, les noms d'onglets        | `js/config.js` (`LABELS`)            |
 | Changer le seuil d'alerte (7 jours)         | `js/config.js` (`ALERT_DAYS`)        |
@@ -142,7 +158,8 @@ La première étape suffit à la sécurité ; la seconde ne fait qu'afficher les
 
 ## Base de données (Supabase)
 
-Tables : `items`, `people`, `locations`, `history`, `projects`, `profiles`.
+Tables : `items`, `people`, `locations`, `history`, `projects`, `profiles`,
+`user_prefs`, `repairs`, `repair_providers`, `packs`, `pack_items`, `pack_extras`.
 
 Les scripts du dossier `sql/` sont **ré-exécutables sans danger** et doivent être joués
 dans l'ordre, **un par un, l'éditeur vidé entre chaque** :
@@ -185,7 +202,7 @@ automatique et export manuel) sont acceptés.
 ## Tests
 
 ```bash
-./tests/run.sh          # les 18 harnais
+./tests/run.sh          # les dix-neuf harnais
 ./tests/run.sh t124     # un seul
 ```
 
@@ -204,14 +221,17 @@ tablette — que les harnais ne peuvent pas couvrir.
 ## Déploiement (mise à jour du site)
 
 1. Uploader le contenu du dossier à la racine du repo GitHub
-   (`index.html` + dossiers `css/`, `js/`, `sql/`).
-2. **Important** : incrémenter le paramètre `?v=` dans `index.html`
-   (ex : `?v=1.2.0` → `?v=1.2.1`) pour forcer les navigateurs à recharger les fichiers.
-3. GitHub Pages republie automatiquement en ~1 minute.
+   (`index.html` + dossiers `css/`, `js/`, `sql/`, `tests/`).
+2. **Important** : mettre `APP_VERSION` (en tête de `js/app.js`) et **tous** les
+   `?v=` de `index.html` au même numéro, pour forcer les navigateurs à recharger
+   les fichiers. `./tests/run.sh` vérifie ce point.
+3. **Si la version livre une migration SQL**, la passer dans Supabase *avant* de
+   déployer, et après avoir exporté une sauvegarde : le code neuf lit des colonnes
+   que l'ancienne base n'a pas.
+4. GitHub Pages republie automatiquement en ~1 minute.
 
-⚠️ **`js/config.js` et `css/styles.css` t'appartiennent** : ils ne sont pas remplacés
-lors des mises à jour, sauf mention explicite. Si une nouvelle version livre un
-`config.js` (parce que la taxonomie y a changé), il faut y recoller ta clé Supabase.
+⚠️ **`js/config.js` t'appartient** : si une nouvelle version le livre (parce que la
+taxonomie y a changé), il faut y recoller ta clé Supabase.
 
 À chaque changement, suivre la checklist de [UPDATE-PROCESS.md](UPDATE-PROCESS.md) :
 `APP_VERSION` dans `js/app.js`, `?v=` dans `index.html`, `./tests/run.sh`,
@@ -225,16 +245,41 @@ le seul endroit où une erreur peut verrouiller tout le monde dehors.
 
 ## Feuille de route
 
-- **v1.3 — Écosystème studio** : intégration au portail local du studio (page d'accueil,
-  page guest wifi / bons plans), l'inventaire comme service interne. Sauvegarde complète
+**Prochain chantier**
+
+- **Ranger les items dans les caisses depuis le projet**, de sorte qu'un item
+  attribué quitte la liste des disponibles. C'est lui qui dira si l'idée suivante
+  vaut le coup.
+- **Des recettes qui demandent un modèle** plutôt qu'un exemplaire précis : une
+  caisse dirait « 4 × Shure SM57 » au lieu de nommer quatre identifiants. Deux
+  recettes ne pourraient alors plus se disputer le même objet, et « en ai-je
+  assez ? » deviendrait calculable. Ne concerne que les familles à plusieurs
+  exemplaires — câbles, pieds, SM57, DI.
+
+**v2.0 — l'interface**
+
+La structure tient ; c'est la densité et les fenêtres modales qui fatiguent. Le
+chantier n'est pas une réécriture : la couche de données ne bouge pas.
+
+- **Une page par objet**, et derrière un engrenage, une page de réglages qui réunit
+  ses métadonnées et ses gestes rares. Les projets suivent déjà ce schéma depuis la
+  v1.25 ; les packs et les items doivent le rejoindre.
+- **Chercher plutôt que filtrer** : une grille de photos et une arborescence dans
+  laquelle on entre, au lieu d'un grand tableau qu'on filtre. Le tableau reste, comme
+  une vue parmi d'autres.
+- **Thème clair, sombre, ou celui du système.** La palette est prête depuis la
+  v1.27 : toutes les couleurs vivent dans un seul bloc `:root`, et un thème se
+  résume à en écrire un second. Le choix se range dans `user_prefs`, qui existe
+  déjà — chacun son réglage.
+- Moins de boutons, plus gros, et un seul geste principal par écran.
+
+**Plus tard, non planifié**
+
+- **Planches d'étiquettes QR** à imprimer. Rien ne presse : aucune étiquette n'a
+  jamais été posée, et les identifiants sont stables depuis la migration 020.
+- **Médias et commentaires** sur une fiche.
+- **Déconnexion automatique et journal d'activité.**
+- **Écosystème studio** : intégration au portail local, et une sauvegarde
   supplémentaire sur le serveur du studio.
-- **v1.4 — Automatisations** : relances email pour le matériel en retard,
-  récapitulatif hebdomadaire du matériel sorti et des réparations en attente.
-
-**Idées pour plus tard (non planifiées)**
-
-- **Valeur du matériel** : renseigner le prix de chaque item, avec tri décroissant par
-  défaut pour voir les pièces les plus coûteuses en premier — utile pour les assurances
-  et les priorités de réparation.
-- **Domaine personnalisé** : `inventaire.accessflow.fr` au lieu de l'adresse GitHub.
-  ⚠️ À faire **avant** d'imprimer les étiquettes QR, qui contiennent l'adresse du site.
+- **Automatisations** : relances pour le matériel en retard, récapitulatif
+  hebdomadaire des sorties et des réparations en attente.

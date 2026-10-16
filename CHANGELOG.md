@@ -1,5 +1,56 @@
 # Changelog
 
+## [1.27.0] — 2026-10-16
+
+Le CSS est consolidé. C'est la condition d'un thème clair, et plus
+largement de la v2.0.
+
+### Changé
+
+- **Toutes les couleurs vivent désormais dans un seul bloc `:root`**,
+  et aucune ailleurs. Il y en avait **quatre-vingt-neuf** écrites à la
+  main dans la feuille. Un thème clair aurait donné un écran à moitié
+  noir.
+
+- **Les teintes de fond font partie de la palette.** Elles étaient
+  écrites une à une, à partir d'une palette antérieure jamais mise à
+  jour : **deux bleus, deux verts, deux ambres et deux rouges**
+  coexistaient, et les fonds ne s'accordaient plus avec le texte
+  qu'ils portaient. La même étiquette `.tag.use` était même à `.13` à
+  un endroit et `.14` à un autre.
+
+  Quarante-sept déclarations changent donc très légèrement de
+  couleur — hue ramené sur la palette actuelle, opacités
+  harmonisées. Aucune règle n'a été ajoutée, déplacée ni supprimée :
+  vérifié déclaration par déclaration.
+
+- **Les onze en-têtes « À COLLER À LA FIN »** sont remplacés par ce
+  qu'on trouve dans chaque section. C'étaient des instructions de
+  livraison adressées à quelqu'un qui recopiait des blocs à la main ;
+  elles ne décrivaient rien. Une table des matières ouvre le fichier,
+  et dit où l'ordre compte.
+
+### Corrigé
+
+- **Deux variables CSS n'avaient jamais existé.** `var(--text)` et
+  `var(--danger)` — les vraies s'appellent `--txt` et `--bad`. Huit
+  déclarations étaient donc sans effet depuis des mois, en silence :
+  le total de l'inventaire, le bouton de déconnexion des réglages et
+  les puces de retard n'avaient pas la couleur prévue. Trouvées par le
+  nouveau harnais, pas à l'œil.
+
+### Ajouté
+
+- **`tests/t127.js`** veille sur la feuille de style : aucune couleur
+  hors de la palette, aucune variable employée sans être définie,
+  aucune définie pour rien. Dix-neuf harnais au total.
+
+- Le **README** était resté à la v1.2 : ni packs, ni projets, ni
+  réparations, ni quatre états, et la moitié des fichiers du dossier
+  `js/` manquaient à l'inventaire. Il est à jour, avec une feuille de
+  route qui dit ce que la v2.0 recouvre.
+
+
 ## [1.26.0] — 2026-10-16
 
 Aucun changement dans l'application. Cette version met à l'abri ce qui
