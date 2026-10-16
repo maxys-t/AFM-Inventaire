@@ -153,7 +153,6 @@ async function loadAll(){
        normalise ici pour que le reste du code n'ait jamais à se
        demander si la migration est passée. */
     pack_ids:p.pack_ids||[], snapshot:p.snapshot||null, subs:p.subs||{},
-    placements:p.placements||{},
     loc_name:p.loc_name||'', starts_on:p.starts_on||null, ends_on:p.ends_on||null,
     archived: !!p.archived
   }));

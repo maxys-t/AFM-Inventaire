@@ -14,7 +14,10 @@ const STUBS = `
   function item(id){ return db.items.find(i=>i.id===id); }
   function project(id){ return db.projects.find(p=>p.id===id); }
   function can(){ return true; }
-  function toast(m,k){ toasts.push({m,k:k||'info'}); }
+  function toast(m,k,lbl,fn){ toasts.push({m,k:k||'info',undo:fn}); }
+  async function apiAddPackItems(packId, ids){ ids.forEach(id=>db.packItems.push({pack_id:packId,item_id:id})); }
+  async function apiRemovePackItems(packId, ids){
+    db.packItems = db.packItems.filter(l=>!(l.pack_id===packId && ids.includes(l.item_id))); }
   function outBy(i){ return i.out ? (i.out.reason||'') : ''; }
   function outForRepair(i){ return !!(i.out && i.out.repairId); }
   function locLabel(n){ return n||''; }
@@ -44,7 +47,7 @@ const DATA = `
   db.packItems=[{pack_id:'k-pel', item_id:'MIC-001'}];
   db.projects=[{id:'pr1', name:'Trianon', status:'inactif', archived:false,
                 item_ids:['PST-001','PST-002','CBL-001'], pack_ids:['k-pel','k-sac'],
-                prep:{}, snapshot:null, subs:{}, placements:{},
+                prep:{}, snapshot:null, subs:{},
                 loc_name:'', starts_on:null, ends_on:null}];
 `;
 
@@ -53,75 +56,48 @@ const TESTS = `
   var R=[]; function T(c,l){R.push([!!c,l]);} function S(l){R.push([null,l]);}
   var p = project('pr1');
 
-  S('1. Sans rangement, les items isolés partent en vrac');
+  S('1. Au départ, les items isolés partent en vrac');
   var c = projContent(p);
   T(c.loose.length === 3, 'les trois sont hors caisse');
-  T(c.groups[0].rangés.length === 0, 'et aucune caisse n’en porte');
   T(c.items.length === 6, 'six objets partent : deux caisses, un micro, trois isolés');
   var poids0 = c.weight;
 
-  S('2. Ranger un item dans une caisse');
-  await projPlace('PST-001', 'k-pel');
+  S('2. Lâcher un item sur une caisse l’y met — pour de bon');
+  await projPutInPack('PST-001', 'k-pel');
+  T(packItemsOf('k-pel').some(i=>i.id === 'PST-001'),
+    'la recette de la Pelicase le contient désormais');
   c = projContent(p);
-  T(c.loose.length === 2, 'il quitte le hors-caisse');
-  T(c.groups[0].rangés.map(i=>i.id).join() === 'PST-001', 'et voyage dans la Pelicase');
-  T(c.items.length === 6, 'le total ne change pas : il était déjà du voyage');
+  T(c.groups[0].items.some(i=>i.id === 'PST-001'), 'il voyage avec elle');
+  T(!c.loose.some(i=>i.id === 'PST-001'), 'et quitte le hors-caisse');
+  T(!(p.item_ids||[]).includes('PST-001'),
+    'retiré des items isolés du projet : sinon il compterait deux fois');
+  T(c.items.length === 6, 'le total ne bouge pas');
   T(c.weight === poids0, 'le poids non plus');
-  T(sauvé.some(x=>x.f.placements), 'le rangement est enregistré sur le projet');
 
-  S('3. La recette de la caisse n’est pas touchée');
-  T(packItemsOf('k-pel').map(i=>i.id).join() === 'MIC-001',
-    'la Pelicase contient toujours le seul U47');
-  T(!packItemsOf('k-pel').some(i=>i.id === 'PST-001'), 'et pas le pied');
+  S('3. L’annulation est à portée');
+  var t = toasts[toasts.length-1];
+  T(/is now part of/.test(t.m), 'l’application dit ce qu’elle a fait');
+  T(typeof t.undo === 'function', 'et propose de revenir en arrière');
+  await t.undo();
+  T(!packItemsOf('k-pel').some(i=>i.id === 'PST-001'), 'la recette revient à l’état d’avant');
+  T((p.item_ids||[]).includes('PST-001'), 'et l’item retrouve sa place dans le projet');
 
-  S('4. Un item n’est que dans une caisse à la fois');
-  await projPlace('PST-001', 'k-sac');
-  c = projContent(p);
-  T(c.groups[0].rangés.length === 0, 'il a quitté la première');
-  T(c.groups[1].rangés.map(i=>i.id).join() === 'PST-001', 'pour la seconde');
+  S('4. Un item de l’inventaire lâché sur une caisse y entre directement');
+  T(!(p.item_ids||[]).includes('CBL-001') === false, 'CBL-001 est bien dans le projet au départ');
+  await projPutInPack('CBL-001', 'k-sac');
+  T(packItemsOf('k-sac').some(i=>i.id === 'CBL-001'), 'la caisse le contient');
+  T(!(p.item_ids||[]).includes('CBL-001'), 'et il n’est plus isolé');
 
-  S('5. Le ressortir le remet en vrac');
-  await projUnplace('PST-001');
-  T(projContent(p).loose.some(i=>i.id === 'PST-001'), 'il revient hors caisse');
-
-  S('6. Retirer une caisse libère ce qu’on y avait rangé');
-  await projPlace('PST-002', 'k-sac');
-  await projPlace('CBL-001', 'k-sac');
-  T(projContent(p).groups[1].rangés.length === 2, 'deux items rangés dedans');
-  await projRemovePack('k-sac');
-  c = projContent(p);
-  T(c.groups.length === 1, 'la caisse est partie');
-  T(c.loose.length === 3, 'et les trois items sont de nouveau en vrac');
-  T(Object.keys(p.placements).length === 0, 'plus aucun rangement orphelin');
-  T(toasts.some(t=>/loose again/.test(t.m)), 'et l’application le dit');
-  p.pack_ids = ['k-pel','k-sac'];
-
-  S('7. Un rangement vers une caisse absente est ignoré, pas perdu');
-  p.placements = {'PST-001':'k-fantome'};
-  c = projContent(p);
-  T(c.loose.some(i=>i.id === 'PST-001'), 'l’item retombe en vrac');
-  T(c.items.length === 6, 'et reste du voyage');
-  p.placements = {};
-
-  S('8. Retirer un item du projet efface son rangement');
-  await projPlace('CBL-001', 'k-pel');
-  await projRemoveItem('CBL-001');
-  T(!p.placements['CBL-001'], 'aucune trace ne subsiste');
-  p.item_ids = ['PST-001','PST-002','CBL-001'];
-
-  S('9. Le départ fige le chargement réel, caisse par caisse');
-  await projPlace('PST-001', 'k-pel');
+  S('5. Le départ fige ce qui part');
   var snap = projSnapshot(p);
-  var pel = snap.packs.find(g=>g.id === 'k-pel');
-  T(pel.items.includes('MIC-001') && pel.items.includes('PST-001'),
-    'la Pelicase emporte sa recette ET ce qu’on y a rangé');
+  var sac = snap.packs.find(g=>g.id === 'k-sac');
+  T(sac.items.includes('CBL-001'), 'le câble part dans le sac');
   p.snapshot = snap; p.status = 'show';
-  /* Une fois parti, défaire le rangement ne réécrit pas ce qui est
-     dans la caisse à l'autre bout de Paris. */
-  p.placements = {};
+  db.packItems = db.packItems.filter(l=>!(l.pack_id==='k-sac' && l.item_id==='CBL-001'));
   var gelé = projContent(p);
   T(gelé.frozen === true, 'le contenu est figé');
-  T(gelé.groups[0].items.some(i=>i.id === 'PST-001'), 'et le pied y est toujours');
+  T(gelé.groups[1].items.some(i=>i.id === 'CBL-001'),
+    'vider la caisse au studio ne réécrit pas ce qui roule');
   p.status = 'inactif'; p.snapshot = null;
 
   window.__results = R;
@@ -135,8 +111,7 @@ dom.window.eval([
   STUBS,
   read('js/config.js'),
   read('js/helpers.js'),
-  morceau(/async function projPlace\([\s\S]*?\n}/),
-  morceau(/async function projUnplace\([\s\S]*?\n}/),
+  morceau(/async function projPutInPack\([\s\S]*?\n}\n/),
   morceau(/async function projRemovePack\([\s\S]*?\n}/),
   morceau(/async function projRemoveItem\([\s\S]*?\n}/),
   DATA, TESTS
@@ -147,7 +122,7 @@ dom.window.eval([
   if(!dom.window.__results){ console.log('Les tests ne se sont jamais terminés.'); process.exit(1); }
   const R = dom.window.__results;
 
-  R.push([null,'10. Monter une caisse sans quitter le projet']);
+  R.push([null,'6. Monter une caisse sans quitter le projet']);
   const vpk = read('js/views-packs.js');
   R.push([/function projNewPack/.test(vp) && /openPackForm\(null, async id/.test(vp),
           'la composition sait ouvrir le formulaire de caisse']);
@@ -160,20 +135,26 @@ dom.window.eval([
   R.push([/await apiInsertPack\(row\)/.test(vpk),
           'créée par le même chemin que depuis l’onglet Packs — donc visible partout']);
 
-  R.push([null,'11. Cohérence des fichiers']);
-  const sql = read('sql/027-rangements-projet.sql'), h = read('index.html'),
+  R.push([null,'7. Cohérence des fichiers']);
+  const h = read('index.html'),
         app = read('js/app.js'), dbjs = read('js/db.js'), css = read('css/styles.css');
-  R.push([/add column if not exists placements jsonb/.test(sql),
-          'la 027 ouvre les rangements de projet']);
-  R.push([!/update public\.projects set/.test(sql), 'et ne touche à aucune donnée']);
-  R.push([/placements:p\.placements\|\|\{\}/.test(dbjs) && /placements:p\.placements\|\|\{\}/.test(app),
-          'ils survivent au chargement et à la restauration']);
+  /* La 027 avait ouvert un rangement « pour ce projet seulement ».
+     Faute de cas d'usage, la 028 le retire : une caisse, c'est ce
+     qu'il y a dedans. Une colonne inutilisée finit toujours par être
+     réemployée pour autre chose. */
+  R.push([/drop column placements/.test(read('sql/028-rangements-retires.sql')),
+          'la 028 retire la colonne des rangements']);
+  const mot = /\bplacements\b/;   /* « emplacements » n'en est pas un */
+  R.push([!mot.test(dbjs) && !mot.test(app) && !mot.test(vp),
+          'et plus rien dans le code ne s’y réfère']);
   R.push([/data-pjcase=/.test(vp) && /\.pjgrp\.hot\{/.test(css),
           'chaque caisse est une cible de dépôt, et le dit']);
   R.push([/d\.kind === 'placer'/.test(vp),
           'un item isolé se glisse dans une caisse']);
   R.push([/projMore\(d\.key, d\.caisse\)/.test(vp),
           'et un item de l’inventaire lâché sur une caisse y atterrit directement']);
+  R.push([/function projScrollSave/.test(vp) && /projScrollRestore/.test(vp),
+          'redessiner ne renvoie plus la colonne de gauche tout en haut']);
   const vApp=(app.match(/APP_VERSION = '([\d.]+)'/)||[])[1];
   const vUniq=[...new Set((h.match(/\?v=[\d.]+/g)||[]).map(t=>t.slice(3)))];
   R.push([vUniq.length===1 && vUniq[0]===vApp, `tous les fichiers en ${vApp}`]);

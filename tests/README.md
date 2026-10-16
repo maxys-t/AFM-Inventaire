@@ -96,7 +96,7 @@ sont dans `manuel/` :
   seul essai qui ait jamais trouvé cinq défauts d'un coup.
 - `manuel/TEST-v1.24.md` — le tour des caisses partagées, des
   doublons de projet et des quatre états.
-- `manuel/TEST-v1.28.md` — ranger les items d'un projet dans ses
+- `manuel/TEST-v1.29.md` — mettre les items d'un projet dans ses
   caisses, et monter une caisse sans quitter le projet.
 
 Un essai de restauration vaut d'être refait **après chaque migration

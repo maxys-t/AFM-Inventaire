@@ -1,5 +1,47 @@
 # Changelog
 
+## [1.29.0] — 2026-10-16
+
+**Migration SQL à passer : `sql/028-rangements-retires.sql`**, après
+la 027 de la veille.
+
+### Changé — une caisse, c'est ce qu'il y a dedans
+
+La v1.28 permettait de ranger un item dans une caisse **pour un
+projet seulement**, sans toucher à sa recette. L'idée n'a pas survécu
+à la question « donne-moi un cas concret » : il n'y en avait pas.
+
+L'application ne peut pas savoir si l'objet ressort de la caisse au
+déballage — seule la personne qui déballe le sait. Prétendre le
+contraire obligeait à refaire le même geste à chaque tournée, au lieu
+de converger vers des recettes justes. Et si l'on ressent le besoin
+d'ajouter un item en urgence dans une caisse, c'est justement qu'à la
+sortie suivante il faut qu'il soit prévu dans la checklist.
+
+- **Lâcher un objet sur une caisse l'y met pour de bon.** La recette
+  de la caisse le contient, il part avec elle la prochaine fois, et
+  c'est vérifiable en l'ouvrant. Un **Undo** reste proposé douze
+  secondes.
+- L'item quitte la liste des items isolés du projet : il est désormais
+  apporté par la caisse, le laisser des deux côtés le compterait deux
+  fois.
+- La mention **« added for this project »** disparaît, et avec elle la
+  troisième sorte de ligne dans une caisse.
+- La colonne `projects.placements` est retirée. Une colonne
+  inutilisée finit toujours par être réemployée pour autre chose,
+  trois ans plus tard, par quelqu'un qui n'aura pas lu le commentaire.
+
+### Corrigé
+
+- **Chaque dépôt renvoyait la colonne de gauche tout en haut.**
+  Redessiner l'onglet remplace son contenu, et les colonnes qui
+  défilent repartent du début — on se retrouvait catapulté au sommet
+  de la liste après chaque item ajouté. Les trois positions de
+  défilement (les deux colonnes et la page) sont maintenant relevées
+  avant et reposées après. Changer d'écran, lui, remonte toujours en
+  haut : c'est voulu.
+
+
 ## [1.28.1] — 2026-10-16
 
 ### Changé

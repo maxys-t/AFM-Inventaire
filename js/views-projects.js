@@ -32,17 +32,47 @@ function renderProj(){
      sur la liste plutôt que sur un écran vide. */
   if(projView.mode !== 'list' && !project(projView.id)) projView.mode = 'list';
 
-  if(projView.mode === 'edit'){ box.innerHTML = projEditor(); bindProjDrag(); return; }
-  if(projView.mode === 'settings'){ box.innerHTML = projSettings(); return; }
-  if(projView.mode === 'prep'){ box.innerHTML = projPrep(); return; }
-  box.innerHTML = projList();
+  /* Redessiner remplace tout le contenu de l'onglet : les colonnes
+     qui défilent repartent donc du haut, et l'on se retrouve catapulté
+     au début de la liste après chaque dépôt. On relève les positions
+     avant, on les repose après — le même soin qu'en v1.15.2 pour
+     l'inventaire. */
+  const posé = projSautAuHaut ? null : projScrollSave();
+  if(projView.mode === 'edit'){ box.innerHTML = projEditor(); bindProjDrag(); }
+  else if(projView.mode === 'settings') box.innerHTML = projSettings();
+  else if(projView.mode === 'prep') box.innerHTML = projPrep();
+  else box.innerHTML = projList();
+  projScrollRestore(posé);
+}
+
+/* Les deux colonnes défilent séparément, et la page aussi. On garde
+   les trois : sinon corriger l'une déplace les autres. */
+function projScrollSave(){
+  const p = {};
+  document.querySelectorAll('#v-proj .pjsrc, #v-proj .pjcol.prj').forEach((el,n)=>{
+    p['e'+n] = el.scrollTop;
+  });
+  p.page = window.scrollY;
+  return p;
+}
+function projScrollRestore(p){
+  if(!p) return;
+  document.querySelectorAll('#v-proj .pjsrc, #v-proj .pjcol.prj').forEach((el,n)=>{
+    if(p['e'+n]) el.scrollTop = p['e'+n];
+  });
+  if(p.page) window.scrollTo(0, p.page);
 }
 
 function projGo(mode, id){
   projView.mode = mode; projView.id = id || null; projView.q = '';
+  /* Changer d'écran remonte en haut ; rester sur le même ne doit
+     surtout pas le faire. D'où le drapeau. */
+  projSautAuHaut = true;
   renderProj();
+  projSautAuHaut = false;
   window.scrollTo(0, 0);
 }
+let projSautAuHaut = false;
 function projBack(){ projGo('list'); }
 
 /* ============================================================
@@ -107,7 +137,7 @@ async function openProjForm(id){
   if(id){ projGo('edit', id); return; }
   if(!can('edit')) return;
   const p = {id:"p"+Date.now(), name:"New project", description:"", status:'inactif',
-             item_ids:[], pack_ids:[], prep:{}, snapshot:null, subs:{}, placements:{}, last_used:null,
+             item_ids:[], pack_ids:[], prep:{}, snapshot:null, subs:{}, last_used:null,
              created_at:now(), loc_name:'', starts_on:null, ends_on:null, archived:false};
   db.projects.push(p);
   projGo('edit', p.id);
@@ -118,7 +148,7 @@ async function openProjForm(id){
 async function duplicateProj(id){
   const s = project(id); if(!s) return;
   const p = {...s, id:"p"+Date.now(), name:s.name + ' (copy)', status:'inactif',
-             prep:{}, snapshot:null, subs:{}, placements:{}, last_used:null, created_at:now(), archived:false,
+             prep:{}, snapshot:null, subs:{}, last_used:null, created_at:now(), archived:false,
              item_ids:[...(s.item_ids||[])], pack_ids:[...(s.pack_ids||[])]};
   db.projects.push(p);
   projGo('edit', p.id);
@@ -224,7 +254,7 @@ function projEditor(){
 
   /* ---- colonne de droite ---- */
   let contenu = c.groups.map(g=>{
-    const dedans = g.items.concat(g.rangés);
+    const dedans = g.items;
     return `
     <div class="pjgrp" data-pjcase="${g.packId}">
       <div class="hd"><span class="t">${esc(g.name)}</span>
@@ -247,12 +277,6 @@ function projEditor(){
                  title="Use ${esc(itemTitleText(libre))} here instead">Use ${esc(libre.id)}</button>`:''}
             </div>`;
           }).join(''):''}
-        ${g.rangés.length?`<div class="pjsub">Added for this project</div>` +
-          g.rangés.map(i=>`<div class="pjrow">${pjThumb(i)}<div class="pjnm">
-            <div class="t">${itemTitle(i)}</div><div class="s mono">${i.id}</div></div>
-            <span class="muted">${fweight(i.weight_g||0)}</span>
-            <button class="pjx" onclick="projUnplace('${i.id}')" title="Take it back out of this case">⤺</button>
-            </div>`).join(''):''}
         ${g.extras.length?`<div class="pjsub">Consumables</div>` +
           g.extras.map(e=>`<div class="pjrow extra"><div class="pjnm"><div class="t">${esc(e.label)}</div>
             <div class="s">× ${e.qty} · not counted in the weight</div></div></div>`).join(''):''}
@@ -269,7 +293,7 @@ function projEditor(){
         <button class="pjx" onclick="projRemoveItem('${i.id}')">✕</button></div>`).join('')}
       </div>
       ${c.groups.length?`<div class="hintline" style="padding:0 10px 8px">Drag one into a case
-        to say it travels in there — the case's own contents are untouched.</div>`:''}
+        to put it in there for good — the case will carry it next time too.</div>`:''}
       </div>`;
   }
   if(!contenu) contenu = `<div class="empty">Drag a case or an item from the left,<br>or use the + button.</div>`;
@@ -366,14 +390,15 @@ async function projMore(key, caisse){
   const pris = projFromPacks(p);
   const libre = g.all.find(i=>!pris.has(i.id) && !(p.item_ids||[]).includes(i.id) && !projBusy(i, p));
   if(!libre){ toast('No free copy left of ' + g.name + '.', 'warn'); return; }
+  /* Lâché sur une caisse : il y entre pour de bon. Une caisse, c'est
+     ce qu'il y a dedans — l'application ne peut pas savoir si tu l'en
+     ressors en déballant, donc elle ne fait pas semblant de le
+     savoir. L'annulation est à portée, et retirer un objet d'une
+     caisse se fait de toute façon là où on le retire vraiment. */
+  if(caisse && (p.pack_ids||[]).includes(caisse)) return projPutInPack(libre.id, caisse);
   p.item_ids = [...(p.item_ids||[]), libre.id];
-  const champs = {item_ids:p.item_ids};
-  if(caisse && (p.pack_ids||[]).includes(caisse)){
-    p.placements = {...(p.placements||{}), [libre.id]: caisse};
-    champs.placements = p.placements;
-  }
   renderProj();
-  await projSave(p, champs);
+  await projSave(p, {item_ids:p.item_ids});
 }
 async function projLess(key){
   const p = project(projView.id); if(!p || !can('edit')) return;
@@ -390,11 +415,8 @@ async function projRemoveItem(id){
   const p = project(projView.id); if(!p || !can('edit')) return;
   p.item_ids = (p.item_ids||[]).filter(x=>x !== id);
   if(p.prep) delete p.prep[id];
-  if(p.placements && p.placements[id]){
-    p.placements = {...p.placements}; delete p.placements[id];
-  }
   renderProj();
-  await projSave(p, {item_ids:p.item_ids, prep:p.prep||{}, placements:p.placements||{}});
+  await projSave(p, {item_ids:p.item_ids, prep:p.prep||{}});
 }
 
 /* Ajouter une caisse. Deux garde-fous visibles plutôt qu'un refus :
@@ -444,47 +466,46 @@ async function projSwap(packId, ancien, nouveau){
         }, 10000);
 }
 
-/* ---- ranger un item dans une caisse, pour ce projet ----
+/* ---- mettre un item dans une caisse ----
 
-   Un item isolé part « en vrac » : c'est à celui qui charge de se
-   souvenir où il l'a mis. Le ranger répond à la question une fois
-   pour toutes, et la checklist le demande alors au bon moment — avec
-   la caisse, pas trois sections plus bas.
+   Lâcher un objet sur une caisse l'y met. Pour de bon : la caisse
+   contient ce qu'elle contient, et c'est vérifiable en l'ouvrant.
 
-   La recette de la caisse n'est pas touchée. Elle ne contient
-   toujours pas ce pied ; c'est CE projet qui dit qu'il voyage
-   dedans. La tournée suivante repart du réel. */
-async function projPlace(itemId, packId){
-  const p = project(projView.id); if(!p || !can('projectPrep')) return;
-  if(!(p.pack_ids||[]).includes(packId)) return;
-  if(!(p.item_ids||[]).includes(itemId)) return;
-  p.placements = {...(p.placements||{}), [itemId]: packId};
+   On a d'abord essayé un rangement « valable pour ce projet
+   seulement ». C'était une complication sans cas d'usage : l'appli ne
+   peut pas savoir si l'objet ressort de la caisse au déballage — toi
+   seul le sais — et il aurait fallu refaire le même geste à chaque
+   tournée au lieu de converger vers des recettes justes. */
+async function projPutInPack(itemId, packId){
+  const p = project(projView.id); if(!p || !can('edit')) return;
+  const k = pack(packId); const i = item(itemId);
+  if(!k || !i) return;
+  const avant = (p.item_ids||[]).includes(itemId);
+  try{
+    await apiAddPackItems(packId, [itemId]);
+    db.packItems.push({pack_id:packId, item_id:itemId});
+  }catch(e){ toast(String(e.message||e), 'error'); return; }
+  /* Il est désormais apporté par la caisse : le laisser aussi dans la
+     liste des items isolés le compterait deux fois. */
+  p.item_ids = (p.item_ids||[]).filter(x=>x !== itemId);
   renderProj();
-  await projSave(p, {placements:p.placements});
-}
-
-async function projUnplace(itemId){
-  const p = project(projView.id); if(!p || !can('projectPrep')) return;
-  if(!p.placements || !p.placements[itemId]) return;
-  p.placements = {...p.placements};
-  delete p.placements[itemId];
-  renderProj();
-  await projSave(p, {placements:p.placements});
+  if(avant) await projSave(p, {item_ids:p.item_ids});
+  toast(`${itemTitleText(i)} is now part of ${k.name}.`, 'ok', 'Undo', async ()=>{
+    try{
+      await apiRemovePackItems(packId, [itemId]);
+      db.packItems = db.packItems.filter(l=>!(l.pack_id===packId && l.item_id===itemId));
+      if(avant){ p.item_ids = [...(p.item_ids||[]), itemId]; await projSave(p, {item_ids:p.item_ids}); }
+      renderProj();
+      toast('Reverted.', 'ok');
+    }catch(e){ toast('Could not undo: ' + (e.message||e), 'error'); }
+  }, 12000);
 }
 
 async function projRemovePack(id){
   const p = project(projView.id); if(!p || !can('edit')) return;
   p.pack_ids = (p.pack_ids||[]).filter(x=>x !== id);
-  /* Ce qu'on avait rangé dedans retombe en vrac plutôt que de
-     désigner une caisse qui n'est plus du voyage. */
-  const libérés = Object.keys(p.placements||{}).filter(k=>p.placements[k] === id);
-  if(libérés.length){
-    p.placements = {...p.placements};
-    libérés.forEach(k=>delete p.placements[k]);
-  }
   renderProj();
-  await projSave(p, {pack_ids:p.pack_ids, placements:p.placements||{}});
-  if(libérés.length) toast(`${libérés.length} item(s) are loose again.`, 'info');
+  await projSave(p, {pack_ids:p.pack_ids});
 }
 
 /* ---- glisser-déposer ----
@@ -595,8 +616,8 @@ function projDragEnd(){
   if(!d.actif || !d.sur) return;
 
   if(d.kind === 'pack')  return projAddPack(d.key);
-  /* Un item déjà dans le projet qu'on déplace vers une caisse. */
-  if(d.kind === 'placer') return d.caisse ? projPlace(d.key, d.caisse) : projUnplace(d.key);
+  /* Un item isolé du projet, qu'on met dans l'une de ses caisses. */
+  if(d.kind === 'placer') return d.caisse ? projPutInPack(d.key, d.caisse) : undefined;
   /* Un item de l'inventaire : on l'ajoute, et s'il a été lâché sur
      une caisse, on l'y range dans la foulée. */
   projMore(d.key, d.caisse);
@@ -632,23 +653,17 @@ function projPrep(){
       </div></div>`;
   };
 
-  /* Les items rangés dans la caisse pour ce projet se cochent avec
-     elle : c'est bien dans cette caisse-là qu'on les met. La mention
-     « added for this project » dit qu'ils ne sont pas de la recette,
-     et qu'on ne les retrouvera pas là la prochaine fois. */
-  const ligne = (i, ajouté) => ({
+  const ligne = i => ({
     key:i.id, html:itemTitle(i), photo:i.photo,
     sub: i.id + ' · ' + fweight(i.weight_g||0)
-       + (ajouté ? ' · added for this project' : '')
        + (itemFlag(i) ? ' · ⚠ ' + itemFlag(i) : '')
   });
   let blocs = c.groups.map(g=>bloc(
     g.name,
-    g.items.map(i=>ligne(i, false))
-      .concat(g.rangés.map(i=>ligne(i, true)))
+    g.items.map(ligne)
       .concat(g.extras.map(e=>({key:e.key, html:esc(e.label), sub:'× ' + e.qty, extra:true}))),
     g.extras, g.écartés,
-    g.items.concat(g.rangés).reduce((t,i)=>t+(i.weight_g||0), 0)
+    g.items.reduce((t,i)=>t+(i.weight_g||0), 0)
   )).join('');
 
   if(c.loose.length){
