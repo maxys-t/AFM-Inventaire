@@ -1,0 +1,11 @@
+{
+  "name": "afm-inventory-tests",
+  "private": true,
+  "description": "Harnais de test de l'AFM Inventory Tracker. jsdom est la seule dépendance : l'application elle-même n'en a aucune, et ne doit pas en avoir.",
+  "scripts": {
+    "test": "./run.sh"
+  },
+  "dependencies": {
+    "jsdom": "^24.0.0"
+  }
+}

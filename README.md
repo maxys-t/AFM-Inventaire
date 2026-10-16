@@ -4,7 +4,7 @@ Application web de gestion de l'inventaire du studio AFM : matériel, prêts,
 réparations, emplacements et projets de tournée. Réservée au personnel du studio,
 utilisable sur ordinateur comme sur mobile.
 
-> Version actuelle : **1.2.0** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
+> Version actuelle : **1.26.0** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
 
 ## À quoi ça sert
 
@@ -182,6 +182,25 @@ automatique et export manuel) sont acceptés.
 > À ne pas faire sur la base de production « pour voir » : l'import ajoute l'historique
 > sans écraser l'existant, ce qui créerait des doublons.
 
+## Tests
+
+```bash
+./tests/run.sh          # les 18 harnais
+./tests/run.sh t124     # un seul
+```
+
+Chaque harnais charge les vrais fichiers de `js/` dans un faux
+navigateur et vérifie ce que font leurs fonctions. Aucun ne touche à
+Supabase : ils ne demandent ni compte, ni réseau, ni précaution. Ils
+vérifient aussi que tous les `?v=` de `index.html` valent
+`APP_VERSION` — l'oubli le plus coûteux, parce qu'il livre un mélange
+d'ancien et de neuf.
+
+**On ne déploie pas avec un harnais en échec.** Le détail est dans
+[tests/README.md](tests/README.md), avec les marches à suivre des
+essais manuels — restauration d'une sauvegarde, vérifications sur
+tablette — que les harnais ne peuvent pas couvrir.
+
 ## Déploiement (mise à jour du site)
 
 1. Uploader le contenu du dossier à la racine du repo GitHub
@@ -195,7 +214,9 @@ lors des mises à jour, sauf mention explicite. Si une nouvelle version livre un
 `config.js` (parce que la taxonomie y a changé), il faut y recoller ta clé Supabase.
 
 À chaque changement, suivre la checklist de [UPDATE-PROCESS.md](UPDATE-PROCESS.md) :
-`?v=` dans `index.html`, entrée en haut du [CHANGELOG.md](CHANGELOG.md), commit Git.
+`APP_VERSION` dans `js/app.js`, `?v=` dans `index.html`, `./tests/run.sh`,
+entrée en haut du [CHANGELOG.md](CHANGELOG.md), migration SQL s'il y en a une,
+puis commit Git.
 
 **Environnement de test** : un second projet Supabase « bac à sable » permet d'essayer
 les migrations et les changements de règles d'accès sans toucher aux données du studio.

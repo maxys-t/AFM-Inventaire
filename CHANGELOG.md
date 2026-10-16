@@ -1,5 +1,48 @@
 # Changelog
 
+## [1.26.0] — 2026-10-16
+
+Aucun changement dans l'application. Cette version met à l'abri ce qui
+la protège.
+
+### Ajouté
+
+- **Les dix-huit harnais de test entrent dans le dépôt**, sous
+  `tests/`. Ils vivaient jusqu'ici dans un dossier de travail
+  extérieur : chaque version était vérifiée, mais rien de cette
+  vérification n'était conservé. Ils partaient à la fin de la séance.
+
+  ```bash
+  ./tests/run.sh          # les dix-huit
+  ./tests/run.sh t124     # un seul
+  ```
+
+  Le premier lancement installe `jsdom`, leur seule dépendance — et
+  elle appartient aux tests. **L'application elle-même n'en a aucune
+  et ne doit pas en avoir** : c'est ce qui permet de la déposer sur
+  GitHub Pages sans rien construire.
+
+- **`tests/README.md`** : ce que chaque harnais protège, comment en
+  écrire un, et les trois règles apprises à nos dépens — tester un
+  comportement et non une phrase, tout charger dans un seul `eval`,
+  extraire une fonction plutôt que charger une vue entière.
+
+- **`tests/manuel/`** : les protocoles que les harnais ne peuvent pas
+  couvrir. L'essai de restauration dans un bac à sable — le seul qui
+  ait jamais trouvé cinq défauts d'un coup — et le tour de la v1.24.
+
+### Changé
+
+- **La checklist de livraison était incomplète.** Elle ne mentionnait
+  pas `APP_VERSION`, ni les tests, ni l'ordre entre migration SQL et
+  déploiement. Trois oublis qui se payent cher : un numéro
+  désynchronisé sert un mélange d'ancien et de neuf, et du code neuf
+  sur une base ancienne lit des colonnes qui n'existent pas.
+  `UPDATE-PROCESS.md` a maintenant neuf étapes au lieu de six.
+
+- Le README annonçait encore la version **1.2.0**.
+
+
 ## [1.25.3] — 2026-10-16
 
 ### Ajouté

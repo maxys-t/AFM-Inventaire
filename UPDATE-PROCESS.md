@@ -12,16 +12,26 @@ dans le même geste, jamais séparément.
 ## La checklist
 
 - [ ] **1. Choisir le nouveau numéro de version** (voir règle ci-dessous)
-- [ ] **2. Incrémenter le `?v=`** dans `index.html` (ex : `?v=0.6.1` → `?v=0.6.2`)
+- [ ] **2. Mettre `APP_VERSION`** à cette valeur, en tête de `js/app.js`.
+      C'est elle que l'application affiche et compare pour proposer un
+      rechargement quand une nouvelle version est en ligne.
+- [ ] **3. Incrémenter le `?v=`** dans `index.html` (ex : `?v=0.6.1` → `?v=0.6.2`)
       pour forcer les navigateurs à recharger les fichiers au lieu du cache.
-- [ ] **3. Ajouter une entrée en haut du `CHANGELOG.md`** : la nouvelle version,
+      **Tous** les `?v=` doivent valoir `APP_VERSION` — sinon le navigateur
+      sert un mélange d'ancien et de neuf, et le défaut est introuvable.
+- [ ] **4. Lancer les tests** : `./tests/run.sh`. Ils vérifient entre autres
+      le point précédent. On ne livre pas avec un harnais en échec.
+- [ ] **5. Ajouter une entrée en haut du `CHANGELOG.md`** : la nouvelle version,
       la date, et les changements regroupés (Ajouté / Modifié / Corrigé).
-- [ ] **4. Mettre à jour le `README.md` — SEULEMENT si** le fonctionnement ou
+- [ ] **6. Mettre à jour le `README.md` — SEULEMENT si** le fonctionnement ou
       l'architecture a changé. Pour une simple correction ou un ajustement visuel,
       on n'y touche pas.
-- [ ] **5. Commit Git** avec un message clair reprenant la version
+- [ ] **7. Si la version ajoute une migration SQL**, la passer dans Supabase
+      AVANT de déployer le code, et après avoir exporté une sauvegarde.
+      Le code neuf lit des colonnes que l'ancienne base n'a pas.
+- [ ] **8. Commit Git** avec un message clair reprenant la version
       (ex : `v0.6.2 — correction filtre Sortis`).
-- [ ] **6. Uploader / déployer** sur GitHub Pages.
+- [ ] **9. Uploader / déployer** sur GitHub Pages.
 
 ## Quel numéro choisir ? (MAJEUR.MINEUR.CORRECTIF)
 
