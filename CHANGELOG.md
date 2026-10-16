@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.28.1] — 2026-10-16
+
+### Changé
+
+- **« + New case » passe en tête de la liste des caisses**, avant les
+  existantes et séparé par un filet. On cherche d'abord une caisse qui
+  convient ; c'est quand on n'en trouve pas qu'on regarde en haut, pas
+  après avoir fait défiler toutes celles qui ne conviennent pas.
+
+
 ## [1.28.0] — 2026-10-16
 
 **Migration SQL à passer : `sql/027-rangements-projet.sql`.** Elle ne
