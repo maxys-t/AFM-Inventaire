@@ -57,15 +57,19 @@ const TESTS = `
 
   S('1. Colonnes par défaut');
   renderInv();
-  T(invColDefs().map(c=>c.k).join(',') === 'photo,item,id,cat,status,loc,cond',
+  /* v2.0.2 : « Pack » rejoint les colonnes par défaut. « Case » est
+     le conditionnement propre à l'objet — sa housse ; « Pack » est la
+     caisse dans laquelle il voyage. On confondait les deux faute d'en
+     voir une. */
+  T(invColDefs().map(c=>c.k).join(',') === 'photo,item,id,cat,status,loc,pack,cond',
     'ordre par défaut respecté');
-  T(document.querySelectorAll('#invList thead th').length === 9,
-    'en-tête = 7 colonnes + case à cocher + actions');
+  T(document.querySelectorAll('#invList thead th').length === 10,
+    'en-tête = 8 colonnes + case à cocher + actions');
   T(!/<br>/.test(H()), 'plus aucun retour à la ligne dans les cellules');
 
   S('2. Affichage / masquage');
   toggleCol('price', true); toggleCol('id', false);
-  T(invColDefs().map(c=>c.k).join(',') === 'photo,item,cat,status,loc,cond,price',
+  T(invColDefs().map(c=>c.k).join(',') === 'photo,item,cat,status,loc,pack,cond,price',
     'prix ajouté, ID retiré, ordre canonique conservé');
   T(H().includes('col-price'), 'la colonne prix est rendue');
   T(!H().includes('col-id'), 'la colonne ID a disparu');
@@ -122,8 +126,15 @@ const TESTS = `
   S('7. Préférences');
   T(JSON.parse(localStorage.getItem(PREFS_KEY)).invCols.length > 0,
     'préférences écrites en localStorage');
-  T(sanitizePrefs({invCols:['item','colonne_inexistante']}).invCols.join(',') === 'item',
+  T(sanitizePrefs({invCols:['item','colonne_inexistante'], seen:['pack']}).invCols.join(',') === 'item',
     'une colonne inconnue est ignorée sans casser');
+  /* v2.0.2 : une colonne nouvelle est proposée UNE fois à qui avait
+     déjà réglé les siennes — sinon elle resterait invisible chez tout
+     le monde sauf les nouveaux venus. Ensuite, la décocher tient. */
+  T(sanitizePrefs({invCols:['item','loc']}).invCols.join(',') === 'item,loc,pack',
+    'une colonne nouvelle est glissée une fois après « où »');
+  T(sanitizePrefs({invCols:['item','loc'], seen:['pack']}).invCols.join(',') === 'item,loc',
+    'et ne revient pas une fois écartée');
   T(sanitizePrefs({invCols:[]}).invCols.join(',') === INV_DEFAULT_COLS.join(','),
     'une liste vide retombe sur les colonnes par défaut');
   T(sanitizePrefs(null).invCols.length === INV_DEFAULT_COLS.length,

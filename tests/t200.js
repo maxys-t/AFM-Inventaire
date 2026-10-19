@@ -120,7 +120,25 @@ T(/<div class="dashgrid">/.test(dash) && /\.dashgrid\{display:grid/.test(css),
 T(dash.indexOf('alerts.length ?') < dash.indexOf('The fleet'),
   'les alertes avant les chiffres');
 
-S('10. Cohérence des fichiers');
+S('10. La caisse d’un item se lit dans l’inventaire');
+/* « Case » est le CONDITIONNEMENT — la housse propre à l'objet.
+   « Pack » est la CAISSE dans laquelle il voyage. Une carte
+   d'extension n'a pas de housse et vit pourtant dans une Pelicase :
+   la colonne Case affichait « — », ce qui laissait croire qu'elle
+   n'appartenait à rien. */
+const pf = read('js/prefs.js');
+T(/\{k:'pack',\s+label:'Pack'/.test(pf), 'la colonne Pack existe');
+T(/INV_DEFAULT_COLS = \[[^\]]*'pack'/.test(pf), 'et fait partie des colonnes par défaut');
+T(/MOBILE_COLS = \[[^\]]*'pack'/.test(pf), 'elle est proposée sur téléphone aussi');
+T(/case 'pack':\s*\{[\s\S]{0,160}packsOfItem/.test(inv),
+  'elle lit toutes les caisses, pas seulement l’une d’elles');
+T(/case 'pack':   return packsOfItem/.test(inv), 'et le texte brut suit, pour l’export et la recherche');
+/* Une colonne nouvelle n'apparaît jamais chez qui a déjà réglé les
+   siennes : ses préférences l'emportent sur la liste par défaut. */
+T(/NOUVELLES_COLONNES/.test(pf) && /out\.seen\.push\(k\)/.test(pf),
+  'elle est proposée une fois aux réglages existants, puis laissée à leur main');
+
+S('11. Cohérence des fichiers');
 const vApp=(app.match(/APP_VERSION = '([\d.]+)'/)||[])[1];
 const vUniq=[...new Set((html.match(/\?v=[\d.]+/g)||[]).map(t=>t.slice(3)))];
 T(vUniq.length===1 && vUniq[0]===vApp, `tous les fichiers en ${vApp}`);

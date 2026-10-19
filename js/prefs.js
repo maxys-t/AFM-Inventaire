@@ -26,6 +26,14 @@ const INV_COLUMNS = [
   {k:'status', label:'Status',         fixed:false},
   {k:'loc',    label:'Location',       fixed:false},
   {k:'home',   label:'Home',           fixed:false},
+  /* « Pack » appartient au groupe « où est-il ». À ne pas confondre
+     avec « Case », plus bas : celle-ci est le CONDITIONNEMENT propre
+     à l'objet — sa housse, sa valise d'origine — tandis que « Pack »
+     est la CAISSE dans laquelle il voyage. Une carte d'extension n'a
+     pas de housse et vit pourtant dans une Pelicase : la colonne Case
+     affichait « — », ce qui laissait croire qu'elle n'appartenait à
+     rien. */
+  {k:'pack',   label:'Pack',           fixed:false},
   {k:'cond',   label:'Condition',      fixed:false},
   {k:'weight', label:'Weight',         fixed:false},
   {k:'case',   label:'Case',           fixed:false},
@@ -37,7 +45,11 @@ const INV_COLUMNS = [
   {k:'serial', label:'Serial number',  fixed:false}
 ];
 
-const INV_DEFAULT_COLS = ['photo','item','id','cat','status','loc','cond'];
+const INV_DEFAULT_COLS = ['photo','item','id','cat','status','loc','pack','cond'];
+
+/* Colonnes apparues après coup : proposées une fois à qui avait déjà
+   réglé son tableau, puis laissées à sa main. */
+const NOUVELLES_COLONNES = ['pack'];
 
 /* --- Vues fixes ---
    Deux jeux de colonnes couvrant les deux usages : repérer vite, ou
@@ -61,7 +73,7 @@ const MOBILE_DEFAULT_COLS = ['id','status'];
 /* Au-delà de quatre, la ligne déborde et la carte redevient illisible. */
 const MOBILE_MAX_COLS = 4;
 /* Un libellé long n'a pas sa place sur une ligne de repères. */
-const MOBILE_COLS = ['id','cat','family','status','loc','home','cond','owner','prov','price','pdate','serial'];
+const MOBILE_COLS = ['id','cat','family','status','loc','pack','home','cond','owner','prov','price','pdate','serial'];
 
 const INV_VIEWS = {
   compact: {label:'Compact', cols:['photo','item','id','status','loc']},
@@ -74,7 +86,7 @@ let prefsLoadedRemote = false;
 let prefsTimer = null;
 
 function defaultPrefs(){
-  return {invCols: INV_DEFAULT_COLS.slice(), invView: null,
+  return {seen: [], invCols: INV_DEFAULT_COLS.slice(), invView: null,
           invColsMobile: MOBILE_DEFAULT_COLS.slice(), mobilePhoto: true,
           /* v2.0 : l'apparence appartient à chacun. 'auto' suit la
              largeur de l'écran pour le rail, et les réglages du
@@ -99,6 +111,20 @@ function sanitizePrefs(p){
   if(p && typeof p.mobilePhoto === 'boolean') out.mobilePhoto = p.mobilePhoto;
   if(p && ['auto','shut','open'].includes(p.rail)) out.rail = p.rail;
   if(p && ['auto','dark','light'].includes(p.theme)) out.theme = p.theme;
+  if(p && p.seen) out.seen = p.seen.slice();
+
+  /* Une colonne nouvelle n'apparaît jamais chez quelqu'un qui a déjà
+     réglé les siennes : ses préférences enregistrées l'emportent sur
+     la liste par défaut. On l'ajoute donc UNE fois, puis on note
+     qu'on l'a fait — sans quoi la décocher serait sans effet. */
+  NOUVELLES_COLONNES.forEach(k=>{
+    if(out.seen.includes(k)) return;
+    out.seen.push(k);
+    if(!out.invCols.includes(k)){
+      const après = out.invCols.indexOf('loc');
+      out.invCols.splice(après >= 0 ? après + 1 : out.invCols.length, 0, k);
+    }
+  });
   return out;
 }
 

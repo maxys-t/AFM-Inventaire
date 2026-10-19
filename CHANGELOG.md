@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.0.2] — 2026-10-19
+
+### Ajouté
+
+- **Une colonne « Pack » dans l'inventaire.** Rien n'y disait dans
+  quelle caisse un objet voyage. L'information existait — l'onglet
+  Packs la connaît depuis la v1.20 — mais elle n'était visible nulle
+  part ailleurs.
+
+  La confusion venait de la colonne voisine : **« Case » est le
+  conditionnement propre à l'objet** — sa housse, sa valise d'origine
+  — **et non la caisse dans laquelle il part**. Une carte d'extension
+  n'a pas de housse et vit pourtant dans une Pelicase : la colonne
+  Case affichait « — », ce qui laissait croire qu'elle n'appartenait à
+  rien.
+
+  La nouvelle colonne liste **toutes** les caisses où l'item figure —
+  il peut appartenir à plusieurs recettes depuis la v1.22 — chacune
+  marquée *assembled* ou *config*. Elle se trie, se filtre, et part à
+  l'export comme les autres.
+
+- **Une colonne nouvelle est désormais proposée une fois** à qui avait
+  déjà réglé les siennes. Les préférences enregistrées l'emportent sur
+  la liste par défaut : sans ce mécanisme, seule une personne qui n'a
+  jamais touché ses colonnes aurait vu « Pack » apparaître. Elle est
+  glissée après le groupe « où est-il », puis laissée à la main de
+  chacun — la décocher tient.
+
+
 ## [2.0.1] — 2026-10-19
 
 Dix corrections sur ce que l'essai de la v2.0 a montré. Aucune
