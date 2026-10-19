@@ -63,11 +63,6 @@ function filterText(c, i){
     case 'cond':   return CONDS[i.cond] || i.cond;
     case 'photo':  return i.photo ? 'With photo' : 'No photo';
     case 'weight': return i.weight_g ? fweight(i.weight_g) : 'No weight';
-    case 'pack': {
-      const l = packsOfItem(i.id);
-      if(!l.length) return '<span class="muted">—</span>';
-      return l.map(p=>`<span class="tag ${p.permanent?'perm':'conf'}">${esc(p.name)}</span>`).join(' ');
-    }
     case 'case':   return i.has_case ? 'Has a case' : 'No case';
     case 'pack':   {
       const l = packsOfItem(i.id);
@@ -124,11 +119,6 @@ function sortKey(c, i){
     case 'cond':   return Object.keys(CONDS).indexOf(i.cond);
     case 'price':  return (i.price == null || i.price === '') ? null : Number(i.price);
     case 'weight': return i.weight_g || null;
-    case 'pack': {
-      const l = packsOfItem(i.id);
-      if(!l.length) return '<span class="muted">—</span>';
-      return l.map(p=>`<span class="tag ${p.permanent?'perm':'conf'}">${esc(p.name)}</span>`).join(' ');
-    }
     case 'case':   return i.has_case ? 0 : 1;
     case 'pack':   return (packsOfItem(i.id)[0] || {}).name || null;
     case 'pdate':  return i.purchase_date || null;    // « aaaa-mm-jj » se compare tel quel
@@ -250,11 +240,6 @@ function sepFor(i, by){
     case 'photo':  return i.photo ? 'With photo' : 'No photo';
     case 'serial': return (i.serial||'').trim() ? 'With serial number' : 'No serial number';
     case 'so':     return (i.sales_order||'').trim() || 'No sales order';
-    case 'pack': {
-      const l = packsOfItem(i.id);
-      if(!l.length) return '<span class="muted">—</span>';
-      return l.map(p=>`<span class="tag ${p.permanent?'perm':'conf'}">${esc(p.name)}</span>`).join(' ');
-    }
     case 'case':   return i.has_case ? 'Has a case' : 'No case';
     case 'pack':   {
       const l = packsOfItem(i.id);
@@ -608,11 +593,6 @@ function invCellText(c, i){
     case 'prov':   return i.provider || '';
     case 'price':  return (i.price==null || i.price==='') ? '' : fprice(Number(i.price));
     case 'weight': return fweight(i.weight_g);
-    case 'pack': {
-      const l = packsOfItem(i.id);
-      if(!l.length) return '<span class="muted">—</span>';
-      return l.map(p=>`<span class="tag ${p.permanent?'perm':'conf'}">${esc(p.name)}</span>`).join(' ');
-    }
     case 'case':   return i.has_case ? (i.case_note || 'Yes') : '';
     /* Toutes les caisses, pas seulement celle « de référence » : un
        item peut figurer dans plusieurs recettes depuis la v1.22. */

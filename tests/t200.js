@@ -130,8 +130,29 @@ const pf = read('js/prefs.js');
 T(/\{k:'pack',\s+label:'Pack'/.test(pf), 'la colonne Pack existe');
 T(/INV_DEFAULT_COLS = \[[^\]]*'pack'/.test(pf), 'et fait partie des colonnes par défaut');
 T(/MOBILE_COLS = \[[^\]]*'pack'/.test(pf), 'elle est proposée sur téléphone aussi');
-T(/case 'pack':\s*\{[\s\S]{0,160}packsOfItem/.test(inv),
-  'elle lit toutes les caisses, pas seulement l’une d’elles');
+/* Chaque aiguillage ne doit avoir QU'UN seul case 'pack' : JavaScript
+   retient le premier, et un doublon rend l'autre invisible sans rien
+   signaler. C'est exactement ce qui a fait fuiter du HTML dans les
+   lignes groupées de l'inventaire. */
+const aiguillages = ['filterText','sortKey','sepFor','invCellText','invCell'];
+aiguillages.forEach(fn=>{
+  const d = inv.indexOf('function '+fn+'(');
+  const f = inv.indexOf('\nfunction ', d+1);
+  const n = (inv.slice(d, f<0?inv.length:f).match(/case 'pack'/g)||[]).length;
+  T(d >= 0 && n === 1, `${fn} a exactement un case 'pack' (${n})`);
+});
+/* Et seule invCell écrit du HTML : les trois autres servent le tri,
+   les filtres et les titres, où une balise s'affiche telle quelle. */
+const corps = fn => {
+  const d = inv.indexOf('function '+fn+'('), f = inv.indexOf('\nfunction ', d+1);
+  const b = inv.slice(d, f<0?inv.length:f);
+  const d2 = b.indexOf("case 'pack'");
+  return b.slice(d2, d2+300);
+};
+['filterText','sortKey','sepFor','invCellText'].forEach(fn=>
+  T(!/<span/.test(corps(fn)), `${fn} rend du texte, pas du balisage`));
+T(/<span class="tag [\s\S]{0,40}permanent/.test(corps('invCell')),
+  'invCell, elle, pose une étiquette par caisse — pleine ou creuse selon le montage');
 T(/case 'pack':   return packsOfItem/.test(inv), 'et le texte brut suit, pour l’export et la recherche');
 /* Une colonne nouvelle n'apparaît jamais chez qui a déjà réglé les
    siennes : ses préférences l'emportent sur la liste par défaut. */

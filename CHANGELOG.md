@@ -28,6 +28,20 @@
   glissée après le groupe « où est-il », puis laissée à la main de
   chacun — la décocher tient.
 
+### Corrigé
+
+- **Du balisage s'affichait tel quel dans la colonne Pack** sur les
+  lignes groupées (« Piano Upright · 2 copies »). La cellule est
+  dessinée par deux fonctions : l'une rend le HTML du tableau, l'autre
+  le texte brut qui sert au tri, aux filtres, aux infobulles et aux
+  séparateurs. La version HTML avait atterri dans les deux, et comme
+  JavaScript ne retient que le **premier** `case` d'un aiguillage, le
+  doublon rendait l'autre invisible sans rien signaler.
+
+  Le harnais `t200` vérifie maintenant que chacun des cinq aiguillages
+  de `views-inventory.js` ne porte qu'un seul `case 'pack'`, et que
+  seul celui de la cellule écrit des balises.
+
 
 ## [2.0.1] — 2026-10-19
 
