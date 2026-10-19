@@ -182,7 +182,13 @@ const script = [STUBS, read('js/config.js'), read('js/helpers.js'), read('js/pre
   const css = (fs.existsSync(path.join(SRC,'..','css-a-ajouter-v1.13.1.css'))
     ? fs.readFileSync(path.join(SRC,'..','css-a-ajouter-v1.13.1.css'),'utf8')
     : read('css/styles.css'));
-  R.push([/body\.wideview main\{max-width:100%/.test(css), 'l’inventaire n’est plus bridé en largeur']);
+  /* v2.0.1 : il n'y a plus de vue « large » et de vue étroite — elles
+     ont toutes la même largeur. Deux réglages voisins avaient des
+     marges différentes, et passer de l'un à l'autre faisait sauter la
+     page. */
+  R.push([/main\{padding:20px 22px;max-width:none/.test(css),
+          'l’inventaire n’est plus bridé en largeur']);
+  R.push([!/wideview/.test(css), 'et plus aucune vue n’a de largeur à elle']);
   R.push([/\.invwrap\{overflow:auto/.test(css), 'le tableau défile dans son cadre']);
   R.push([/\.invtable thead th\{position:sticky;top:0/.test(css), 'les en-têtes collent au cadre']);
 

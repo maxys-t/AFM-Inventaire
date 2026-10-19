@@ -1271,6 +1271,13 @@ function openDetail(id){
           ${statusTag(i)} <span class="tag ${i.cond}">${condLabel(i.cond)}</span>${repairTag(i)}
         </div>
       </div>
+      <!-- Les deux gestes qui comptent, en haut à droite : sortir, et
+           signaler. Le reste — modifier, imprimer, jeter — descend en
+           bas de fiche, où l'on ne tombe pas dessus par accident. -->
+      <div class="facts">
+        ${repBtns}
+        ${actionBtn(i)}
+      </div>
     </div>
 
     <div class="fstats">
@@ -1286,13 +1293,6 @@ function openDetail(id){
 
     ${outInfo}
 
-    <div class="modal-actions" style="justify-content:flex-start;margin:4px 0 14px;flex-wrap:wrap">
-      ${actionBtn(i)}
-      ${repBtns}
-      ${can('edit')?`<button class="btn sec small" onclick="openItemForm('${i.id}')">Edit</button>`:''}
-      <button class="btn sec small" onclick="showLabel('${i.id}')">QR label</button>
-      ${can('delete')?`<button class="btn danger small" onclick="deleteItem('${i.id}')">Move to trash</button>`:''}
-    </div>
     <div id="qrzone"></div>
 
     <div class="fcols">
@@ -1301,7 +1301,7 @@ function openDetail(id){
           <h4>Identité</h4>
           ${kv('Fabricant', i.brand ? esc(i.brand) : '')}
           ${kv('Modèle', esc(i.name))}
-          ${kv('Numéro de série', i.serial ? `<span class="mono">${esc(i.serial)}</span>` : '')}
+          ${kv('N° de série', i.serial ? `<span class="mono">${esc(i.serial)}</span>` : '')}
           ${kv('Propriétaire', i.owner ? esc(i.owner) : '')}
         </div>
         <div class="fcard">
@@ -1313,8 +1313,8 @@ function openDetail(id){
       <div>
         <div class="fcard">
           <h4>Rangement</h4>
-          ${kv('Emplacement d\'origine', esc(locLabel(i.home)))}
-          ${kv('Emplacement actuel', où)}
+          ${kv('Rangé à', esc(locLabel(i.home)))}
+          ${kv('Actuellement', où)}
           ${kv('Caisse', packLines(i) ? packLines(i).replace(/^<br>/, '') : '')}
           ${kv('Conditionnement', i.has_case ? esc(i.case_note || 'oui, non précisé') : 'aucun')}
         </div>
@@ -1323,14 +1323,20 @@ function openDetail(id){
           ${kv('Fournisseur', i.provider ? esc(i.provider) : '')}
           ${kv('Date', i.purchase_date ? fdateOnly(i.purchase_date) : '')}
           ${kv('Prix', i.price!=null ? fprice(i.price) : '')}
-          ${kv('Bon de commande', i.sales_order ? esc(i.sales_order) : '')}
+          ${kv('Commande', i.sales_order ? esc(i.sales_order) : '')}
         </div>` : ''}
         ${i.notes ? `<div class="fcard"><h4>Notes</h4>
           <div class="muted" style="font-size:13.5px;line-height:1.5">${esc(i.notes)}</div></div>` : ''}
       </div>
     </div>
 
-    <div class="modal-actions"><button class="btn sec" onclick="close_('ovDetail')">Close</button></div>`;
+    <div class="ffoot">
+      ${can('edit')?`<button class="btn sec small" onclick="openItemForm('${i.id}')">Edit</button>`:''}
+      <button class="btn sec small" onclick="showLabel('${i.id}')">QR label</button>
+      ${can('delete')?`<button class="btn danger small" onclick="deleteItem('${i.id}')">Move to trash</button>`:''}
+      <span style="flex:1"></span>
+      <button class="btn sec" onclick="close_('ovDetail')">Close</button>
+    </div>`;
   open_('ovDetail');
 }
 

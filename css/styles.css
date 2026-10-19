@@ -168,7 +168,7 @@ nav{display:flex;gap:6px;padding:12px 18px;background:var(--glass);backdrop-filt
 nav button{background:none;border:none;color:var(--txt);padding:7px 16px;border-radius:980px;cursor:pointer;font-size:14px;font-weight:500;white-space:nowrap;transition:background .15s}
 nav button.active{background:var(--txt);color:var(--panel)}
 nav button:hover:not(.active){background:var(--border)}
-main{padding:22px 16px;max-width:1100px;margin:0 auto}
+main{padding:20px 22px}
 .btn{background:var(--accent);color:var(--on-accent);border:none;border-radius:980px;padding:9px 18px;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s}
 .btn:hover{background:var(--accent2)}
 .btn.sec{background:var(--panel2);color:var(--txt)}
@@ -619,11 +619,10 @@ tr.bdetail td{ padding-top:0; border-top:0 }
 #btnReset.on{background:var(--t-accent);color:var(--accent)}
 
 /* --- L'inventaire respire mieux en large --- */
-body.wideview main{max-width:1380px}
+/* (largeur unique, voir le bloc v2.0.1 en fin de fichier) */
 
 /* --- Mobile : on revient aux cartes empilées de la feuille d'origine --- */
 @media(max-width:700px){
-  body.wideview main{max-width:100%}
   .invwrap{overflow-x:visible;margin:0;padding:0}
   .invtable th,.invtable td{white-space:normal;max-width:none;overflow:visible;text-overflow:clip}
   .invtable .col-price{text-align:left}
@@ -733,7 +732,7 @@ td,input,textarea,select,.addr,.mono{-webkit-user-select:text;user-select:text}
    Plus de largeur maximale : sur un grand moniteur, brider la vue à
    1380 px laissait un tiers de l'écran noir pendant qu'on faisait
    défiler un tableau de vingt colonnes. */
-body.wideview main{max-width:100%;padding:12px 20px}
+
 
 /* --- Le tableau défile dans son propre cadre, comme un tableur ---
    C'est ce qui règle le débordement ET permet aux en-têtes de coller.
@@ -750,7 +749,7 @@ body.wideview main{max-width:100%;padding:12px 20px}
 .invtable .seprow td{position:sticky;top:31px;z-index:5;background:var(--panel2)}
 
 /* Le panneau ne fait plus que cadrer : c'est le tableau qui défile. */
-body.wideview #v-inv .panel{padding:10px}
+#v-inv .panel{padding:10px}
 
 @media(max-width:1100px){
   /* On garde les en-têtes collants aussi sur petit écran : le cadre
@@ -759,7 +758,6 @@ body.wideview #v-inv .panel{padding:10px}
   .invtable .seprow td{position:sticky;top:31px}
 }
 @media(max-width:700px){
-  body.wideview main{padding:10px}
   .invwrap{max-height:none !important;overflow:visible}
   .invtable thead th,.invtable .seprow td{position:static}
 }
@@ -958,7 +956,6 @@ button[data-tip],label[data-tip]{cursor:pointer}
    L'iPad garde le tableau : au-delà de 700 px il reste lisible, et
    c'est la cible privilégiée pour manipuler l'inventaire debout. */
 @media(min-width:701px) and (max-width:1024px){
-  body.wideview main{padding:10px 12px}
   .invtable td{padding:9px 8px}      /* lignes un peu plus hautes au doigt */
   .invtable .thumb{width:34px;height:34px}
   .hbtn{padding:10px 4px 10px 8px}
@@ -1579,3 +1576,110 @@ body.railshut .railtop{justify-content:center;padding-bottom:10px}
 .kv .k{width:148px;flex:none;color:var(--muted)}
 .kv .v{flex:1;min-width:0;word-break:break-word}
 @media(max-width:560px){.kv{flex-direction:column;gap:1px}.kv .k{width:auto}}
+
+/* ============================================================
+   UNE SEULE LARGEUR (v2.0.1)
+
+   Certaines vues étaient bridées à 1 100 px, d'autres prenaient tout
+   l'écran : passer de l'une à l'autre faisait sauter la page, et deux
+   réglages voisins n'avaient pas la même marge. Le rail ayant déjà
+   pris sa part de la largeur, le contenu prend le reste — partout, et
+   sans condition.
+
+   Seuls les textes longs gardent une largeur de lecture : au-delà de
+   75 caractères par ligne, l'œil perd le début de la suivante.
+   ============================================================ */
+main{padding:20px 22px;max-width:none;margin:0}
+.viewintro,.hero p{max-width:75ch}
+@media(max-width:700px){ main{padding:12px} }
+
+/* --- Fiche item : les actions, et les lignes qui ne se coupent plus --- */
+.facts{display:flex;gap:7px;align-items:flex-start;margin-left:auto;flex-wrap:wrap}
+.ffoot{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
+  border-top:1px solid var(--border);padding-top:13px;margin-top:4px}
+/* Un libellé long poussait la valeur à la ligne : la colonne des clés
+   est bornée, et c'est elle qui se replie, pas la donnée. */
+.kv .k{width:120px}
+.kv .v{white-space:normal}
+
+/* --- Le geste principal, en haut de l'écran projet (v2.0.1) --- */
+.pjmain{display:flex;gap:7px;align-items:center;margin-left:auto;flex-wrap:wrap}
+.pjmain .btn{white-space:nowrap}
+/* Vider une date : le champ natif ne sait pas le faire partout. */
+.datefield{display:flex;gap:7px;align-items:center}
+.datefield input{flex:1;min-width:0}
+
+/* ============================================================
+   LE TABLEAU DE BORD EN DEUX COLONNES (v2.0.1)
+
+   À gauche, large, ce qui demande une action. À droite, étroit, ce
+   qui s'observe. Tout s'empilait sur une colonne : il fallait
+   défiler pour savoir si quelque chose clochait, alors que c'est la
+   première question qu'on pose en arrivant.
+   ============================================================ */
+.dashtop{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.dashtop h1{font-size:23px;font-weight:680;letter-spacing:-.025em}
+.dashtop p{max-width:62ch;margin-top:2px}
+.dashtop .heroacts{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
+
+.dashgrid{display:grid;grid-template-columns:1.45fr 1fr;gap:14px;align-items:start}
+@media(max-width:1100px){.dashgrid{grid-template-columns:1fr}}
+
+.minis{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.mini{background:var(--panel2);border-radius:12px;padding:11px 13px}
+.mini[role="button"]{cursor:pointer}
+.mini[role="button"]:hover{background:var(--border)}
+.mini .v{font-size:23px;font-weight:680;letter-spacing:-.02em}
+.mini .k{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;margin-top:1px}
+.mini.ok .v{color:var(--ok)} .mini.warn .v{color:var(--warn)} .mini.bad .v{color:var(--bad)}
+
+/* ============================================================
+   LE TÉLÉPHONE (v2.0.1)
+
+   Trois défauts à l'écran de 390 px : l'en-tête occupait un tiers de
+   la hauteur avec quatre boutons sur trois lignes, les libellés de la
+   barre basse se chevauchaient, et le bloc d'accueil répétait des
+   phrases qu'on avait déjà lues cent fois.
+
+   La règle ici : on ne montre que ce qui ne peut pas attendre. Le
+   reste est à un geste.
+   ============================================================ */
+@media(max-width:700px){
+  /* L'en-tête se réduit au nom, à l'état de synchronisation, et au
+     rechargement. Qui on est et la déconnexion vivent dans Settings,
+     où on va de toute façon pour les changer. */
+  header{padding:10px 12px;gap:8px}
+  header h1{font-size:16px}
+  #userChip{display:none !important}
+  header .vtag{display:none}
+
+  /* Barre basse : huit destinations sur 390 px, c'est 48 px chacune.
+     Les libellés se chevauchaient — ils disparaissent, et seule la
+     destination courante garde le sien. Une icône qu'on ne connaît
+     pas encore s'apprend en voyant son nom au moment où on l'active. */
+  #rail .nav span{display:none !important}
+  #rail .nav.active span{display:block !important;font-size:9.5px;
+    max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #rail .nav{padding:7px 6px;min-width:0;flex:1}
+  #rail .nav svg{width:21px;height:21px}
+  #rail .nav.active{background:var(--t-accent);border-radius:12px}
+  #trashBtn .trashn{display:none}
+
+  /* Le bloc d'accueil : le titre et la phrase d'explication sont pour
+     quelqu'un qui découvre l'application, pas pour celui qui l'ouvre
+     douze fois par jour. */
+  .dashtop h1,.dashtop p{display:none}
+  .dashtop{margin-bottom:10px}
+  .dashtop .heroacts{margin-left:0;width:100%}
+  .dashtop .heroacts .btn{flex:1}
+  .viewintro{display:none}
+
+  /* Les panneaux se resserrent : sur un écran étroit, la marge coûte
+     plus qu'elle n'aère. */
+  .panel{padding:13px;border-radius:14px;margin-bottom:11px}
+  .dashgrid{gap:11px}
+  .minis{gap:7px}
+  .mini{padding:9px 11px}
+  .mini .v{font-size:20px}
+}

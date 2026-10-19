@@ -270,14 +270,17 @@ dom.window.eval([
   R.push([/packRoots\(\)/.test(dash),
           'seules les caisses racines sont proposées']);
 
-  R.push([null,'12ter. Les vues de tableaux prennent la largeur']);
+  R.push([null,'12ter. Une seule largeur, partout']);
   const css = read('css/styles.css');
-  const wides = (app.match(/const WIDE_VIEWS = \[([^\]]*)\]/)||['',''])[1];
-  ['inv','out','packs','proj','rep','people'].forEach(v=>{
-    R.push([wides.includes(`'${v}'`), `${v} est en pleine largeur`]);
-  });
-  R.push([!wides.includes("'dash'") && !wides.includes("'settings'"),
-          'le tableau de bord et les réglages restent étroits : c’est du texte']);
+  /* La v1.22.4 avait élargi certaines vues et pas d'autres. La v2.0.1
+     a supprimé la distinction : le rail ayant pris sa part, le contenu
+     prend le reste — partout, et sans condition. */
+  R.push([!/WIDE_VIEWS/.test(app), 'plus de liste de vues « larges »']);
+  R.push([!/wideview/.test(css), 'ni de classe qui en décide']);
+  R.push([/main\{padding:20px 22px;max-width:none/.test(css),
+          'le contenu occupe toute la place laissée par le rail']);
+  R.push([/\.viewintro,\.hero p\{max-width:75ch\}/.test(css),
+          'seuls les textes longs gardent une largeur de lecture']);
   /* Aucune cellule ne doit se replier : un en-tête coupé en deux
      double la hauteur de toute la ligne. */
   ['v-out','v-proj','v-rep','v-people'].forEach(v=>{

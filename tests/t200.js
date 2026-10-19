@@ -27,11 +27,19 @@ T(liens.indexOf('proj') < liens.indexOf('packs'), 'devant les caisses');
 T(liens.indexOf('packs') < liens.indexOf('inv'), 'elles-mêmes devant l’inventaire');
 T(/railhead">Faire partir</.test(rail) && /railhead">Le parc</.test(rail),
   'et il groupe explicitement les deux familles');
-/* Neuf dessins : les huit destinations, plus le bouton de repli. */
-T((rail.match(/<svg/g)||[]).length === 9,
+/* Dix dessins : les huit destinations, la corbeille, et le bouton de
+   repli. La corbeille a rejoint le rail en v2.0.1 — c'est un
+   rangement, pas une action de l'en-tête. */
+T((rail.match(/<svg/g)||[]).length === 10,
   'chaque destination porte son icône — c’est ce qui rend le repli lisible');
-T((rail.match(/class="nav"|class="nav active"/g)||[]).length === 8,
+T((rail.match(/class="nav"/g)||[]).length === 8,
   'et chaque icône appartient bien à une destination');
+T(/id="trashBtn" class="nav"/.test(rail), 'la corbeille est au bas du rail');
+T(!/id="trashBtn"[^>]*btn sec/.test(html), 'et plus dans l’en-tête');
+/* L'engrenage était dessiné deux fois : l'icône du rail, et un
+   pictogramme dans le libellé. Ils se chevauchaient. */
+T(!/settings:\s*"⚙/.test(read('js/config.js')),
+  'un seul engrenage : celui du rail');
 
 S('2. Une seule coquille à montrer ou cacher');
 /* Trois éléments synchronisés à la main finissent par diverger : le
@@ -73,7 +81,7 @@ T(/id="detailBody"[\s\S]{0,40}/.test(html) && /class="modal wide" id="detailBody
 T(/@media\(max-width:780px\)\{\.fcols\{grid-template-columns:1fr\}\}/.test(css),
   'et sur écran étroit les colonnes s’empilent');
 /* Ce qui était dans le paragraphe doit s'y retrouver, pas disparaître. */
-['Numéro de série','Propriétaire','Conditionnement','Fournisseur'].forEach(k=>
+['N° de série','Propriétaire','Conditionnement','Fournisseur'].forEach(k=>
   T(inv.includes(`kv('${k}'`), `${k} n’a pas été perdu en chemin`));
 
 S('6. Les vues n’ont pas bougé');
@@ -83,7 +91,36 @@ S('6. Les vues n’ont pas bougé');
 ['v-dash','v-inv','v-proj','v-out','v-packs','v-rep','v-people','v-settings']
   .forEach(v=>T(html.includes(`id="${v}"`), `#${v} est toujours là`));
 
-S('7. Cohérence des fichiers');
+S('7. La fiche : les gestes à leur place');
+/* Sortir et signaler sont les deux gestes qu'on vient chercher ;
+   modifier, imprimer et jeter se font une fois sur vingt. */
+T(/<div class="facts">[\s\S]{0,120}\$\{repBtns\}[\s\S]{0,60}\$\{actionBtn\(i\)\}/.test(inv),
+  'sortir et signaler sont en haut à droite');
+T(/<div class="ffoot">[\s\S]{0,400}Move to trash/.test(inv),
+  'modifier, imprimer et jeter sont en pied de fiche');
+T(/\.kv \.k\{width:120px\}/.test(css),
+  'et la colonne des libellés est bornée : c’est elle qui se replie, pas la donnée');
+
+S('8. Le téléphone ne montre que l’indispensable');
+const tel = css.slice(css.lastIndexOf('LE TÉLÉPHONE'));
+T(/#userChip\{display:none/.test(tel.replace(/\s/g,'')) || /#userChip\s*\{display:none/.test(tel),
+  'qui on est quitte l’en-tête : ça vit dans les réglages');
+T(/#rail \.nav span\{display:none/.test(tel.replace(/ /g,'')) ||
+  /#rail \.nav span\{display:none/.test(tel),
+  'les libellés de la barre basse disparaissent — ils se chevauchaient');
+T(/#rail \.nav\.active span/.test(tel),
+  'seule la destination courante garde le sien');
+T(/\.dashtop h1,\.dashtop p\{display:none\}/.test(tel),
+  'et le bloc d’accueil ne répète plus ce qu’on a lu cent fois');
+
+S('9. Le tableau de bord en deux colonnes');
+const dash = read('js/views-dashboard.js');
+T(/<div class="dashgrid">/.test(dash) && /\.dashgrid\{display:grid/.test(css),
+  'deux colonnes : ce qui demande une action, ce qui s’observe');
+T(dash.indexOf('alerts.length ?') < dash.indexOf('The fleet'),
+  'les alertes avant les chiffres');
+
+S('10. Cohérence des fichiers');
 const vApp=(app.match(/APP_VERSION = '([\d.]+)'/)||[])[1];
 const vUniq=[...new Set((html.match(/\?v=[\d.]+/g)||[]).map(t=>t.slice(3)))];
 T(vUniq.length===1 && vUniq[0]===vApp, `tous les fichiers en ${vApp}`);

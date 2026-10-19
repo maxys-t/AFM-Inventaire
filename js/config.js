@@ -236,7 +236,10 @@ const LABELS = {
     out:       "Checked out",
     packs:     "Packs",
     rep:       "Repairs",
-    settings:  "⚙ Settings"
+    /* Pas de pictogramme dans le libellé : le rail dessine déjà le
+       sien, et les deux se chevauchaient. */
+    settings:  "Settings",
+    trash:     "Trash"
   },
   intro: {
     dash:     "What needs your attention today, and where the gear stands.",

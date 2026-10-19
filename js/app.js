@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.0.1';
 
 /* ---- le thème ----
 
@@ -67,8 +67,6 @@ function applyRailPref(){
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','packs','rep','settings'];
-/* Les vues faites de tableaux ou de colonnes : elles prennent l'écran. */
-const WIDE_VIEWS = ['inv','out','packs','proj','rep','people'];
 function show(v){
   document.querySelectorAll('#rail .nav').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
   VIEWS.forEach(x=>{ const el = document.getElementById('v-'+x); if(el) el.style.display = x===v?'':'none'; });
@@ -78,13 +76,10 @@ function show(v){
     intro.textContent = txt;
     intro.style.display = txt ? '' : 'none';
   }
-  /* Les vues qui montrent des TABLEAUX prennent toute la largeur.
-     L'inventaire le faisait seul depuis la v1.13.1 ; les autres
-     restaient bridées à 1 100 px, et leurs colonnes se repliaient sur
-     deux lignes alors qu'un tiers de l'écran restait noir. Le tableau
-     de bord et les réglages, eux, sont du texte : on les garde
-     étroits, parce qu'une ligne de prose trop longue se lit mal. */
-  document.body.classList.toggle('wideview', WIDE_VIEWS.includes(v));
+  /* Toutes les vues occupent la même largeur. Jusqu'ici certaines
+     étaient bridées et d'autres non : passer de l'une à l'autre
+     faisait sauter la page, et deux réglages voisins n'avaient pas la
+     même marge. Une seule largeur, et plus rien ne bouge. */
   syncStickyOffset();
   try{ window.scrollTo(0,0); }catch(e){}
   render();

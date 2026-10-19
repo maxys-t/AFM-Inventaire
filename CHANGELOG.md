@@ -1,5 +1,76 @@
 # Changelog
 
+## [2.0.1] — 2026-10-19
+
+Dix corrections sur ce que l'essai de la v2.0 a montré. Aucune
+migration SQL.
+
+### Corrigé
+
+- **La largeur changeait d'un onglet à l'autre.** Certaines vues
+  étaient bridées à 1 100 px, d'autres prenaient l'écran : passer de
+  l'une à l'autre faisait sauter la page, et deux réglages voisins
+  n'avaient pas la même marge. Le rail ayant déjà pris sa part, le
+  contenu prend le reste — **partout, et sans condition**. Seuls les
+  textes longs gardent une largeur de lecture.
+
+- **Deux engrenages se chevauchaient** dans le rail : l'icône dessinée
+  et un pictogramme laissé dans le libellé.
+
+- **Impossible de supprimer une date** d'un projet : Safari n'offre
+  aucun moyen de vider un champ date. Ce n'était pas la logique — elle
+  accepte le vide depuis toujours — mais l'absence d'un bouton. Un
+  **Clear** apparaît à côté d'une date posée.
+
+- **La fiche d'un item se coupait en deux** sur les lignes longues :
+  un libellé poussait la valeur à la ligne. La colonne des libellés
+  est bornée, et c'est elle qui se replie.
+
+### Changé
+
+- **Les deux gestes qui comptent passent en haut à droite** de la
+  fiche : *Check out* et *Report a fault*. Modifier, imprimer et jeter
+  descendent en pied de fiche, où l'on ne tombe pas dessus par
+  accident.
+
+- **Start packing passe en haut à droite** de l'écran projet. Il était
+  sous la liste : il fallait défiler jusqu'au bout pour lancer une
+  préparation.
+
+- **La corbeille descend au bas du rail**, avec le même trait que ses
+  voisines. C'est un rangement, pas une action de l'en-tête.
+
+- **Le tableau de bord passe en deux colonnes.** À gauche, large, ce
+  qui demande une action — les alertes, puis les projets en cours. À
+  droite, étroit, ce qui s'observe. Tout s'empilait, et il fallait
+  défiler pour savoir si quelque chose clochait : c'est pourtant la
+  première question qu'on pose en arrivant.
+
+- **Deux icônes redessinées** : une clé et un tournevis croisés pour
+  les réparations, une guitare pour les projets. Une clé seule et un
+  fanion ne disaient rien du métier.
+
+### Corrigé — le téléphone
+
+Trois défauts sur un écran de 390 px :
+
+- L'**en-tête** occupait un tiers de la hauteur, avec quatre boutons
+  sur trois lignes. Qui on est et la déconnexion partent dans les
+  réglages, où l'on va de toute façon pour les changer.
+- Les **libellés de la barre basse se chevauchaient** — huit
+  destinations à 48 px chacune. Ils disparaissent ; seule la
+  destination courante garde le sien, ce qui suffit à apprendre une
+  icône au moment où on l'active.
+- Le **bloc d'accueil** répétait un titre et une phrase d'explication
+  écrits pour quelqu'un qui découvre l'application, pas pour celui qui
+  l'ouvre douze fois par jour.
+
+### À venir
+
+Le **mode packing non linéaire** — bandeau des caisses, composition
+figée au lancement — sera la v2.1.0.
+
+
 ## [2.0.0] — 2026-10-19
 
 Aucune migration SQL. **Ce que l'application calcule et affiche ne

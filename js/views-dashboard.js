@@ -36,42 +36,60 @@ function renderDash(){
   const withPrice = db.items.filter(i=>i.price!=null && i.price!=='');
   const value = withPrice.reduce((s,i)=>s + Number(i.price), 0);
 
-  const stat = (n, label, tone, action) =>
-    `<div class="stat ${tone||''}" ${action?`onclick="${action}" role="button" tabindex="0"`:''}>
-       <div class="num">${n}</div><div class="lbl">${label}</div></div>`;
+  const mini = (n, label, tone, action) =>
+    `<div class="mini ${tone||''}" ${action?`onclick="${action}" role="button" tabindex="0"`:''}>
+       <div class="v">${n}</div><div class="k">${label}</div></div>`;
 
+  /* ============================================================
+     LE TABLEAU DE BORD EN DEUX COLONNES (v2.0.1)
+
+     Tout s'empilait sur une seule colonne : il fallait défiler pour
+     savoir si quelque chose clochait, alors que c'est la première
+     question qu'on pose en arrivant.
+
+     À gauche, large, ce qui demande une action — les alertes, puis
+     les projets en cours. À droite, étroit, ce qui s'observe — les
+     chiffres du parc et les caisses. L'œil balaie la colonne gauche
+     et s'arrête s'il y a quelque chose ; sinon il passe à droite.
+     ============================================================ */
   document.getElementById('v-dash').innerHTML = `
-    <div class="hero">
-      <h1>${esc(LABELS.appTitle)}</h1>
-      <p>${esc(LABELS.tagline || '')}</p>
+    <div class="dashtop">
+      <div>
+        <h1>${esc(LABELS.appTitle)}</h1>
+        <p class="muted">${esc(LABELS.tagline || '')}</p>
+      </div>
       <div class="heroacts">
         ${can('edit')?`<button class="btn" onclick="show('proj');openProjForm()">+ New project</button>`:
                       `<button class="btn" onclick="show('proj')">Open projects</button>`}
-        <button class="btn sec" onclick="show('packs')">Packs</button>
-        <button class="btn sec" onclick="show('inv')">Browse inventory</button>
         ${can('edit')?`<button class="btn sec" onclick="openItemForm()">+ Add item</button>`:''}
       </div>
     </div>
 
-    ${dashProjectsHTML()}
-    ${dashPacksHTML()}
+    <div class="dashgrid">
+      <div>
+        ${alerts.length ? `<div class="panel">
+            <h2>Needs attention <span class="tag hs">${alerts.length}</span></h2>
+            ${alerts.join("")}
+          </div>`
+          : `<div class="panel"><h2>Needs attention</h2>
+            <div class="muted">Nothing to report — everything is in place and in good shape. 👌</div></div>`}
+        ${dashProjectsHTML()}
+      </div>
 
-    ${alerts.length ? `<div class="panel">
-        <h2>Needs attention <span class="tag hs">${alerts.length}</span></h2>
-        ${alerts.join("")}
-      </div>`
-      : `<div class="panel"><h2>Needs attention</h2>
-        <div class="muted">Nothing to report — everything is in place and in good shape. 👌</div></div>`}
-
-    <div class="cards">
-      ${stat(total, 'Items total', '', "goInventory({})")}
-      ${stat(dispo, 'Items available', 'ok', "goInventory({status:'dispo'})")}
-      ${stat(out.length, 'Items checked out', 'warn', "goInventory({status:'sorti'})")}
-      ${stat(rep.length, 'Items needing repair', 'bad', "show('rep')")}
-      ${canSeeValue() && withPrice.length
-        ? `<div class="stat value"><div class="num">${fprice(value)}</div>
-             <div class="lbl">Purchase value${withPrice.length!==total?` <span class="muted">(${withPrice.length} priced)</span>`:''}</div></div>`
-        : ''}
+      <div>
+        <div class="panel">
+          <h2>The fleet</h2>
+          <div class="minis">
+            ${mini(total, 'Total', '', "goInventory({})")}
+            ${mini(dispo, 'Available', 'ok', "goInventory({status:'dispo'})")}
+            ${mini(out.length, 'Checked out', 'warn', "goInventory({status:'sorti'})")}
+            ${mini(rep.length, 'To repair', 'bad', "show('rep')")}
+          </div>
+          ${canSeeValue() && withPrice.length ? `<div class="hintline" style="margin-top:9px">
+            Purchase value <b>${fprice(value)}</b>${withPrice.length!==total?` — ${withPrice.length} of ${total} priced`:''}</div>` : ''}
+        </div>
+        ${dashPacksHTML()}
+      </div>
     </div>`;
 }
 

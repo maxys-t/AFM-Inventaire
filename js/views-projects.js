@@ -339,6 +339,13 @@ function projEditor(){
   </div>`;
 }
 
+/* Vider une date. Le champ natif ne le permet pas partout, et une
+   date fausse qu'on ne peut pas retirer est pire que pas de date. */
+async function projClearDate(f){
+  await projSetField(f, null);
+  renderProj();
+}
+
 /* La liste des destinations, avec la bonne déjà choisie. Un lieu
    archivé n'y figure plus : on l'y remet, sinon rouvrir un projet
    effacerait sa destination sans rien dire — c'était le piège corrigé
@@ -761,7 +768,11 @@ function projPrep(){
       ${p.archived?'<span class="tag pinactif">archived</span>':''}</h2>
     ${(can('edit') && !figé)?`<button class="btn sec small" onclick="projGo('edit','${p.id}')">Edit gear</button>`:''}
     <button class="btn sec small" onclick="projGo('settings','${p.id}')"
-            title="Project settings">⚙ Settings</button>
+            title="Project settings">Settings</button>
+    <!-- Le geste principal de l'écran, à l'endroit où l'œil finit sa
+         course. Il était en bas, sous la liste : il fallait défiler
+         jusqu'au bout pour lancer une préparation. -->
+    ${actions ? `<span class="pjmain">${actions}</span>` : ''}
   </div>
 
   <div class="panel">
@@ -782,8 +793,6 @@ function projPrep(){
   </div>
 
   ${blocs || '<div class="panel"><div class="empty">This project is empty — add cases and items first.</div></div>'}
-
-  <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;margin-top:12px">${actions}</div>
 
 `;
 }
@@ -821,11 +830,22 @@ function projSettings(){
         <select id="pj-dest" onchange="projSetField('loc_name', this.value)">${projDestOptions(p)}</select>
         <div class="hintline">Add off-site addresses in Settings → Locations.</div></div>
       <div class="field"><label>Start date</label>
-        <input type="date" value="${p.starts_on||''}"
-               onchange="projSetField('starts_on', this.value||null)"></div>
+        <!-- Safari n'offre aucun moyen de vider un champ date : sans
+             ce bouton, une date posée par erreur restait là pour
+             toujours. -->
+        <div class="datefield">
+          <input type="date" value="${p.starts_on||''}"
+                 onchange="projSetField('starts_on', this.value||null)">
+          ${p.starts_on?`<button class="btn sec small" onclick="projClearDate('starts_on')"
+            title="Remove this date">Clear</button>`:''}
+        </div></div>
       <div class="field"><label>End date</label>
-        <input type="date" value="${p.ends_on||''}"
-               onchange="projSetField('ends_on', this.value||null)"></div>
+        <div class="datefield">
+          <input type="date" value="${p.ends_on||''}"
+                 onchange="projSetField('ends_on', this.value||null)">
+          ${p.ends_on?`<button class="btn sec small" onclick="projClearDate('ends_on')"
+            title="Remove this date">Clear</button>`:''}
+        </div></div>
     </div>
   </div>
 
