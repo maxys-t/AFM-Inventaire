@@ -75,7 +75,11 @@ let prefsTimer = null;
 
 function defaultPrefs(){
   return {invCols: INV_DEFAULT_COLS.slice(), invView: null,
-          invColsMobile: MOBILE_DEFAULT_COLS.slice(), mobilePhoto: true};
+          invColsMobile: MOBILE_DEFAULT_COLS.slice(), mobilePhoto: true,
+          /* v2.0 : l'apparence appartient à chacun. 'auto' suit la
+             largeur de l'écran pour le rail, et les réglages du
+             système pour le thème. */
+          rail: 'auto', theme: 'auto'};
 }
 
 /* Lecture tolérante : une colonne supprimée dans une version
@@ -93,6 +97,8 @@ function sanitizePrefs(p){
     if(keep.length) out.invColsMobile = keep;
   }
   if(p && typeof p.mobilePhoto === 'boolean') out.mobilePhoto = p.mobilePhoto;
+  if(p && ['auto','shut','open'].includes(p.rail)) out.rail = p.rail;
+  if(p && ['auto','dark','light'].includes(p.theme)) out.theme = p.theme;
   return out;
 }
 

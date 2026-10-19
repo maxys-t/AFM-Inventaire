@@ -1,5 +1,86 @@
 # Changelog
 
+## [2.0.0] — 2026-10-19
+
+Aucune migration SQL. **Ce que l'application calcule et affiche ne
+change pas** : seule la façon d'y arriver change. Les vues écrivent
+dans les mêmes conteneurs qu'hier, et la couche de données n'a pas
+bougé d'une ligne.
+
+### Changé — un rail de navigation
+
+La barre horizontale plafonnait à sept onglets, et l'application doit
+pouvoir en accueillir d'autres. Un **rail à gauche** a de la place,
+reste visible, et libère le haut de l'écran.
+
+- Il **groupe explicitement** ce qui sert à faire partir du matériel —
+  Projects, Packs, Checked out — et ce qui décrit le parc — Inventory,
+  Repairs, Borrowers. L'ordre dit la hiérarchie du travail : le projet
+  est la fin, tout le reste existe pour le servir.
+- Il **se replie en icônes** à la demande, et tout seul sous 1000 px.
+  C'est là, et seulement là, que des icônes de navigation se
+  justifient : apprises une fois, répétées à chaque écran. Aucune
+  icône n'a été inventée pour une catégorie — il y en a 73, elles
+  auraient coûté leur place pour rien.
+- **Sur téléphone, il devient une barre basse**, là où le pouce
+  arrive. Un rail de 60 px sur un écran de 375 px, ce serait un
+  sixième de la largeur pour une navigation qu'on utilise six fois par
+  jour.
+- Le choix replié/déplié **se range dans les préférences** de chacun,
+  comme les colonnes de l'inventaire.
+
+Le rail, l'en-tête et le contenu vivent désormais dans une seule
+coquille, montrée ou cachée d'un bloc. Trois éléments synchronisés à
+la main finissaient par diverger.
+
+### Ajouté — thème clair, sombre, ou celui du système
+
+- **Settings → Appearance.** Trois choix, et le troisième n'est pas un
+  compromis : « System » suit le réglage de l'appareil, **y compris
+  quand il bascule tout seul** au coucher du soleil — on écoute le
+  changement au lieu de le lire une fois au démarrage.
+- Le thème appartient à la personne, pas à l'appareil : il suit son
+  compte. Deux personnes du studio peuvent travailler côte à côte avec
+  des réglages différents.
+- Le thème clair n'est pas le sombre « éclairci » : les surfaces
+  s'inversent, et les couleurs de sens sont assombries pour rester
+  lisibles sur du blanc — l'ambre et le vert du thème sombre
+  disparaîtraient sur fond clair.
+
+C'est la v1.27 qui a rendu ceci possible : toutes les couleurs vivant
+dans un seul bloc, un thème tient dans un second. Le harnais vérifie
+maintenant que **les deux palettes définissent exactement les mêmes
+variables** — une variable manquante laisserait l'autre thème
+transparaître à cet endroit, et c'est introuvable à la relecture.
+
+### Changé — la fiche d'un item
+
+Elle reste une fenêtre : c'est le bon contenant pour regarder un objet
+sans quitter la liste. Mais son contenu était une colonne unique de
+trois mètres, où les chiffres qui comptent étaient noyés dans un
+paragraphe.
+
+- Un **bandeau de quatre chiffres** — état, poids, où il est, nombre
+  de sorties — puis des **cartes thématiques côte à côte** : Identité,
+  Rangement, Achat, Notes, Historique.
+- Rien n'a été retiré : le harnais vérifie nommément que le numéro de
+  série, le propriétaire, le conditionnement et le fournisseur sont
+  toujours là.
+
+### Ajouté
+
+- **`tests/t200.js`**, sept sections, dont une qui vérifie que les huit
+  conteneurs de vues existent toujours — c'est la promesse de cette
+  version. Vingt et un harnais au total.
+
+### Reste pour plus tard
+
+Le rail de filtres sur l'inventaire — familles, états et emplacements
+visibles en permanence à côté de la liste. Les menus d'en-tête
+fonctionnent ; on verra à l'usage si le rail apporte vraiment quelque
+chose.
+
+
 ## [1.29.1] — 2026-10-16
 
 ### Changé — le projet passe devant la caisse

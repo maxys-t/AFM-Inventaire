@@ -32,10 +32,10 @@ function showScreen(which){          // 'login' | 'setpw' | 'denied' | 'app'
   set('login',  which==='login');
   set('setpw',  which==='setpw');
   set('denied', which==='denied');
-  set(document.querySelector('main'), which==='app');
-  set(document.querySelector('nav'),  which==='app');
-  const nav = document.querySelector('nav');
-  if(nav && which==='app') nav.style.display = 'flex';
+  /* Depuis la v2.0, le rail, l'en-tête et le contenu vivent dans une
+     seule coquille : on la montre ou on la cache d'un bloc, au lieu
+     de synchroniser trois éléments qui finissaient par diverger. */
+  set('shell', which==='app');
   set('userChip', which==='app' || which==='denied');
 }
 

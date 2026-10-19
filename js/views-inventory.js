@@ -1244,30 +1244,49 @@ function openDetail(id){
   const repBtns = openRep
     ? `<button class="btn small ok" onclick="openReceive('${openRep.id}')">Close the incident</button>`
     : `<button class="btn sec small" onclick="openReport('${i.id}')">Report a fault</button>`;
+  /* ============================================================
+     LA FICHE EN COLONNES (v2.0)
+
+     Elle était une colonne unique de trois mètres : on faisait
+     défiler pour atteindre l'historique, et les chiffres qui comptent
+     — l'état, le poids, où il est — étaient noyés dans un paragraphe.
+
+     Désormais : un bandeau de quatre chiffres, puis des cartes
+     thématiques côte à côte. Même fenêtre, même contenu ; c'est
+     l'ordre de lecture qui change. Sur écran étroit les colonnes
+     s'empilent d'elles-mêmes.
+     ============================================================ */
+  const kv = (k, v) => v ? `<div class="kv"><span class="k">${k}</span><span class="v">${v}</span></div>` : '';
+  const où = i.status === 'sorti' ? esc(i.out.reason || i.loc) : esc(locLabel(i.loc));
+
   document.getElementById('detailBody').innerHTML = `
-    <h3>${itemTitle(i)} <span class="mono">${i.id}</span>${codeStale(i)
-      ? ` <span class="tag stale" data-tip="This ID starts with ${esc(String(i.id).split('-')[0])}, but the sub-category now expects ${esc(codeFor(i.cat,i.subcat))}. Harmless until you print labels.">code ${esc(codeFor(i.cat,i.subcat))}?</span>` : ''}</h3>
-    ${i.photo?`<img class="itemphoto" loading="lazy" src="${i.photo}">`:""}
-    <p style="margin-bottom:10px">
-      <span class="tag cat">${esc(catPath(i))}</span> ${statusTag(i)} <span class="tag ${i.cond}">${condLabel(i.cond)}</span>${repairTag(i)}${
-      i.weight_g ? ` <span class="tag wtag">${esc(fweight(i.weight_g))}</span>` : ''}
-    </p>
+    <div class="fhead">
+      ${i.photo?`<img class="fphoto" loading="lazy" src="${i.photo}">`
+               :'<span class="fphoto rnophoto"></span>'}
+      <div class="ftitle">
+        <h3>${itemTitle(i)}</h3>
+        <div class="submuted"><span class="mono">${i.id}</span> · ${esc(catPath(i))}${codeStale(i)
+          ? ` <span class="tag stale" data-tip="This ID starts with ${esc(String(i.id).split('-')[0])}, but the sub-category now expects ${esc(codeFor(i.cat,i.subcat))}. Harmless until you print labels.">code ${esc(codeFor(i.cat,i.subcat))}?</span>` : ''}</div>
+        <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">
+          ${statusTag(i)} <span class="tag ${i.cond}">${condLabel(i.cond)}</span>${repairTag(i)}
+        </div>
+      </div>
+    </div>
+
+    <div class="fstats">
+      <div class="fstat"><div class="k">État</div>
+        <div class="v" style="font-size:17px">${esc(condLabel(i.cond))}</div></div>
+      <div class="fstat"><div class="k">Poids</div>
+        <div class="v">${i.weight_g ? esc(fweight(i.weight_g)) : '<span class="muted" style="font-size:15px">non pesé</span>'}</div></div>
+      <div class="fstat"><div class="k">Où</div>
+        <div class="v" style="font-size:16px">${où || '—'}</div></div>
+      <div class="fstat"><div class="k">Sorties</div>
+        <div class="v">${db.history.filter(h=>h.itemId===id && h.type==='out').length}</div></div>
+    </div>
+
     ${outInfo}
-    <p class="muted" style="margin-bottom:4px">
-      ${i.serial?`Serial: <b>${esc(i.serial)}</b><br>`:""}
-      ${i.owner?`Owner: <b>${esc(i.owner)}</b><br>`:""}
-      ${i.provider?`Provider: <b>${esc(i.provider)}</b><br>`:""}
-      ${i.price!=null?`Purchase price: <b>${fprice(i.price)}</b>${i.purchase_date?` on ${fdateOnly(i.purchase_date)}`:""}<br>`
-        :(i.purchase_date?`Bought on <b>${fdateOnly(i.purchase_date)}</b><br>`:"")}
-      ${i.sales_order?`Sales order: <b>${esc(i.sales_order)}</b><br>`:""}
-      Home location: <b>${esc(locLabel(i.home))}</b><br>
-      Current location: <b>${esc(i.status==='sorti'?i.loc:locLabel(i.loc))}</b><br>
-      Packaging: <b>${i.has_case
-        ? esc(i.case_note || 'yes, not described')
-        : 'none'}</b>${packLines(i)}
-    </p>
-    ${i.notes?`<p class="muted" style="margin-bottom:10px">📝 ${esc(i.notes)}</p>`:""}
-    <div class="modal-actions" style="justify-content:flex-start;margin:12px 0;flex-wrap:wrap">
+
+    <div class="modal-actions" style="justify-content:flex-start;margin:4px 0 14px;flex-wrap:wrap">
       ${actionBtn(i)}
       ${repBtns}
       ${can('edit')?`<button class="btn sec small" onclick="openItemForm('${i.id}')">Edit</button>`:''}
@@ -1275,8 +1294,42 @@ function openDetail(id){
       ${can('delete')?`<button class="btn danger small" onclick="deleteItem('${i.id}')">Move to trash</button>`:''}
     </div>
     <div id="qrzone"></div>
-    <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">History</h3>
-    <ul class="hist">${rows||'<li class="muted">No activity yet</li>'}</ul>
+
+    <div class="fcols">
+      <div>
+        <div class="fcard">
+          <h4>Identité</h4>
+          ${kv('Fabricant', i.brand ? esc(i.brand) : '')}
+          ${kv('Modèle', esc(i.name))}
+          ${kv('Numéro de série', i.serial ? `<span class="mono">${esc(i.serial)}</span>` : '')}
+          ${kv('Propriétaire', i.owner ? esc(i.owner) : '')}
+        </div>
+        <div class="fcard">
+          <h4>Historique <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">${db.history.filter(h=>h.itemId===id).length}</span></h4>
+          <ul class="hist">${rows||'<li class="muted">No activity yet</li>'}</ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="fcard">
+          <h4>Rangement</h4>
+          ${kv('Emplacement d\'origine', esc(locLabel(i.home)))}
+          ${kv('Emplacement actuel', où)}
+          ${kv('Caisse', packLines(i) ? packLines(i).replace(/^<br>/, '') : '')}
+          ${kv('Conditionnement', i.has_case ? esc(i.case_note || 'oui, non précisé') : 'aucun')}
+        </div>
+        ${(i.price!=null || i.purchase_date || i.provider || i.sales_order) ? `<div class="fcard">
+          <h4>Achat</h4>
+          ${kv('Fournisseur', i.provider ? esc(i.provider) : '')}
+          ${kv('Date', i.purchase_date ? fdateOnly(i.purchase_date) : '')}
+          ${kv('Prix', i.price!=null ? fprice(i.price) : '')}
+          ${kv('Bon de commande', i.sales_order ? esc(i.sales_order) : '')}
+        </div>` : ''}
+        ${i.notes ? `<div class="fcard"><h4>Notes</h4>
+          <div class="muted" style="font-size:13.5px;line-height:1.5">${esc(i.notes)}</div></div>` : ''}
+      </div>
+    </div>
+
     <div class="modal-actions"><button class="btn sec" onclick="close_('ovDetail')">Close</button></div>`;
   open_('ovDetail');
 }

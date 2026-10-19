@@ -144,12 +144,15 @@ dom.window.eval([
   R.push([null,'7. Les projets passent devant les caisses']);
   /* L'ordre de la barre dit la hiérarchie du travail : le projet est
      la fin, les caisses et l'inventaire existent pour le servir. */
+  /* v2.0 : la barre horizontale est devenue un rail, mais l'ordre
+     qu'elle portait reste le même — c'est lui qui dit la hiérarchie. */
   const nav = h.slice(h.indexOf('<nav'), h.indexOf('</nav>'));
   const ordre = [...nav.matchAll(/data-v="(\w+)"/g)].map(m=>m[1]);
   R.push([ordre[1] === 'proj', 'Projects vient juste après le tableau de bord']);
   R.push([ordre.indexOf('proj') < ordre.indexOf('packs'), 'devant les packs']);
   R.push([ordre.indexOf('packs') < ordre.indexOf('inv'), 'eux-mêmes devant l’inventaire']);
-  R.push([/class="navmain">Projects/.test(h), 'et Projects porte la mise en avant']);
+  R.push([/<div class="railhead">Faire partir<\/div>/.test(h),
+          'et le rail groupe explicitement ce qui sert à faire partir']);
   const dash = read('js/views-dashboard.js');
   R.push([/function dashProjectsHTML/.test(dash) &&
           dash.indexOf('dashProjectsHTML()') < dash.indexOf('dashPacksHTML()'),

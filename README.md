@@ -4,7 +4,7 @@ Application web de gestion de l'inventaire du studio AFM : matériel, prêts,
 réparations, emplacements et projets de tournée. Réservée au personnel du studio,
 utilisable sur ordinateur comme sur mobile.
 
-> Version actuelle : **1.29.1** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
+> Version actuelle : **2.0.0** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
 
 ## À quoi ça sert
 
@@ -132,7 +132,8 @@ config → auth → helpers → db → vues → app. Ne pas le modifier.
 
 | Je veux…                                    | Fichier                              |
 |---------------------------------------------|--------------------------------------|
-| Changer une couleur                         | `css/styles.css`, bloc `:root` — **toutes** les couleurs y sont, et aucune ailleurs |
+| Changer une couleur                         | `css/styles.css` — un bloc de palette par thème, et aucune couleur ailleurs |
+| Ajouter un thème                            | `css/styles.css` — copier le bloc `html[data-theme="light"]`, puis l'ajouter à `THEMES` dans `js/app.js` |
 | Changer les sous-catégories pouvant servir de contenant | `js/config.js` (`CONTAINER_SUBS`) |
 | Changer les états du matériel               | `js/config.js` (`CONDS`) — les menus s'y adaptent seuls |
 | Ajouter / renommer une catégorie            | `js/config.js` (`CATS`)              |
@@ -202,7 +203,7 @@ automatique et export manuel) sont acceptés.
 ## Tests
 
 ```bash
-./tests/run.sh          # les vingt harnais
+./tests/run.sh          # les vingt-et-un harnais
 ./tests/run.sh t124     # un seul
 ```
 

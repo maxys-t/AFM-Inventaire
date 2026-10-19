@@ -53,6 +53,75 @@
   --sh-deep:rgba(0,0,0,.55);
 
   --radius:16px;
+
+  /* Les pastilles d'aperçu des thèmes, dans les réglages. Elles sont
+     volontairement IDENTIQUES dans les deux palettes : une vignette
+     du thème clair doit rester claire même quand on regarde depuis le
+     thème sombre, sinon elle ne montre rien. Ce sont des échantillons,
+     pas des couleurs d'interface. */
+  --ech-dark-1:#1d1d1f; --ech-dark-2:#2c2c2e;
+  --ech-light-1:#ffffff; --ech-light-2:#ececed;
+
+  /* Changement de thème : seules les couleurs changent, jamais la
+     mise en page. C'est tout l'intérêt d'avoir consolidé la feuille
+     en v1.27 — un thème tient désormais dans un bloc comme celui-ci.
+     `color-scheme` fait suivre ce que le navigateur dessine lui-même :
+     ascenseurs, champs de saisie, menus déroulants natifs. */
+  color-scheme:dark;
+}
+
+/* ============================================================
+   LE THÈME CLAIR (v2.0)
+
+   Ce n'est pas le thème sombre « éclairci » : les surfaces
+   s'inversent (du plus clair au plus sombre en descendant), les
+   textes aussi, et les couleurs de sens sont assombries pour rester
+   lisibles sur du blanc — l'ambre et le vert du thème sombre
+   disparaîtraient sur fond clair.
+
+   Les teintes de fond sont renforcées pour la même raison : à 14 %
+   sur du blanc, on ne voit plus rien.
+   ============================================================ */
+html[data-theme="light"]{
+  --bg:#f5f5f7; --panel:#ffffff; --panel2:#ececed;
+  --border:#dcdce0; --border2:#c4c4c9;
+  --txt:#1d1d1f; --muted:#6e6e73; --muted2:#48484a;
+  --on-accent:#fff; --ink:#000;
+
+  --accent:#0071e3; --accent2:#0058b0;
+  --ok:#1a8f3c; --warn:#b36b00; --bad:#c7362b; --info:#8d3fb0;
+
+  --t-accent-faint:rgba(0,113,227,.06);
+  --t-accent-soft:rgba(0,113,227,.10);
+  --t-accent:rgba(0,113,227,.13);
+  --t-ok:rgba(26,143,60,.13);
+  --t-warn:rgba(179,107,0,.13);
+  --t-warn-strong:rgba(179,107,0,.24);
+  --t-bad-faint:rgba(199,54,43,.07);
+  --t-bad:rgba(199,54,43,.12);
+  --t-info:rgba(141,63,176,.13);
+  --t-neutral:rgba(110,110,115,.12);
+  --t-light:rgba(0,0,0,.025);
+
+  --veil:rgba(0,0,0,.28);
+  --veil-strong:rgba(0,0,0,.42);
+  --veil-photo:rgba(0,0,0,.72);
+  --glass:rgba(255,255,255,.82);
+  --sh-hair:rgba(0,0,0,.05);
+  --sh-soft:rgba(0,0,0,.10);
+  --sh-mid:rgba(0,0,0,.17);
+  --sh-deep:rgba(0,0,0,.24);
+
+
+  /* Les pastilles d'aperçu des thèmes, dans les réglages. Elles sont
+     volontairement IDENTIQUES dans les deux palettes : une vignette
+     du thème clair doit rester claire même quand on regarde depuis le
+     thème sombre, sinon elle ne montre rien. Ce sont des échantillons,
+     pas des couleurs d'interface. */
+  --ech-dark-1:#1d1d1f; --ech-dark-2:#2c2c2e;
+  --ech-light-1:#ffffff; --ech-light-2:#ececed;
+
+  color-scheme:light;
 }
 
 /* ============================================================
@@ -1379,3 +1448,134 @@ tr.outpack td{padding-top:8px;padding-bottom:8px}
 /* La vignette d'une caisse dans l'en-tête de son groupe : plus petite
    que celles des lignes, pour ne pas écraser le titre. */
 .pjgrp > .hd .repthumb{width:28px;height:28px;flex:none}
+
+/* ============================================================
+   LE RAIL DE NAVIGATION (v2.0)
+
+   La barre horizontale plafonnait à sept onglets, et l'application
+   doit pouvoir en accueillir d'autres. Un rail a de la place, reste
+   visible, et libère le haut de l'écran pour ce qui change.
+
+   Il se replie en icônes sous 1000 px — et à la demande, par le
+   bouton. Le choix tient dans une classe sur le corps du document,
+   parce qu'il doit survivre aux redessins de chaque vue.
+   ============================================================ */
+#shell{display:grid;grid-template-columns:212px 1fr;min-height:100vh}
+body.railshut #shell{grid-template-columns:60px 1fr}
+
+#rail{background:var(--panel);border-right:1px solid var(--border);
+  padding:10px 9px 14px;display:flex;flex-direction:column;gap:2px;
+  position:sticky;top:0;height:100vh;overflow-y:auto;z-index:30}
+.railtop{display:flex;align-items:center;gap:9px;padding:2px 2px 12px}
+.railtoggle{background:none;border:none;color:var(--muted);padding:7px;border-radius:9px;
+  flex:none;display:grid;place-items:center}
+.railtoggle:hover{background:var(--panel2);color:var(--txt)}
+.railbrand{font-weight:680;letter-spacing:-.02em;font-size:14.5px;
+  white-space:nowrap;overflow:hidden}
+.railhead{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  font-weight:650;padding:14px 10px 5px;white-space:nowrap;overflow:hidden}
+.railfoot{margin-top:auto;padding-top:10px}
+
+#rail .nav{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:none;border:none;color:var(--muted);font-size:14px;font-weight:500;
+  padding:9px 10px;border-radius:10px;white-space:nowrap;overflow:hidden}
+#rail .nav svg{width:19px;height:19px;flex:none;fill:none;stroke:currentColor;
+  stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+#rail .nav:hover{background:var(--panel2);color:var(--txt)}
+#rail .nav.active{background:var(--t-accent);color:var(--txt);font-weight:600}
+#rail .nav:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* Replié : les icônes seules, centrées, et une infobulle native pour
+   ceux qui ne les ont pas encore apprises. */
+body.railshut .railbrand,
+body.railshut .railhead,
+body.railshut #rail .nav span{display:none}
+body.railshut #rail .nav{justify-content:center;padding:11px 0}
+body.railshut .railtop{justify-content:center;padding-bottom:10px}
+
+/* L'en-tête perd sa position collante : c'est le rail qui l'est. */
+#pane{min-width:0;display:flex;flex-direction:column}
+#pane > header{position:static}
+#pane > main{flex:1}
+
+@media(max-width:1000px){
+  #shell{grid-template-columns:60px 1fr}
+  .railbrand,.railhead,#rail .nav span{display:none}
+  #rail .nav{justify-content:center;padding:11px 0}
+  .railtop{justify-content:center;padding-bottom:10px}
+  body.railopen #shell{grid-template-columns:212px 1fr}
+  body.railopen .railbrand,body.railopen .railhead,
+  body.railopen #rail .nav span{display:revert}
+  body.railopen #rail .nav{justify-content:flex-start;padding:9px 10px}
+  body.railopen .railtop{justify-content:flex-start;padding-bottom:12px}
+}
+
+/* Téléphone : le rail devient une barre basse, là où le pouce arrive.
+   Un rail de 60 px sur 375 px de large, c'est un sixième de l'écran
+   pour une navigation qu'on utilise six fois par jour. */
+@media(max-width:700px){
+  #shell{display:block}
+  #rail{position:fixed;left:0;right:0;bottom:0;top:auto;height:auto;width:100%;
+    flex-direction:row;justify-content:space-around;border-right:none;
+    border-top:1px solid var(--border);padding:6px 4px;
+    gap:0;overflow-x:auto;z-index:45}
+  .railtop,.railhead{display:none}
+  .railfoot{margin:0;padding:0}
+  #rail .nav{flex-direction:column;gap:3px;padding:6px 8px;font-size:10.5px;
+    justify-content:center;width:auto}
+  #rail .nav span{display:revert;font-size:10px}
+  body.railshut #rail .nav span{display:revert}
+  main{padding-bottom:76px}
+}
+
+/* --- Choix du thème, dans les réglages (v2.0) --- */
+.themegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+@media(max-width:700px){.themegrid{grid-template-columns:1fr}}
+.themecard{display:flex;flex-direction:column;gap:3px;text-align:left;
+  background:var(--panel2);border:1.5px solid var(--border);border-radius:14px;
+  padding:11px;color:var(--txt);font-family:inherit}
+.themecard:hover{border-color:var(--border2)}
+.themecard.on{border-color:var(--accent);background:var(--t-accent-soft)}
+.themeprev{display:block;height:46px;border-radius:9px;margin-bottom:5px;
+  border:1px solid var(--border2)}
+.themeprev.dark{background:linear-gradient(135deg,var(--ech-dark-1) 0 55%,var(--ech-dark-2) 55%)}
+.themeprev.light{background:linear-gradient(135deg,var(--ech-light-1) 0 55%,var(--ech-light-2) 55%)}
+.themeprev.auto{background:linear-gradient(135deg,var(--ech-dark-1) 0 50%,var(--ech-light-1) 50%)}
+.themenm{font-weight:600;font-size:14px}
+.themenote{font-size:12px;color:var(--muted);line-height:1.4}
+
+/* ============================================================
+   LA FICHE D'UN ITEM, EN COLONNES (v2.0)
+
+   Elle restait une fenêtre — c'est le bon contenant pour « regarder
+   un objet sans quitter la liste ». Mais son contenu était une
+   colonne unique de trois mètres : il fallait défiler pour atteindre
+   l'historique, et les chiffres qui comptent étaient noyés dans un
+   paragraphe. Un bandeau, puis des cartes côte à côte.
+   ============================================================ */
+.fhead{display:flex;align-items:flex-start;gap:15px;flex-wrap:wrap;margin-bottom:14px}
+.fphoto{width:82px;height:82px;object-fit:cover;border-radius:14px;flex:none;
+  background:var(--panel2);display:block}
+.ftitle{flex:1;min-width:180px}
+.ftitle h3{font-size:21px;font-weight:650;letter-spacing:-.02em;margin:0}
+
+.fstats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:13px}
+@media(max-width:700px){.fstats{grid-template-columns:repeat(2,1fr)}}
+.fstat{background:var(--panel2);border-radius:12px;padding:11px 13px;min-width:0}
+.fstat .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);font-weight:650}
+.fstat .v{font-size:20px;font-weight:680;letter-spacing:-.02em;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.fcols{display:grid;grid-template-columns:1.15fr 1fr;gap:13px;align-items:start}
+@media(max-width:780px){.fcols{grid-template-columns:1fr}}
+.fcard{background:var(--panel2);border-radius:13px;padding:13px 14px;margin-bottom:13px}
+.fcard h4{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  font-weight:650;margin-bottom:9px;display:flex;gap:7px;align-items:baseline}
+.fcard .hist{max-height:280px;overflow:auto;margin:0}
+.fcard .hist li{padding:8px 0}
+.kv{display:flex;gap:12px;padding:6px 0;font-size:13.5px}
+.kv + .kv{border-top:1px solid var(--border)}
+.kv .k{width:148px;flex:none;color:var(--muted)}
+.kv .v{flex:1;min-width:0;word-break:break-word}
+@media(max-width:560px){.kv{flex-direction:column;gap:1px}.kv .k{width:auto}}

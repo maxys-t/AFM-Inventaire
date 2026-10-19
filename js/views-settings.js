@@ -10,6 +10,7 @@ let settingsTab = 'account';
 
 const SET_TABS = [
   {k:'account',  label:'Account',   icon:'👤'},
+  {k:'appearance',label:'Appearance', icon:'🎨'},
   {k:'data',     label:'Data',      icon:'🗂', admin:true},
   {k:'locations',label:'Locations', icon:'📍'},
   {k:'providers',label:'Repair shops', icon:'🔧', admin:true},
@@ -42,6 +43,7 @@ function renderSettings(){
 
   const body = document.getElementById('setBody');
   if(settingsTab === 'account')   body.innerHTML = paneAccount();
+  if(settingsTab === 'appearance') body.innerHTML = paneAppearance();
   if(settingsTab === 'data')      body.innerHTML = paneData();
   if(settingsTab === 'locations'){ body.innerHTML = paneLocations(); renderLoc(); }
   if(settingsTab === 'providers'){ body.innerHTML = paneProviders(); renderProviders(); }
@@ -52,6 +54,44 @@ function renderSettings(){
 }
 
 /* ---------- panneaux ---------- */
+
+/* L'apparence appartient à chacun : elle se range dans user_prefs,
+   comme les colonnes de l'inventaire. Deux personnes du studio
+   peuvent travailler côte à côte avec des réglages différents. */
+function paneAppearance(){
+  const choisi = themeChoisi();
+  const carte = (k, titre, note) => `
+    <button class="themecard${choisi===k?' on':''}" onclick="setTheme('${k}')">
+      <span class="themeprev ${k}"></span>
+      <span class="themenm">${titre}</span>
+      <span class="themenote">${note}</span>
+    </button>`;
+
+  return `<div class="panel">
+    <h2>Theme</h2>
+    <div class="themegrid">
+      ${carte('auto','System','Follows your device, including when it switches at dusk.')}
+      ${carte('dark','Dark','The studio default.')}
+      ${carte('light','Light','For daylight, and for printing a packing list.')}
+    </div>
+    <div class="hintline" style="margin-top:10px">
+      Currently showing the <b>${themeEffectif() === 'light' ? 'light' : 'dark'}</b> theme.
+      This setting is yours alone — it follows your account, not this device.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Navigation</h2>
+    <label class="checkline">
+      <input type="checkbox" ${document.body.classList.contains('railshut')?'checked':''}
+             onchange="toggleRail()">
+      Keep the side rail folded to icons
+    </label>
+    <div class="hintline">On a narrow screen it folds on its own; on a phone it becomes a
+      bottom bar, where the thumb reaches.</div>
+  </div>`;
+}
+
 function paneAccount(){
   const role = me && me.role === 'admin' ? 'Administrator' : 'Assistant';
   return `<div class="panel">

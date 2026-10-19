@@ -4,14 +4,73 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '1.29.1';
+const APP_VERSION = '2.0.0';
+
+/* ---- le thème ----
+
+   Trois états, et le troisième n'est pas un compromis : « système »
+   veut dire que l'application suit le réglage de l'appareil, y
+   compris quand il bascule tout seul au coucher du soleil. On écoute
+   donc le changement, au lieu de le lire une fois au démarrage.
+
+   Le thème vit sur <html> et non sur <body> : la couleur de fond de
+   la page est peinte avant que <body> existe, et un éclair sombre au
+   chargement d'une page claire se voit. */
+const THEMES = {auto:'System', dark:'Dark', light:'Light'};
+
+function themeChoisi(){
+  try{ return (prefs && prefs.theme) || 'auto'; }catch(e){ return 'auto'; }
+}
+function themeEffectif(){
+  const c = themeChoisi();
+  if(c !== 'auto') return c;
+  try{ return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; }
+  catch(e){ return 'dark'; }
+}
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', themeEffectif());
+}
+function setTheme(t){
+  if(!THEMES[t]) return;
+  try{ prefs.theme = t; schedulePrefsSave(); }catch(e){}
+  applyTheme();
+  if(typeof renderSettings === 'function' && document.getElementById('v-settings')) renderSettings();
+}
+/* Le système bascule : on suit, mais seulement si c'est ce qu'on a
+   demandé. */
+try{
+  window.matchMedia('(prefers-color-scheme: light)')
+    .addEventListener('change', ()=>{ if(themeChoisi() === 'auto') applyTheme(); });
+}catch(e){}
+
+/* ---- le rail : replié ou déplié ----
+   Le choix est celui de la personne, pas de la largeur de l'écran :
+   il tient dans une classe sur <body> et se range dans ses
+   préférences, comme les colonnes de l'inventaire. */
+function toggleRail(){
+  const étroit = window.matchMedia('(max-width:1000px)').matches;
+  if(étroit) document.body.classList.toggle('railopen');
+  else       document.body.classList.toggle('railshut');
+  try{
+    prefs.rail = étroit
+      ? (document.body.classList.contains('railopen') ? 'open' : 'auto')
+      : (document.body.classList.contains('railshut') ? 'shut' : 'auto');
+    schedulePrefsSave();
+  }catch(e){}
+}
+function applyRailPref(){
+  try{
+    if(prefs.rail === 'shut') document.body.classList.add('railshut');
+    if(prefs.rail === 'open') document.body.classList.add('railopen');
+  }catch(e){}
+}
 
 /* ---- navigation entre onglets ---- */
 const VIEWS = ['dash','inv','people','proj','out','packs','rep','settings'];
 /* Les vues faites de tableaux ou de colonnes : elles prennent l'écran. */
 const WIDE_VIEWS = ['inv','out','packs','proj','rep','people'];
 function show(v){
-  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
+  document.querySelectorAll('#rail .nav').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
   VIEWS.forEach(x=>{ const el = document.getElementById('v-'+x); if(el) el.style.display = x===v?'':'none'; });
   const intro = document.getElementById('viewIntro');
   if(intro){
@@ -420,7 +479,16 @@ function applyLabels(){
   document.querySelector('header h1').textContent = LABELS.appTitle;
   const v = document.getElementById('appVersion');
   if(v){ v.textContent = 'v' + APP_VERSION; v.title = 'Version currently online'; }
-  document.querySelectorAll('nav button').forEach(b=>{ if(LABELS.nav[b.dataset.v]) b.textContent = LABELS.nav[b.dataset.v]; });
+  /* Le libellé seulement : l'icône du rail reste en place. Remplacer
+     tout le contenu du bouton l'effacerait. */
+  document.querySelectorAll('#rail .nav').forEach(b=>{
+    const t = b.querySelector('span');
+    if(t && LABELS.nav[b.dataset.v]) t.textContent = LABELS.nav[b.dataset.v];
+  });
+  const marque = document.querySelector('.railbrand');
+  if(marque) marque.textContent = LABELS.appTitle;
 }
 applyLabels();
+applyRailPref();
+applyTheme();
 init();

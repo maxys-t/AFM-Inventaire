@@ -187,7 +187,10 @@ dom.window.eval([STUBS, read('js/config.js'), read('js/helpers.js'), read('js/pr
   R.push([/id="i-copies"/.test(h) && /copiesField/.test(h),
           'le champ « exemplaires » n’apparaît qu’en édition']);
   R.push([/serial: ''/.test(inv), 'et un exemplaire ne reprend pas le numéro de série']);
-  R.push([/Packaging: <b>/.test(inv) && /case_note \|\| 'yes, not described'/.test(inv),
+  /* v2.0 : la fiche est passée en cartes thématiques. Le
+     conditionnement a quitté le paragraphe pour la carte Rangement,
+     mais il doit toujours y figurer, et toujours être nommé. */
+  R.push([/kv\('Conditionnement'/.test(inv) && /case_note \|\| 'oui, non précisé'/.test(inv),
           'la fiche d’un item indique son conditionnement, nommé quand il l’est']);
   const vApp=(app.match(/APP_VERSION = '([\d.]+)'/)||[])[1];
   const vUniq=[...new Set((h.match(/\?v=[\d.]+/g)||[]).map(t=>t.slice(3)))];
