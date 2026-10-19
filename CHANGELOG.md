@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.0.3] — 2026-10-19
+
+### Corrigé
+
+- **Du balisage s'affichait tel quel dans la colonne Pack** sur les
+  lignes groupées (« Piano Upright · 2 copies »). La cellule est
+  dessinée par deux fonctions : l'une rend le HTML du tableau, l'autre
+  le texte brut qui sert au tri, aux filtres, aux infobulles et aux
+  séparateurs. La version HTML avait atterri dans les deux, et comme
+  JavaScript ne retient que le **premier** `case` d'un aiguillage, le
+  doublon rendait l'autre invisible sans rien signaler.
+
+  Le harnais `t200` vérifie maintenant que chacun des cinq aiguillages
+  de `views-inventory.js` ne porte qu'un seul `case 'pack'`, et que
+  seul celui de la cellule écrit des balises.
+
+
+- **La correction précédente n'atteignait personne.** Elle a été
+  poussée sous le même numéro que la version déjà en ligne : les
+  `?v=2.0.2` des balises `<script>` étant identiques, les navigateurs
+  ont continué à servir l'ancien fichier depuis leur cache. Le code
+  était juste, le bug restait visible. D'où cette 2.0.3 — c'est la
+  règle que l'étape 4 du processus de mise à jour protège : **tout
+  changement de fichier exige un nouveau numéro.**
+
+
 ## [2.0.2] — 2026-10-19
 
 ### Ajouté
@@ -27,20 +53,6 @@
   jamais touché ses colonnes aurait vu « Pack » apparaître. Elle est
   glissée après le groupe « où est-il », puis laissée à la main de
   chacun — la décocher tient.
-
-### Corrigé
-
-- **Du balisage s'affichait tel quel dans la colonne Pack** sur les
-  lignes groupées (« Piano Upright · 2 copies »). La cellule est
-  dessinée par deux fonctions : l'une rend le HTML du tableau, l'autre
-  le texte brut qui sert au tri, aux filtres, aux infobulles et aux
-  séparateurs. La version HTML avait atterri dans les deux, et comme
-  JavaScript ne retient que le **premier** `case` d'un aiguillage, le
-  doublon rendait l'autre invisible sans rien signaler.
-
-  Le harnais `t200` vérifie maintenant que chacun des cinq aiguillages
-  de `views-inventory.js` ne porte qu'un seul `case 'pack'`, et que
-  seul celui de la cellule écrit des balises.
 
 
 ## [2.0.1] — 2026-10-19
