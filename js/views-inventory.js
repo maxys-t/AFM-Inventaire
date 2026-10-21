@@ -177,15 +177,27 @@ function headerSortClick(k, maj){
   sortBy(k, dir, maj || (!!r && sortLevels.length > 1));
 }
 
+/* ============================================================
+   FILTRER NE RENVOIE PLUS EN HAUT (v2.0.4)
+
+   Un filtre se règle en cochant plusieurs valeurs d'affilée, le menu
+   d'en-tête resté ouvert. Chaque clic rendait la liste à nouveau et
+   la ramenait en haut : on perdait l'endroit qu'on examinait, et avec
+   lui la raison d'avoir ouvert le menu.
+
+   Un tri, lui, réordonne toute la liste — rester à la 300e ligne n'y
+   a plus de sens, et revenir en haut reste le bon geste. Un filtre ne
+   fait que retirer des lignes : celles d'au-dessus ne bougent pas.
+   Si la liste raccourcit sous la position gardée, le navigateur la
+   borne tout seul.
+   ============================================================ */
 function toggleFilterValue(k, v, on){
-  invResetScroll();
   if(!colFilters[k]) colFilters[k] = new Set();
   if(on) colFilters[k].add(v); else colFilters[k].delete(v);
   if(!colFilters[k].size) delete colFilters[k];
   renderHeaderMenu(); renderInv();
 }
 function clearFilter(k){
-  invResetScroll();
   delete colFilters[k];
   closeHeaderMenu(); renderInv();
 }
@@ -273,9 +285,52 @@ function sepFor(i, by){
   }
   return null;
 }
-function mobileSep(label){ return `<div class="msep-head">${esc(label)}</div>`; }
-function sepRow(label, span){
-  return `<tr class="seprow"><td colspan="${span}">${esc(label)}</td></tr>`;
+function mobileSep(label, sous){
+  return `<div class="msep-head${sous?' msub':''}">${esc(label)}</div>`;
+}
+function sepRow(label, span, sous){
+  return `<tr class="seprow${sous?' sub':''}"><td colspan="${span}">${esc(label)}</td></tr>`;
+}
+
+/* ============================================================
+   DEUX NIVEAUX DE REGROUPEMENT, DU PLUS LARGE AU PLUS PRÉCIS (v2.1.0)
+
+   La liste se coupait par famille — « Keyboards », « Microphones » —
+   et s'arrêtait là. Dans une famille de soixante items, retrouver les
+   synthés parmi les claviers de scène demandait de lire chaque ligne.
+
+   On ajoute donc la sous-catégorie sous la famille. Deux niveaux
+   suffisent : un troisième découperait la liste en tranches de deux
+   lignes, ce qui coûte plus en hauteur qu'il ne fait gagner.
+
+   Le second niveau est volontairement discret, et il ne colle pas en
+   haut du cadre : deux bandeaux collants superposés mangent le tiers
+   de l'écran sur un iPad.
+
+   sepChain() renvoie la suite d'intitulés d'un item, du plus large au
+   plus fin. Un seul endroit décide, et le rendu trié comme le rendu
+   par défaut s'en servent tous les deux.
+   ============================================================ */
+function sepChain(i, by){
+  // Trier sur la catégorie, c'est demander les deux niveaux.
+  if(by === 'cat')
+    return [catLabel(i.cat) || '—', subLabel(i.cat, i.subcat) || '—'];
+  const s = sepFor(i, by);
+  return s === null ? [] : [s];
+}
+/* Écrit les séparateurs manquants et retourne la nouvelle chaîne
+   courante. Un niveau qui change invalide tous ceux d'en dessous :
+   sans ça, passer de Keyboards/Synths à Guitars/Synths n'afficherait
+   pas le second « Synths ». */
+function sepsHTML(chaine, prec, span, mob){
+  let out = '';
+  let rompu = false;
+  chaine.forEach((lab, n)=>{
+    if(!rompu && prec[n] === lab) return;
+    rompu = true;
+    out += mob ? mobileSep(lab, n > 0) : sepRow(lab, span, n > 0);
+  });
+  return out;
 }
 
 /* ---- en-tête du tableau, construit à partir des colonnes visibles ---- */
@@ -500,10 +555,10 @@ function renderInv(){
 
   if(by){
     const allSelF = rows.length && rows.every(i=>sel.has(i.id));
-    let body = "", lastSep = null;
+    let body = "", chaine = [];
     rows.forEach(i=>{
-      const s = sepFor(i, by);
-      if(s !== null && s !== lastSep){ lastSep = s; body += mob ? mobileSep(s) : sepRow(s, span); }
+      const c = sepChain(i, by);
+      if(c.length){ body += sepsHTML(c, chaine, span, mob); chaine = c; }
       body += mob ? mobileCard(i, false) : itemRow(i, false);
     });
     wrap.innerHTML = mob
@@ -531,7 +586,7 @@ function renderInv(){
   const ordonnes = [...rows].sort(byCatOrder);
 
   const done = new Set();
-  let body = "", derniereFamille = null;
+  let body = "", chaine = [];
   ordonnes.forEach(i=>{
     // On construit d'abord la ligne : un exemplaire déjà affiché dans
     // son groupe n'en produit aucune, et ne doit donc pas déclencher
@@ -547,8 +602,12 @@ function renderInv(){
     }else{
       ligne = mob ? mobileCard(i, false) : itemRow(i, false);
     }
-    const fam = catLabel(i.cat) || '—';
-    if(fam !== derniereFamille){ derniereFamille = fam; body += mob ? mobileSep(fam) : sepRow(fam, span); }
+    /* La vue par défaut suit le même ordre de grandeur que la vue
+       triée : famille, puis sous-catégorie. byCatOrder() range déjà
+       les lignes dans cet ordre. */
+    const c = [catLabel(i.cat) || '—', subLabel(i.cat, i.subcat) || '—'];
+    body += sepsHTML(c, chaine, span, mob);
+    chaine = c;
     body += ligne;
   });
 

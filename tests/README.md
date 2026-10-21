@@ -59,6 +59,7 @@ continue de servir l'ancien fichier.
 | t127 | La feuille de style : toutes les couleurs dans la palette |
 | t128 | Ranger les items d'un projet dans ses caisses |
 | t200 | Le rail, les thèmes, la fiche en colonnes |
+| t210 | Regroupement à deux niveaux, filtre sans saut, caisses dehors au tableau de bord |
 
 ## En écrire un
 

@@ -177,9 +177,29 @@ function dashPacksHTML(){
     </div>`;
   };
 
+  /* ============================================================
+     DEHORS D'ABORD, ET SÉPARÉMENT (v2.1.0)
+
+     Les caisses arrivaient en une seule liste, celles qui sont sorties
+     à la fin : savoir ce qui est dehors — la question qu'on pose en
+     arrivant le matin — demandait de défiler jusqu'en bas.
+
+     Deux groupes nommés, les sorties en tête. Chacun porte son compte,
+     donc un coup d'œil suffit même replié ; et un groupe vide
+     disparaît au lieu d'occuper la place d'un titre sans contenu.
+     ============================================================ */
+  const groupe = (titre, liste, etiquette) => !liste.length ? '' : `
+    <div class="dpgroup">
+      <div class="dphead">${titre} ${etiquette}</div>
+      <div class="dpacks">${liste.map(ligne).join('')}</div>
+    </div>`;
+
   return `<div class="panel">
     <h2>Packs ${dehors.length?`<span class="tag sorti">${dehors.length} out</span>`:''}</h2>
-    <div class="dpacks">${ici.concat(dehors).map(ligne).join('')}</div>
+    <div class="dpcols">
+      ${groupe('Out', dehors, `<span class="tag sorti">${dehors.length}</span>`)}
+      ${groupe('In place', ici, `<span class="tag dispo">${ici.length}</span>`)}
+    </div>
     <div class="hintline" style="margin-top:8px">Sending a case takes its container,
       its contents and any nested case with it.</div>
   </div>`;

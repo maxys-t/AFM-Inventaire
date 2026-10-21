@@ -114,7 +114,8 @@ const TESTS = `
   S('8. Vue par défaut : regroupée par famille');
   renderInv();
   var h = document.getElementById('invList').innerHTML;
-  var seps = [...document.querySelectorAll('.seprow td')].map(t=>t.textContent.trim());
+  // v2.1.0 : deux niveaux. Ce test porte sur le niveau famille.
+  var seps = [...document.querySelectorAll('.seprow:not(.sub) td')].map(t=>t.textContent.trim());
   T(seps.length > 0, 'des séparateurs de famille apparaissent sans tri actif');
   T(seps[0] === 'Instruments', 'Instruments ouvre la liste (' + seps[0] + ')');
   T(seps.indexOf('Instruments') < seps.indexOf('Cables & connectors'), 'ordre respecté');
@@ -123,14 +124,24 @@ const TESTS = `
 
   S('9. Les items suivent leur séparateur');
   var lignes = [...document.querySelectorAll('#invList tbody tr')];
-  var famCourante = null, fautes = 0;
+  var famCourante = null, sousCourante = null, fautes = 0, fautesSous = 0;
   lignes.forEach(tr=>{
-    if(tr.classList.contains('seprow')){ famCourante = tr.textContent.trim(); return; }
+    if(tr.classList.contains('seprow')){
+      if(tr.classList.contains('sub')) sousCourante = tr.textContent.trim();
+      else { famCourante = tr.textContent.trim(); sousCourante = null; }
+      return;
+    }
     var id = (tr.querySelector('.mono')||{}).textContent;
     var it = id && item(id.trim());
-    if(it && catLabel(it.cat) !== famCourante) fautes++;
+    if(!it) return;
+    if(catLabel(it.cat) !== famCourante) fautes++;
+    if(subLabel(it.cat, it.subcat) !== sousCourante) fautesSous++;
   });
   T(fautes === 0, 'chaque item est sous la bonne famille (' + fautes + ' écart)');
+  /* Le second niveau se vérifie de la même façon : un item mal placé
+     sous une sous-catégorie est aussi trompeur qu'un item mal placé
+     sous une famille. */
+  T(fautesSous === 0, 'et sous la bonne sous-catégorie (' + fautesSous + ' écart)');
 
   S('10. Le tri explicite reprend la main');
   sortBy('item', 1, false);

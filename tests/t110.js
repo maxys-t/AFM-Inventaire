@@ -105,10 +105,19 @@ const TESTS = `
      famille, dans l'ordre de config.js. Auparavant elle n'avait aucun
      séparateur. */
   sortLevels = []; renderInv();
-  var sd = [...document.querySelectorAll('.seprow td')].map(t=>t.textContent.trim());
-  T(sd.length > 0, 'des séparateurs sont présents');
+  /* Depuis la v2.1.0 la liste se coupe à deux niveaux : la famille,
+     puis la sous-catégorie à l'intérieur. Les deux portent des classes
+     distinctes, et c'est ce qui permet de les distinguer ici. */
+  var sd = [...document.querySelectorAll('.seprow:not(.sub) td')].map(t=>t.textContent.trim());
+  var ss = [...document.querySelectorAll('.seprow.sub td')].map(t=>t.textContent.trim());
+  T(sd.length > 0, 'des séparateurs de famille sont présents');
   T(sd.every(x=>Object.values(CATS).some(c=>c.label === x)),
     'ce sont bien des noms de familles : ' + sd.join(' / '));
+  T(ss.length > 0, 'et des séparateurs de sous-catégorie sous eux');
+  var ssOK = ss.every(x=>Object.values(CATS)
+    .some(c=>Object.values(c.subs||{}).some(v=>v.label === x)));
+  T(ssOK, 'ce sont bien des sous-catégories : ' + ss.join(' / '));
+  T(!ss.some(x=>sd.includes(x)), 'et aucun des deux niveaux ne porte le nom de l’autre');
 
   S('6. Reset filters');
   document.getElementById('q').value = 'juno';

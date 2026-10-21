@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.1.0] — 2026-10-21
+
+Trois frictions du travail quotidien. Aucune migration SQL.
+
+### Modifié
+
+- **L'inventaire se coupe maintenant à deux niveaux : la famille, puis
+  la sous-catégorie.** La liste s'arrêtait à la famille. Dans
+  « Instruments », soixante lignes se suivaient sans que rien ne
+  sépare les synthés des percussions — il fallait lire chaque nom.
+
+  Les deux niveaux apparaissent dans la vue par défaut comme dans un
+  tri sur la colonne Category. Le second est volontairement discret —
+  il subdivise la famille au-dessus, il ne la concurrence pas — et il
+  ne colle pas en haut du cadre : deux bandeaux collants superposés
+  mangeraient le tiers de l'écran sur un iPad.
+
+  On s'arrête à deux. Un troisième niveau découperait la liste en
+  tranches de deux lignes, ce qui coûte plus de hauteur qu'il ne fait
+  gagner de temps.
+
+- **Le tableau de bord sépare les caisses sorties de celles en place**,
+  les sorties en tête. Elles étaient en fin de liste unique : savoir
+  ce qui est dehors — la première question du matin — demandait de
+  défiler jusqu'en bas. Chaque groupe porte son compte, et un groupe
+  vide disparaît plutôt que de laisser un titre sans contenu. Au-delà
+  de 1 500 px de large, les deux groupes se placent côte à côte.
+
+### Corrigé
+
+- **Cocher un filtre ne renvoie plus en haut de la liste.** Un filtre
+  se règle en cochant plusieurs valeurs d'affilée, le menu d'en-tête
+  resté ouvert : chaque clic ramenait au début, et on perdait
+  l'endroit qu'on examinait — avec lui la raison d'avoir ouvert le
+  menu. Un filtre ne fait que retirer des lignes, celles d'au-dessus
+  ne bougent pas.
+
+  Un **tri**, lui, réordonne tout : revenir en haut y reste le bon
+  geste, et c'est resté le cas.
+
+
 ## [2.0.3] — 2026-10-19
 
 ### Corrigé

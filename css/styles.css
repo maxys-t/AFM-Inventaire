@@ -853,6 +853,20 @@ td,input,textarea,select,.addr,.mono{-webkit-user-select:text;user-select:text}
 }
 .invtable tbody tr.seprow:first-child td{border-top:none;padding-top:10px}
 
+/* --- Second niveau : la sous-catégorie (v2.1.0) ---
+   Discret par construction : il doit se lire comme une subdivision de
+   la famille au-dessus, pas la concurrencer. Et il ne colle pas en
+   haut du cadre — deux bandeaux collants superposés mangeraient le
+   tiers de l'écran sur un iPad. */
+.invtable .seprow.sub td{
+  position:static;
+  font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);background:var(--panel);
+  padding:7px 12px 4px;
+  border-top:none;border-bottom:1px solid var(--border)
+}
+.invtable tbody tr.seprow.sub:first-child td{padding-top:7px}
+
 /* --- Modèle ou exemplaire : la nuance se voit --- */
 .invtable tr.grouprow td{background:var(--t-accent-faint)}
 .invtable tr.grouprow:hover td{background:var(--t-accent-soft)}
@@ -929,6 +943,9 @@ button[data-tip],label[data-tip]{cursor:pointer}
 .msep-head{font-size:13px;font-weight:700;color:var(--txt);
   padding:12px 4px 3px;letter-spacing:-.01em}
 .mlist > .msep-head:first-child{padding-top:2px}
+/* Second niveau : la sous-catégorie, sous la famille (v2.1.0) */
+.msep-head.msub{font-size:11px;font-weight:650;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;padding:8px 4px 2px}
 
 /* --- Téléphone --- */
 @media(max-width:700px){
@@ -1322,6 +1339,17 @@ nav button.navmain:not(.active){box-shadow:inset 0 0 0 1px var(--border2)}
 .dpack .repbody{flex:1;min-width:0}
 .dpack .reptitle{font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dpack .repmeta{font-size:12px;color:var(--muted)}
+
+/* --- Caisses dehors / en place, côte à côte quand il y a la place (v2.1.0) ---
+   Le panneau vit dans la colonne étroite du tableau de bord : à deux
+   colonnes il y serait illisible. Elles ne s'ouvrent donc qu'au-delà
+   de 1500 px, où la colonne de droite est assez large ; en dessous les
+   deux groupes s'empilent, ce qui suffit déjà puisque « Out » est en
+   tête. */
+.dpcols{display:grid;gap:12px}
+@media(min-width:1500px){.dpcols:has(.dpgroup + .dpgroup){grid-template-columns:1fr 1fr}}
+.dphead{font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:6px}
 
 /* L'arborescence des sorties : un décalage, pas un cadre — le tableau
    doit rester lisible en une colonne sur téléphone. */
