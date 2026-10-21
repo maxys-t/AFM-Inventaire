@@ -1636,6 +1636,20 @@ body.railshut .railtop{justify-content:center;padding-bottom:10px}
 .ndcopy{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .ndcopy .btn{font-size:12px}
 
+/* --- Items attitrés (v2.4.0) ---
+   Un lien mène à une fiche : il doit se voir comme un lien. */
+.ndlink{color:var(--accent);cursor:pointer}
+.ndlink:hover{text-decoration:underline}
+/* Sur la fiche du PSU : qui le réclame. C'est l'information qui
+   empêche de le prêter la veille d'une tournée, donc elle est en
+   tête de carte et elle se voit. */
+.ndparent{background:var(--panel);border:1px solid var(--border2);border-radius:10px;
+  padding:8px 10px;font-size:13px;margin-bottom:10px}
+.ndlinkform{margin-top:12px;display:grid;gap:6px}
+.ndlinkform input{min-width:0;font-size:13px}
+.ndlinkform .ndsub{margin:0}
+.ndlinkform .hintline{margin:0}
+
 /* ============================================================
    UNE SEULE LARGEUR (v2.0.1)
 

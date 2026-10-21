@@ -62,6 +62,7 @@ continue de servir l'ancien fichier.
 | t210 | Regroupement à deux niveaux, filtre sans saut, caisses dehors au tableau de bord |
 | t220 | Les besoins d'un item : alimentations et cordons dérivés |
 | t221 | L'application parle anglais — aucun libellé français à l'écran |
+| t230 | Les items attitrés : un PSU qui suit son appareil partout |
 
 ## En écrire un
 

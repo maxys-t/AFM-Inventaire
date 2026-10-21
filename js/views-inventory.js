@@ -1275,18 +1275,49 @@ async function doCheckout(){
   const userId = await borrowerId(who);
   // Dernier filet : l'état a pu changer entre l'ouverture de la fenêtre
   // et la validation, par exemple depuis un autre poste.
-  const targets = (bulkMode ? selItems().filter(i=>i.status==='dispo') : [item(actionId)])
+  const choisis = (bulkMode ? selItems().filter(i=>i.status==='dispo') : [item(actionId)])
                     .filter(i=>i && (allowDamaged || canCheckout(i)));
-  if(!targets.length){ toast("Nothing left to check out — those items are flagged for repair.", 'error'); return; }
+  if(!choisis.length){ toast("Nothing left to check out — those items are flagged for repair.", 'error'); return; }
+
+  /* ============================================================
+     L'ALIMENTATION ATTITRÉE PART AVEC (v2.4.0)
+
+     Sortir le Germanium Preamp en laissant son PSU « disponible au
+     studio » rend la fiche du PSU fausse, et c'est la cohérence de
+     tout l'inventaire qui s'effrite — on finit par ne plus croire ce
+     que l'application dit d'un emplacement.
+
+     Un lié déjà sorti ailleurs n'est pas repris : son emplacement
+     actuel est plus récent que cette intention-ci. On le dit, et on
+     laisse partir le reste plutôt que de bloquer une sortie pour un
+     cordon.
+     ============================================================ */
+  const liés = withLinked(choisis).filter(i=>!choisis.includes(i));
+  const emportés = liés.filter(i=>i.status === 'dispo');
+  const bloqués  = liés.filter(i=>i.status !== 'dispo');
+  const targets  = choisis.concat(emportés);
   const nAbimes = targets.filter(i=>!canCheckout(i)).length;
   if(!targets.length) return;
 
   const out = {userId, date:now(), reason, due, alertOn};
   targets.forEach(i=>{ i.status='sorti'; i.out={...out}; i.loc=reason; });
   await apiUpdateItemsIn(targets.map(i=>i.id), {status:'sorti', out, loc:reason});
-  await histMany(targets.map(i=>({itemId:i.id, type:'out',
-    detail: reason + (due?` — due back ${fdateD(due)}`:''), userId})));
+  /* L'historique dit POURQUOI un item est parti sans qu'on l'ait
+     désigné : six mois plus tard, « sorti avec le Germanium Preamp »
+     est la seule chose qui rende la ligne compréhensible. */
+  await histMany(targets.map(i=>{
+    const parent = emportés.includes(i) ? requiredBy(i.id) : null;
+    return {itemId:i.id, type:'out', userId,
+            detail: reason + (due?` — due back ${fdateD(due)}`:'')
+                  + (parent ? ` — went out with ${itemTitleText(parent)}` : '')};
+  }));
   close_('ovOut');
+  if(emportés.length)
+    toast(`${emportés.length} linked item(s) went out too: ${
+      emportés.map(i=>itemTitleText(i)).join(', ')}.`, 'info', null, null, 7000);
+  if(bloqués.length)
+    toast(`${bloqués.map(i=>itemTitleText(i)).join(', ')} — needed, but already out. Check it separately.`,
+          'warn', null, null, 9000);
   if(bulkMode){ clearSel(); toast(`${targets.length} item(s) checked out to ${esc(who)}.`, 'ok'); }
   // Une trace explicite : on saura plus tard que c'était un choix.
   if(nAbimes) toast(`${nAbimes} item(s) went out flagged for repair.`, 'info', null, null, 7000);
@@ -1354,17 +1385,37 @@ function checkInAllFor(userId){
 
 async function doCheckin(){
   const cond = document.getElementById('in-cond').value, note = document.getElementById('in-note').value.trim();
-  const targets = checkinTargets
+  const choisis = checkinTargets
     ? checkinTargets.map(id=>item(id)).filter(i=>i && i.status==='sorti')
     : bulkMode ? selItems().filter(i=>i.status==='sorti') : [item(actionId)];
-  if(!targets.length){ checkinTargets = null; return; }
+  if(!choisis.length){ checkinTargets = null; return; }
+
+  /* ============================================================
+     ET IL REVIENT AVEC (v2.4.0)
+
+     Symétrique de la sortie, à une nuance près qui compte : l'état
+     saisi dans la fenêtre décrit l'objet qu'on a DANS LES MAINS.
+     L'appliquer au PSU qui revient dans le même carton marquerait
+     une alimentation en panne parce que le préampli grésille — une
+     fausse réparation à ouvrir, et une vraie à chercher ailleurs.
+     Les liés rentrent donc avec leur état inchangé.
+     ============================================================ */
+  const liés = withLinked(choisis).filter(i=>!choisis.includes(i) && i.status === 'sorti');
+  const targets = choisis.concat(liés);
+
   const rows = [];
   for(const i of targets){
     const userId = i.out?i.out.userId:null;
-    i.status='dispo'; i.cond=cond; i.loc=i.home; i.out=null;
-    await apiUpdateItem(i.id, {status:'dispo', cond, loc:i.home, out:null});
-    rows.push({itemId:i.id, type:'in', detail:note, userId, cond});
+    const e = choisis.includes(i) ? cond : i.cond;
+    i.status='dispo'; i.cond=e; i.loc=i.home; i.out=null;
+    await apiUpdateItem(i.id, {status:'dispo', cond:e, loc:i.home, out:null});
+    rows.push({itemId:i.id, type:'in', userId, cond:e,
+               detail: choisis.includes(i) ? note
+                     : ((note ? note + ' — ' : '') + 'came back with '
+                        + itemTitleText(requiredBy(i.id) || i))});
   }
+  if(liés.length)
+    toast(`${liés.length} linked item(s) came back too.`, 'info');
   await histMany(rows);
   close_('ovIn');
   if(bulkMode){ clearSel(); toast(`${targets.length} item(s) checked in.`, 'ok'); }
@@ -1505,25 +1556,50 @@ function needsBlock(i){
   const éditable = can('edit');
   if(!liste.length && !éditable) return '';
 
+  /* Un besoin suivi comme un item mène à sa fiche : c'est un objet,
+     il a une valeur et une histoire, on doit pouvoir y aller. */
   const ligne = n => `<div class="ndline">
-    <span class="ndkind ${n.kind}">${n.kind === 'power' ? '⚡' : '〰'}</span>
-    <span class="ndlbl">${esc(needText(n))}${
-      (n.qty||1) > 1 ? ` <span class="muted">× ${n.qty}</span>` : ''}${
-      n.needs_item_id ? ' <span class="tag conf">tracked</span>' : ''}</span>
-    <span class="muted ndw">${n.weight_g ? esc(fweight(n.weight_g)) : ''}</span>
+    <span class="ndkind ${n.kind}">${n.needs_item_id ? '🔗' : (n.kind === 'power' ? '⚡' : '〰')}</span>
+    <span class="ndlbl">${n.needs_item_id
+      ? `<a class="ndlink" onclick="openDetail('${n.needs_item_id}')">${esc(needText(n))}</a>
+         <span class="mono muted" style="font-size:12px">${esc(n.needs_item_id)}</span>`
+      : esc(needText(n))}${
+      (n.qty||1) > 1 ? ` <span class="muted">× ${n.qty}</span>` : ''}</span>
+    <span class="muted ndw">${n.needs_item_id
+      ? esc(fweight((item(n.needs_item_id)||{}).weight_g) || '')
+      : (n.weight_g ? esc(fweight(n.weight_g)) : '')}</span>
     ${éditable ? `<button class="btn small sec" onclick="needDelete('${n.id}')">✕</button>` : ''}
   </div>`;
 
-  const parFamille = Object.keys(NEED_KINDS).map(k=>{
-    const l = liste.filter(n=>(n.kind||'power') === k);
+  /* Les items suivis d'abord, et dans leur propre section. Un objet
+     qui a une fiche, une valeur et une histoire ne se lit pas dans la
+     même colonne qu'un cordon anonyme — les mélanger ferait oublier
+     qu'il faut penser à le rentrer. */
+  const suivis = liste.filter(n=>n.needs_item_id);
+  const parFamille = (suivis.length
+      ? `<div class="ndsub">Linked gear <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">— travels and returns with it</span></div>${suivis.map(ligne).join('')}`
+      : '')
+    + Object.keys(NEED_KINDS).map(k=>{
+    const l = liste.filter(n=>!n.needs_item_id && (n.kind||'power') === k);
     return l.length ? `<div class="ndsub">${NEED_KINDS[k]}</div>${l.map(ligne).join('')}` : '';
   }).join('');
 
   const jumeaux = copiesDe(i).length;
   const mêmeSub = db.items.filter(x=>x.cat === i.cat && x.subcat === i.subcat && x.id !== i.id).length;
 
+  /* Le sens inverse. Sur la fiche du PSU, savoir QUI le réclame est
+     plus important que tout le reste : c'est ce qui empêche de le
+     prêter à quelqu'un la veille d'une tournée. */
+  const parent = requiredBy(i.id);
+  const bandeauParent = parent
+    ? `<div class="ndparent">🔗 Required by
+         <a class="ndlink" onclick="openDetail('${parent.id}')">${esc(itemTitleText(parent))}</a>
+         — it travels and returns with it.</div>`
+    : '';
+
   return `<div class="fcard">
     <h4>Needs <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">— travels with this item</span></h4>
+    ${bandeauParent}
     ${parFamille || '<div class="muted" style="font-size:13.5px">Nothing declared.</div>'}
     ${éditable ? `
       <div class="ndform">
@@ -1543,6 +1619,16 @@ function needsBlock(i){
         <input id="nd-weight" placeholder="weight, optional" title="Leave empty if too light to matter">
         <button class="btn small" onclick="needAdd('${i.id}')">Add</button>
       </div>
+      <div class="ndlinkform">
+        <div class="ndsub">Or link a tracked item</div>
+        <input id="nd-item" list="ndItems" placeholder="search the inventory…"
+               onkeydown="if(event.key==='Enter')needLink('${i.id}')">
+        <datalist id="ndItems">${liablesPour(i).map(x=>
+          `<option value="${esc(itemTitleText(x))} [${x.id}]"></option>`).join('')}</datalist>
+        <button class="btn sec small" onclick="needLink('${i.id}')">Link</button>
+        <div class="hintline">Use this for a real object with its own record — a dedicated
+          PSU, a matching remote. It goes out and comes back with this item, and only this one.</div>
+      </div>
       ${liste.length ? `<div class="ndcopy">
         ${jumeaux ? `<button class="btn sec small" onclick="needCopyTo('${i.id}','copies')">
           Copy to the ${jumeaux} other cop${jumeaux>1?'ies':'y'}</button>` : ''}
@@ -1550,6 +1636,59 @@ function needsBlock(i){
           Copy to all ${mêmeSub} in ${esc(subLabel(i.cat, i.subcat))}</button>` : ''}
       </div>` : ''}` : ''}
   </div>`;
+}
+
+/* ---- Qui peut être lié à cet item ----
+   On ne propose que ce qui sera accepté : la base refuserait le
+   reste, mais un message d'erreur après coup se lit comme une panne
+   de l'application. Trois exclusions :
+     — lui-même (030) ;
+     — ce qui est déjà attitré ailleurs : un item lié n'a qu'un
+       parent, et le proposer quand même promettrait un lien qu'on
+       devrait reprendre à quelqu'un ;
+     — ce qui le réclame déjà, directement ou par une chaîne : la
+       boucle fige n'importe quel calcul de contenu. */
+function liablesPour(i){
+  const pris = new Set((db.needs||[]).filter(n=>n.needs_item_id)
+                                     .map(n=>n.needs_item_id));
+  const déjà = new Set(linkedOf(i.id).map(x=>x.id));
+  /* Tout ce qui dépend de i, à n'importe quelle profondeur. */
+  const amont = new Set();
+  (function remonter(id){
+    (db.needs||[]).filter(n=>n.needs_item_id === id).forEach(n=>{
+      if(amont.has(n.item_id)) return;
+      amont.add(n.item_id);
+      remonter(n.item_id);
+    });
+  })(i.id);
+
+  return db.items.filter(x=>x.id !== i.id && !pris.has(x.id)
+                         && !déjà.has(x.id) && !amont.has(x.id))
+    .sort((a,b)=>itemTitleText(a).localeCompare(itemTitleText(b),'fr'));
+}
+
+async function needLink(itemId){
+  const champ = document.getElementById('nd-item');
+  const saisie = (champ.value || '').trim();
+  /* Le champ affiche « Nom [ID] » : c'est l'identifiant qui fait foi,
+     deux items pouvant porter le même nom. */
+  const m = saisie.match(/\[([^\]]+)\]\s*$/);
+  const cible = m ? item(m[1].trim()) : null;
+  if(!cible){ toast('Pick an item from the list.', 'warn'); return; }
+  if(!liablesPour(item(itemId)).some(x=>x.id === cible.id)){
+    const p = requiredBy(cible.id);
+    toast(p ? `${itemTitleText(cible)} is already linked to ${itemTitleText(p)}.`
+            : 'That link would loop back on itself.', 'warn', null, null, 7000);
+    return;
+  }
+  try{
+    const rows = await apiInsertNeeds([{item_id:itemId, kind:'power', label:null,
+                                        needs_item_id:cible.id, qty:1, weight_g:null,
+                                        pos: needsOf(itemId).length}]);
+    db.needs.push(...rows);
+    openDetail(itemId);
+    toast(`${itemTitleText(cible)} now travels with this item.`, 'ok');
+  }catch(err){ toast(String(err.message||err), 'error'); }
 }
 
 /* Les autres exemplaires du même modèle : « SM57 #2 » quand on est

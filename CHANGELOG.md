@@ -1,5 +1,83 @@
 # Changelog
 
+## [2.4.0] — 2026-10-21
+
+⚠️ **Migration SQL : `sql/030-items-lies.sql`.** À lancer dans
+Supabase avant de déployer. Elle n'ajoute qu'un index et un
+déclencheur. Si des liens existants violaient l'unicité, la création
+échouerait en le disant — la requête de diagnostic en bas du fichier
+les liste.
+
+### Ajouté
+
+- **Un item peut être attitré à un autre.** Le Germanium Preamp/DI ne
+  fonctionne pas sans le Germanium PSU, et ce PSU est un **vrai
+  objet** : une valeur, un numéro de série, des pannes possibles, une
+  histoire. Le réduire à une ligne de checklist comme une Schuko
+  anonyme perdrait tout ça.
+
+  Le modèle le prévoyait déjà : la colonne `needs_item_id` de la
+  migration 029 désignait un item suivi, sans être exposée. Cette
+  version lui donne son interface et son comportement.
+
+- **Il voyage et revient avec son appareil.** Mettre le preamp dans
+  une caisse y fait entrer le PSU ; sortir le preamp sort le PSU, et
+  le rentrer le rentre. Il n'est **inscrit nulle part** — ni dans
+  `pack_items`, ni dans le contenu d'un projet : il en est déduit,
+  comme les besoins de la v2.2. Rien à synchroniser, donc rien à
+  désynchroniser.
+
+  Ce qui est en jeu n'est pas le confort mais la **cohérence de
+  l'inventaire** : lire « disponible au studio » sur un PSU qui est
+  au Trianon, c'est commencer à ne plus croire ce que l'application
+  dit d'un emplacement.
+
+- **La chaîne suit jusqu'au bout.** Le U47 réclame son PSU, qui
+  réclame son câble sept broches : les trois partent ensemble.
+  S'arrêter au premier niveau laisserait le câble au studio.
+
+- **Sur la fiche du PSU, un bandeau dit qui le réclame.** C'est
+  l'information qui empêche de le prêter la veille d'une tournée.
+
+- **Un item lié n'a qu'un seul parent** (index unique). C'est une
+  décision d'usage avec une conséquence heureuse : il ne peut pas
+  être réclamé par deux projets à la fois, donc le conflit entre
+  parents **n'existe pas**, au lieu d'être détecté après coup. Le
+  jour où un boîtier en alimentera réellement deux, il faudra lever
+  l'index et rouvrir la question du conflit — les deux vont ensemble.
+
+- **Le champ de liaison ne propose que ce qui sera accepté** : ni
+  l'item lui-même, ni un item déjà attitré ailleurs, ni quoi que ce
+  soit qui le réclame déjà à quelque profondeur que ce soit. Un
+  message d'erreur après coup se lit comme une panne de
+  l'application.
+
+### Détails qui comptent
+
+- **Un lié déjà sorti ailleurs n'est pas repris.** Son emplacement
+  actuel est plus récent que l'intention présente. L'application le
+  signale et laisse partir le reste, plutôt que de bloquer une sortie
+  entière pour un cordon.
+
+- **Au retour, l'état saisi ne s'applique qu'à ce qu'on a dans les
+  mains.** Sans cette nuance, déclarer le préampli grésillant
+  marquerait aussi son alimentation en panne : une fausse réparation
+  à ouvrir, et une vraie à chercher ailleurs.
+
+- **L'historique dit pourquoi.** « Sorti — Trianon — went out with
+  Germanium Preamp/DI » : six mois plus tard, c'est la seule chose
+  qui rende la ligne compréhensible.
+
+- **Le poids du lié entre dans le total** de la caisse et du projet.
+  Il est dans le carton, il pèse.
+
+- **Une boucle ne fige plus rien.** La base les refuse désormais, par
+  une CTE récursive qui remonte *toutes* les branches — pas une seule
+  avec `limit 1`, l'erreur que la 024 avait dû corriger sur les
+  packs. Le calcul côté application s'arrête de lui-même, pour les
+  bases antérieures à la migration.
+
+
 ## [2.3.0] — 2026-10-21
 
 ### Modifié

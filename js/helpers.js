@@ -556,6 +556,65 @@ function projNeedKeys(c){
   return out;
 }
 
+/* ============================================================
+   UN ITEM ATTITRÉ À UN AUTRE (v2.4)
+
+   Le Germanium Preamp ne fonctionne pas sans le Germanium PSU, et ce
+   PSU est un VRAI objet : une valeur, un numéro de série, une
+   histoire, des pannes. Le réduire à une ligne de checklist perdrait
+   tout ça — c'est la différence avec une Schuko anonyme.
+
+   Un item lié SUIT son parent : partout où le parent va, il va. Il
+   n'est donc jamais inscrit dans une caisse ni dans un projet, il en
+   est déduit — exactement comme un besoin ordinaire, et pour la même
+   raison : il n'y a rien à synchroniser, donc rien à désynchroniser.
+
+   La 030 garantit qu'un item lié n'a QU'UN parent. C'est ce qui rend
+   tout le reste simple : il ne peut pas être réclamé par deux
+   projets à la fois, et la question du conflit ne se pose pas.
+   ============================================================ */
+
+/* Les items suivis que celui-ci réclame, au premier niveau. */
+function linkedOf(itemId){
+  return needsOf(itemId)
+    .filter(n=>n.needs_item_id)
+    .map(n=>item(n.needs_item_id))
+    .filter(Boolean);
+}
+/* Et toute la chaîne : un préampli peut réclamer un PSU qui réclame
+   lui-même son cordon suivi. `vus` coupe les boucles — la base les
+   refuse depuis la 030, mais un calcul sans fin fige l'écran sans
+   rien dire, et une base d'avant la migration peut en contenir. */
+function linkedDeep(i, vus){
+  vus = vus || new Set();
+  if(!i || vus.has(i.id)) return [];
+  vus.add(i.id);
+  const out = [];
+  linkedOf(i.id).forEach(l=>{
+    if(vus.has(l.id)) return;
+    out.push(l);
+    out.push(...linkedDeep(l, vus));
+  });
+  return out;
+}
+/* Le sens inverse : quel appareil réclame CET item ? Un seul, depuis
+   la 030. C'est ce qui permet de prévenir avant de le sortir seul. */
+function requiredBy(itemId){
+  const n = (db.needs||[]).find(x=>x.needs_item_id === itemId);
+  return n ? item(n.item_id) : null;
+}
+/* Une liste d'items, augmentée de tout ce qu'ils entraînent. Les
+   doublons sautent : un PSU n'est emporté qu'une fois, même si son
+   parent figure deux fois dans le lot. */
+function withLinked(items){
+  const vus = new Set((items||[]).map(i=>i.id));
+  const out = [...(items||[])];
+  (items||[]).forEach(i=>linkedDeep(i).forEach(l=>{
+    if(!vus.has(l.id)){ vus.add(l.id); out.push(l); }
+  }));
+  return out;
+}
+
 /* Le poids de familles DÉJÀ agrégées — celles d'un groupe de projet
    ou d'une photographie figée, où les items ne sont plus à portée. */
 function besoinsPoids(familles){
@@ -575,6 +634,10 @@ function itemWeightDeep(i, vus){
      poids réel dans la caisse. Ceux qui n'en ont pas n'ajoutent
      rien — mieux vaut un total incomplet qu'un total inventé. */
   let g = (i.weight_g || 0) + needsWeight([i]);
+  /* Son alimentation attitrée voyage avec lui : son poids est dans
+     la caisse, qu'on l'y ait mise ou non. `vus` évite de la compter
+     deux fois si elle y figure aussi par elle-même. */
+  linkedOf(i.id).forEach(l=>{ g += itemWeightDeep(l, vus); });
   const p = packOfContainer(i.id);
   if(p) packItemsOf(p.id).forEach(m=>{ g += itemWeightDeep(m, vus); });
   return g;
@@ -624,6 +687,11 @@ function packAllItems(p, vus){
   if(c && !vus.has(c.id)){ vus.add(c.id); out.push(c); }
   packItemsOf(p.id).forEach(i=>{
     if(!vus.has(i.id)){ vus.add(i.id); out.push(i); }
+    /* Son alimentation attitrée vient avec lui, sans avoir été
+       ajoutée à la caisse : elle suit l'appareil, pas la caisse. */
+    linkedDeep(i).forEach(l=>{
+      if(!vus.has(l.id)){ vus.add(l.id); out.push(l); }
+    });
     const sous = packOfContainer(i.id);
     if(sous) out.push(...packAllItems(sous, vus));
   });
@@ -813,8 +881,12 @@ function projContent(p){
     });
   });
 
-  const loose = (p.item_ids||[])
-    .filter(id=>!vus.has(id)).map(id=>item(id)).filter(Boolean);
+  /* Un item isolé entraîne lui aussi son alimentation attitrée : on
+     n'ajoute pas le Germanium Preamp à un projet en laissant son PSU
+     au studio. `withLinked` saute ce qu'une caisse a déjà pris. */
+  const loose = withLinked((p.item_ids||[])
+    .filter(id=>!vus.has(id)).map(id=>item(id)).filter(Boolean))
+    .filter(i=>!vus.has(i.id));
   loose.forEach(i=>vus.add(i.id));
 
   const items  = groups.reduce((a,g)=>a.concat(g.items), []).concat(loose);

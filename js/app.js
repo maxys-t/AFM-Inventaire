@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.4.0';
 
 /* ---- le thème ----
 
