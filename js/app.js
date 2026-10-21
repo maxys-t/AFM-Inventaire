@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.5.0';
 
 /* ---- le thème ----
 
@@ -243,6 +243,7 @@ async function exportJSON(){
   delete out.repairsSupported; delete out.packsSupported;
   delete out.packExtrasSupported;
   delete out.needsSupported;
+  delete out.linksSupported;
   try{
     toast('Reading the full history…', 'info');
     const [hist, items] = await Promise.all([
@@ -354,12 +355,47 @@ function normalizeImport(d){
      exactement pourquoi le protocole de restauration se rejoue. */
   const needs = (d.needs || d.item_needs || [])
     .map(n=>({id:n.id, item_id:n.item_id, kind:n.kind || 'power',
-              label:n.label || null, needs_item_id:n.needs_item_id || null,
+              label:n.label || null,
               qty:n.qty || 1, weight_g:n.weight_g ?? null, pos:n.pos || 0}))
-    .filter(n=>n.id && n.item_id && (n.label || n.needs_item_id));
+    .filter(n=>n.id && n.item_id && n.label);
+  /* Les lots indissociables (v2.5). Une sauvegarde antérieure peut
+     encore porter l'ancien lien dirigé : on le convertit en lot à la
+     lecture, exactement comme la migration 031 le fait en base.
+     Sans ça, restaurer une sauvegarde de la v2.4 rendrait un parc
+     dont tous les liens auraient disparu — en silence. */
+  const linkGroups  = (d.linkGroups || d.item_link_groups || [])
+    .map(g=>({id:g.id, name:g.name || null})).filter(g=>g.id);
+  const linkMembers = (d.linkMembers || d.item_link_members || [])
+    .map(m=>({group_id:m.group_id, item_id:m.item_id}))
+    .filter(m=>m.group_id && m.item_id);
+
+  const anciens = (d.needs || d.item_needs || [])
+    .filter(n=>n.needs_item_id && n.item_id);
+  if(anciens.length && !linkMembers.length){
+    const lotDe = new Map();
+    anciens.forEach(n=>{
+      const g1 = lotDe.get(n.item_id), g2 = lotDe.get(n.needs_item_id);
+      if(!g1 && !g2){
+        /* La base attend un uuid : on en fabrique un vrai plutôt
+           qu'un identifiant lisible qui serait refusé à l'import. */
+        const id = (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : n.id;
+        linkGroups.push({id, name:null});
+        lotDe.set(n.item_id, id); lotDe.set(n.needs_item_id, id);
+      }else if(!g1){ lotDe.set(n.item_id, g2);
+      }else if(!g2){ lotDe.set(n.needs_item_id, g1);
+      }else if(g1 !== g2){
+        // Deux lots que cette paire relie : ils n'en font qu'un.
+        lotDe.forEach((v,k)=>{ if(v === g2) lotDe.set(k, g1); });
+        const i = linkGroups.findIndex(g=>g.id === g2);
+        if(i >= 0) linkGroups.splice(i, 1);
+      }
+    });
+    lotDe.forEach((group_id, item_id)=>linkMembers.push({group_id, item_id}));
+  }
 
   return {items:d.items||[], users, locations, history, projects:d.projects||[],
-          repairs, providers, packs, packItems, packExtras, needs};
+          repairs, providers, packs, packItems, packExtras, needs,
+          linkGroups, linkMembers};
 }
 function importJSON(inp){
   const f = inp.files[0]; if(!f) return;
@@ -387,6 +423,8 @@ function importJSON(inp){
       if(d.packItems.length) await apiUpsertPackItems(d.packItems);
       if(d.packExtras.length) await apiUpsertPackExtras(d.packExtras);
       if(d.needs.length) await apiUpsertNeeds(d.needs);
+      if(d.linkGroups.length)  await apiUpsertLinkGroups(d.linkGroups);
+      if(d.linkMembers.length) await apiUpsertLinkMembers(d.linkMembers);
       if(d.providers.length) await apiUpsertProviders(d.providers);
       if(d.repairs.length)   await apiUpsertRepairs(d.repairs);
       if(d.projects.length) await apiUpsertProjects(d.projects.map(p=>({

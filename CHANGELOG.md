@@ -1,6 +1,89 @@
 # Changelog
 
+## [2.5.0] — 2026-10-21
+
+⚠️ **Migration SQL : `sql/031-lots-indissociables.sql`.** Elle
+**convertit** les liens de la v2.4 en lots, puis supprime la colonne
+qui les portait. Rien n'est perdu, mais le retour en arrière passe
+par la sauvegarde — fais-la avant.
+
+### Changé — la relation devient symétrique
+
+- **« A a besoin de B » devient « A, B et C ne se séparent jamais ».**
+  Les deux enceintes Amphion et leur Amp 700 ne sont pas trois objets
+  dont l'un sert les autres : c'est **un lot**. On ne sort jamais une
+  enceinte seule. Le Germanium Preamp et son alimentation non plus.
+
+  Il n'y a donc **ni parent ni enfant** : on bouge l'un, tout suit.
+  La fiche de l'Amp 700 dit exactement la même chose que celle de
+  l'enceinte — si les deux écrans divergeaient, l'un des deux
+  mentirait sur la nature du lien.
+
+- **Deux règles de rattrapage disparaissent**, et c'est le meilleur
+  argument en faveur du changement. La v2.4 interdisait le partage ;
+  il a fallu lever l'interdiction pour les Amphion, puis retenir un
+  item tant qu'un autre de ses « parents » était dehors. Chacune se
+  défendait ; ensemble elles signalaient que le modèle tirait dans le
+  mauvais sens. **Un lot ne se divise pas, donc il n'y a plus de
+  moitié à retenir** — et le code est plus court qu'avant.
+
+- **Un seul mécanisme, pas deux.** Le lien dirigé n'avait plus de cas
+  à lui : garder les deux aurait obligé à choisir entre eux à chaque
+  déclaration, pour une différence que personne n'aurait su énoncer.
+  C'est exactement ce qui avait rendu les packs incompréhensibles en
+  v1.20 — deux relations concurrentes, et plus moyen de savoir
+  laquelle on manipulait. La 021 avait dû en supprimer une. On ne
+  recommence pas.
+
+- **Un item n'appartient qu'à un lot.** Ce n'est pas une restriction,
+  c'est la définition : si A voyage avec B et B avec C, alors A, B et
+  C forment un seul lot. La migration fait la fusion une fois, en
+  base, plutôt que de la recalculer à chaque lecture — les liens de
+  la v2.4 arrivaient en paires et ressortent fusionnés.
+
+- **Un lot d'un seul item n'est pas un lot** : il naît avec son
+  deuxième membre et se dissout quand il n'en reste qu'un, plutôt que
+  de laisser une coquille qui ressemble à une relation.
+
+### Ce qui ne change pas
+
+- **Les besoins ordinaires de la v2.2** — « IEC C13 », « DC 12V » —
+  sont intacts. Eux sont légitimement dirigés : un appareil a besoin
+  d'un cordon, un cordon n'a besoin de rien. C'était la seule partie
+  de la 029 qui décrivait une vraie dépendance.
+
+- **Au retour, l'état saisi ne s'applique qu'à ce qu'on a dans les
+  mains.** Déclarer une enceinte grésillante ne doit pas marquer
+  l'Amp 700 en panne : une fausse réparation à ouvrir, et une vraie à
+  chercher ailleurs.
+
+- **Un membre déjà sorti ailleurs n'est pas repris**, et déjà parti à
+  la même destination n'est pas un conflit — il y est déjà.
+
+### Détails
+
+- **Une sauvegarde d'avant la v2.5 se relit.** L'ancien lien dirigé
+  est converti en lot à l'import, avec la même fusion transitive que
+  la migration. Sans ça, restaurer un fichier de la v2.4 rendrait un
+  parc dont tous les liens auraient disparu — en silence, ce qui est
+  la pire façon de perdre des données.
+
+- **Les lignes converties sont supprimées de `item_needs`.** Première
+  écriture de la migration, je les avais laissées : elles portaient
+  une cible et aucun libellé, et la nouvelle contrainte les a
+  refusées en bloc. Elle a fait son travail — sans elle, chaque
+  checklist aurait hérité de cases à cocher vides.
+
+- **La migration est rejouable**, y compris après un échec en cours
+  de route : la conversion vérifie que la colonne existe encore avant
+  de s'exécuter.
+
+
 ## [2.4.0] — 2026-10-21
+
+> **Remplacée par la v2.5.0.** Le lien dirigé décrit ci-dessous est
+> devenu un lot symétrique. L'entrée reste pour que la migration 030,
+> qui a bien été jouée, se relise.
 
 ⚠️ **Migration SQL : `sql/030-items-lies.sql`.** À lancer dans
 Supabase avant de déployer. Elle n'ajoute qu'un index et un

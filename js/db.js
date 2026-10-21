@@ -10,6 +10,7 @@ let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:fa
           packs:[],packItems:[],packsSupported:true,
           packExtras:[],packExtrasSupported:true,
           needs:[],needsSupported:true,
+          linkGroups:[],linkMembers:[],linksSupported:true,
           trash:[],trashSupported:true,profiles:[]};
 let syncState = 'off';   // 'ok' | 'off' | 'error'
 
@@ -170,11 +171,13 @@ async function loadAll(){
   ]);
   /* Packs (migration 019). Tolérant à son absence, comme les
      réparations : sans eux l'onglet est vide, l'app tourne. */
-  const [pk, pit, pex, bes] = await Promise.all([
+  const [pk, pit, pex, bes, lg, lm] = await Promise.all([
     sb.from('packs').select('*').order('name'),
     sb.from('pack_items').select('*'),
     sb.from('pack_extras').select('*').order('pos'),
-    sb.from('item_needs').select('*').order('pos')
+    sb.from('item_needs').select('*').order('pos'),
+    sb.from('item_link_groups').select('*').order('name'),
+    sb.from('item_link_members').select('*')
   ]);
   db.packsSupported = !pk.error;
   db.packs = pk.error ? [] : pk.data.map(p=>({...p, permanent: !!p.permanent}));
@@ -190,6 +193,12 @@ async function loadAll(){
      jour. */
   db.needsSupported = !bes.error;
   db.needs = bes.error ? [] : bes.data;
+  /* Les lots indissociables (031). Même tolérance que partout : sans
+     la migration, la carte dit quoi lancer et rien d'autre ne
+     change. */
+  db.linksSupported = !lg.error && !lm.error;
+  db.linkGroups  = lg.error ? [] : lg.data;
+  db.linkMembers = lm.error ? [] : lm.data;
 
   db.repairsSupported = !rp.error;
   db.repairs = rp.error ? [] : rp.data.map(r=>({...r, item_id:r.item_id}));
@@ -230,7 +239,7 @@ async function refresh(){
    un rechargement complet de l'inventaire à chaque case cochée. */
 const SYNC_TABLES = ['items','people','locations','history','projects','profiles',
                      'repairs','repair_providers','packs','pack_items','pack_extras',
-                     'item_needs'];
+                     'item_needs','item_link_groups','item_link_members'];
 function subscribe(){
   let t = null;
   try{
@@ -506,6 +515,30 @@ async function apiInsertNeeds(rows){
   return data;
 }
 async function apiUpdateNeed(id, f){ await run(sb.from('item_needs').update(f).eq('id', id)); }
+
+/* ---------------- Lots indissociables (v2.5) ----------------
+   Les deux Amphion et leur Amp 700 : on bouge l'un, tout suit. Pas
+   de parent, pas d'enfant — voir la 031. */
+async function apiCreateLinkGroup(name){
+  const {data, error} = await sb.from('item_link_groups').insert({name}).select().single();
+  if(error) throw error;
+  return data;
+}
+async function apiRenameLinkGroup(id, name){
+  await run(sb.from('item_link_groups').update({name}).eq('id', id));
+}
+async function apiAddLinkMembers(groupId, itemIds){
+  const rows = itemIds.map(item_id=>({group_id:groupId, item_id}));
+  const {error} = await sb.from('item_link_members').insert(rows);
+  if(error) throw error;
+}
+async function apiRemoveLinkMember(groupId, itemId){
+  await run(sb.from('item_link_members').delete()
+    .eq('group_id', groupId).eq('item_id', itemId));
+}
+async function apiDeleteLinkGroup(id){
+  await run(sb.from('item_link_groups').delete().eq('id', id));
+}
 async function apiDeleteNeed(id){ await run(sb.from('item_needs').delete().eq('id', id)); }
 /* ---------------- Lecture complète, pour la sauvegarde ----------------
 
@@ -537,6 +570,10 @@ async function apiUpsertPackItems(rows){
 }
 async function apiUpsertPackExtras(rows){ await run(sb.from('pack_extras').upsert(rows)); }
 async function apiUpsertNeeds(rows){ await run(sb.from('item_needs').upsert(rows)); }
+async function apiUpsertLinkGroups(rows){ await run(sb.from('item_link_groups').upsert(rows)); }
+async function apiUpsertLinkMembers(rows){
+  await run(sb.from('item_link_members').upsert(rows, {onConflict:'group_id,item_id'}));
+}
 
 async function apiUpsertRepairs(rows){ await run(sb.from('repairs').upsert(rows)); }
 async function apiUpsertProviders(rows){ await run(sb.from('repair_providers').upsert(rows)); }

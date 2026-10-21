@@ -1280,21 +1280,27 @@ async function doCheckout(){
   if(!choisis.length){ toast("Nothing left to check out — those items are flagged for repair.", 'error'); return; }
 
   /* ============================================================
-     L'ALIMENTATION ATTITRÉE PART AVEC (v2.4.0)
+     LE LOT PART D'UN BLOC (v2.5.0)
 
-     Sortir le Germanium Preamp en laissant son PSU « disponible au
-     studio » rend la fiche du PSU fausse, et c'est la cohérence de
-     tout l'inventaire qui s'effrite — on finit par ne plus croire ce
-     que l'application dit d'un emplacement.
+     Les deux Amphion et leur Amp 700 ne se séparent jamais. Sortir
+     l'un en laissant les autres « disponibles au studio » rend leurs
+     fiches fausses, et c'est la cohérence de tout l'inventaire qui
+     s'effrite — on finit par ne plus croire ce que l'application dit
+     d'un emplacement.
 
-     Un lié déjà sorti ailleurs n'est pas repris : son emplacement
+     Un membre déjà sorti ailleurs n'est pas repris : son emplacement
      actuel est plus récent que cette intention-ci. On le dit, et on
-     laisse partir le reste plutôt que de bloquer une sortie pour un
-     cordon.
+     laisse partir le reste plutôt que de bloquer une sortie entière.
      ============================================================ */
   const liés = withLinked(choisis).filter(i=>!choisis.includes(i));
   const emportés = liés.filter(i=>i.status === 'dispo');
-  const bloqués  = liés.filter(i=>i.status !== 'dispo');
+  /* Déjà parti à la MÊME destination : il y est. Ce n'est pas un
+     conflit, et avertir à chaque fois apprendrait à ignorer
+     l'avertissement — c'est ainsi qu'on finit par manquer le vrai. */
+  const déjàLàBas = liés.filter(i=>i.status !== 'dispo'
+                                && i.out && i.out.reason === reason);
+  const bloqués  = liés.filter(i=>i.status !== 'dispo'
+                                && !déjàLàBas.includes(i));
   const targets  = choisis.concat(emportés);
   const nAbimes = targets.filter(i=>!canCheckout(i)).length;
   if(!targets.length) return;
@@ -1306,14 +1312,17 @@ async function doCheckout(){
      désigné : six mois plus tard, « sorti avec le Germanium Preamp »
      est la seule chose qui rende la ligne compréhensible. */
   await histMany(targets.map(i=>{
-    const parent = emportés.includes(i) ? requiredBy(i.id) : null;
+    /* Le lot est nommé, pas un membre en particulier : il n'y a plus
+       de parent à citer, et « parti avec le lot Amphion » se relit
+       six mois plus tard sans avoir à deviner qui a entraîné qui. */
+    const lot = emportés.includes(i) ? linkGroupOf(i.id) : null;
     return {itemId:i.id, type:'out', userId,
             detail: reason + (due?` — due back ${fdateD(due)}`:'')
-                  + (parent ? ` — went out with ${itemTitleText(parent)}` : '')};
+                  + (lot ? ` — went out with ${groupLabel(lot)}` : '')};
   }));
   close_('ovOut');
   if(emportés.length)
-    toast(`${emportés.length} linked item(s) went out too: ${
+    toast(`${emportés.length} item(s) travel with these: ${
       emportés.map(i=>itemTitleText(i)).join(', ')}.`, 'info', null, null, 7000);
   if(bloqués.length)
     toast(`${bloqués.map(i=>itemTitleText(i)).join(', ')} — needed, but already out. Check it separately.`,
@@ -1391,16 +1400,23 @@ async function doCheckin(){
   if(!choisis.length){ checkinTargets = null; return; }
 
   /* ============================================================
-     ET IL REVIENT AVEC (v2.4.0)
+     ET IL RENTRE D'UN BLOC (v2.5.0)
 
-     Symétrique de la sortie, à une nuance près qui compte : l'état
-     saisi dans la fenêtre décrit l'objet qu'on a DANS LES MAINS.
-     L'appliquer au PSU qui revient dans le même carton marquerait
-     une alimentation en panne parce que le préampli grésille — une
-     fausse réparation à ouvrir, et une vraie à chercher ailleurs.
-     Les liés rentrent donc avec leur état inchangé.
+     La v2.5 devait retenir un item partagé tant qu'un autre de ses
+     « parents » était dehors. Cette règle disparaît : un lot ne se
+     divise pas, donc il n'y a plus de moitié à retenir. C'est le
+     genre de simplification qui dit après coup qu'on avait pris la
+     bonne décision — le modèle dirigé réclamait des rattrapages, le
+     modèle symétrique n'en demande aucun.
+
+     Reste la nuance qui compte : l'état saisi dans la fenêtre décrit
+     l'objet qu'on a DANS LES MAINS. L'appliquer à tout le lot
+     marquerait l'Amp 700 en panne parce qu'une enceinte grésille —
+     une fausse réparation à ouvrir, et une vraie à chercher
+     ailleurs.
      ============================================================ */
-  const liés = withLinked(choisis).filter(i=>!choisis.includes(i) && i.status === 'sorti');
+  const liés = withLinked(choisis)
+    .filter(i=>!choisis.includes(i) && i.status === 'sorti');
   const targets = choisis.concat(liés);
 
   const rows = [];
@@ -1412,10 +1428,10 @@ async function doCheckin(){
     rows.push({itemId:i.id, type:'in', userId, cond:e,
                detail: choisis.includes(i) ? note
                      : ((note ? note + ' — ' : '') + 'came back with '
-                        + itemTitleText(requiredBy(i.id) || i))});
+                        + groupLabel(linkGroupOf(i.id)))});
   }
   if(liés.length)
-    toast(`${liés.length} linked item(s) came back too.`, 'info');
+    toast(`${liés.length} item(s) came back with them.`, 'info');
   await histMany(rows);
   close_('ovIn');
   if(bulkMode){ clearSel(); toast(`${targets.length} item(s) checked in.`, 'ok'); }
@@ -1511,6 +1527,7 @@ function openDetail(id){
           ${kv('Pack', packLines(i) ? packLines(i).replace(/^<br>/, '') : '')}
           ${kv('Case', i.has_case ? esc(i.case_note || 'yes, unspecified') : 'none')}
         </div>
+        ${linkBlock(i)}
         ${needsBlock(i)}
         ${(i.price!=null || i.purchase_date || i.provider || i.sales_order) ? `<div class="fcard">
           <h4>Purchase</h4>
@@ -1556,50 +1573,27 @@ function needsBlock(i){
   const éditable = can('edit');
   if(!liste.length && !éditable) return '';
 
-  /* Un besoin suivi comme un item mène à sa fiche : c'est un objet,
-     il a une valeur et une histoire, on doit pouvoir y aller. */
+  /* Un besoin est un consommable : un libellé, une quantité, un
+     poids éventuel. Les objets qui ont une fiche vivent dans un LOT,
+     pas ici — voir linkBlock(). */
   const ligne = n => `<div class="ndline">
-    <span class="ndkind ${n.kind}">${n.needs_item_id ? '🔗' : (n.kind === 'power' ? '⚡' : '〰')}</span>
-    <span class="ndlbl">${n.needs_item_id
-      ? `<a class="ndlink" onclick="openDetail('${n.needs_item_id}')">${esc(needText(n))}</a>
-         <span class="mono muted" style="font-size:12px">${esc(n.needs_item_id)}</span>`
-      : esc(needText(n))}${
+    <span class="ndkind ${n.kind}">${n.kind === 'power' ? '⚡' : '〰'}</span>
+    <span class="ndlbl">${esc(needText(n))}${
       (n.qty||1) > 1 ? ` <span class="muted">× ${n.qty}</span>` : ''}</span>
-    <span class="muted ndw">${n.needs_item_id
-      ? esc(fweight((item(n.needs_item_id)||{}).weight_g) || '')
-      : (n.weight_g ? esc(fweight(n.weight_g)) : '')}</span>
+    <span class="muted ndw">${n.weight_g ? esc(fweight(n.weight_g)) : ''}</span>
     ${éditable ? `<button class="btn small sec" onclick="needDelete('${n.id}')">✕</button>` : ''}
   </div>`;
 
-  /* Les items suivis d'abord, et dans leur propre section. Un objet
-     qui a une fiche, une valeur et une histoire ne se lit pas dans la
-     même colonne qu'un cordon anonyme — les mélanger ferait oublier
-     qu'il faut penser à le rentrer. */
-  const suivis = liste.filter(n=>n.needs_item_id);
-  const parFamille = (suivis.length
-      ? `<div class="ndsub">Linked gear <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">— travels and returns with it</span></div>${suivis.map(ligne).join('')}`
-      : '')
-    + Object.keys(NEED_KINDS).map(k=>{
-    const l = liste.filter(n=>!n.needs_item_id && (n.kind||'power') === k);
+  const parFamille = Object.keys(NEED_KINDS).map(k=>{
+    const l = liste.filter(n=>(n.kind||'power') === k);
     return l.length ? `<div class="ndsub">${NEED_KINDS[k]}</div>${l.map(ligne).join('')}` : '';
   }).join('');
 
   const jumeaux = copiesDe(i).length;
   const mêmeSub = db.items.filter(x=>x.cat === i.cat && x.subcat === i.subcat && x.id !== i.id).length;
 
-  /* Le sens inverse. Sur la fiche du PSU, savoir QUI le réclame est
-     plus important que tout le reste : c'est ce qui empêche de le
-     prêter à quelqu'un la veille d'une tournée. */
-  const parent = requiredBy(i.id);
-  const bandeauParent = parent
-    ? `<div class="ndparent">🔗 Required by
-         <a class="ndlink" onclick="openDetail('${parent.id}')">${esc(itemTitleText(parent))}</a>
-         — it travels and returns with it.</div>`
-    : '';
-
   return `<div class="fcard">
     <h4>Needs <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">— travels with this item</span></h4>
-    ${bandeauParent}
     ${parFamille || '<div class="muted" style="font-size:13.5px">Nothing declared.</div>'}
     ${éditable ? `
       <div class="ndform">
@@ -1619,16 +1613,7 @@ function needsBlock(i){
         <input id="nd-weight" placeholder="weight, optional" title="Leave empty if too light to matter">
         <button class="btn small" onclick="needAdd('${i.id}')">Add</button>
       </div>
-      <div class="ndlinkform">
-        <div class="ndsub">Or link a tracked item</div>
-        <input id="nd-item" list="ndItems" placeholder="search the inventory…"
-               onkeydown="if(event.key==='Enter')needLink('${i.id}')">
-        <datalist id="ndItems">${liablesPour(i).map(x=>
-          `<option value="${esc(itemTitleText(x))} [${x.id}]"></option>`).join('')}</datalist>
-        <button class="btn sec small" onclick="needLink('${i.id}')">Link</button>
-        <div class="hintline">Use this for a real object with its own record — a dedicated
-          PSU, a matching remote. It goes out and comes back with this item, and only this one.</div>
-      </div>
+
       ${liste.length ? `<div class="ndcopy">
         ${jumeaux ? `<button class="btn sec small" onclick="needCopyTo('${i.id}','copies')">
           Copy to the ${jumeaux} other cop${jumeaux>1?'ies':'y'}</button>` : ''}
@@ -1638,36 +1623,74 @@ function needsBlock(i){
   </div>`;
 }
 
-/* ---- Qui peut être lié à cet item ----
+/* ============================================================
+   LE LOT : CE QUI NE SE SÉPARE JAMAIS (v2.5.0)
+
+   Les deux Amphion et leur Amp 700. Le Germanium Preamp et son
+   alimentation. Symétrique : on bouge l'un, tout suit — il n'y a
+   pas de parent à désigner, donc pas de sens à choisir.
+
+   Le bloc se lit à l'identique depuis N'IMPORTE QUEL membre, et
+   c'est voulu : si la fiche de l'Amp 700 montrait autre chose que
+   celle de l'enceinte, l'un des deux écrans mentirait sur la nature
+   de la relation.
+   ============================================================ */
+function linkBlock(i){
+  if(!db.linksSupported){
+    return `<div class="fcard"><h4>Travels together</h4>
+      <div class="hintline">Run <b>sql/031-lots-indissociables.sql</b> in Supabase, then refresh.</div></div>`;
+  }
+  const g = linkGroupOf(i.id);
+  const éditable = can('edit');
+  const membres = g ? groupItems(g.id) : [];
+  if(!g && !éditable) return '';
+
+  const ligne = m => `<div class="ndline${m.id === i.id ? ' ndself' : ''}">
+    <span class="ndkind">${m.id === i.id ? '▸' : '🔗'}</span>
+    <span class="ndlbl">${m.id === i.id
+      ? `<b>${esc(itemTitleText(m))}</b> <span class="muted">— this one</span>`
+      : `<a class="ndlink" onclick="openDetail('${m.id}')">${esc(itemTitleText(m))}</a>`}
+      <span class="mono muted" style="font-size:12px">${esc(m.id)}</span></span>
+    <span class="muted ndw">${esc(itemWhere(m))}</span>
+    ${éditable ? `<button class="btn small sec" onclick="linkRemove('${m.id}')">✕</button>` : ''}
+  </div>`;
+
+  return `<div class="fcard">
+    <h4>Travels together${g ? ` <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">${membres.length} items</span>` : ''}</h4>
+    ${g
+      ? membres.map(ligne).join('')
+        + `<div class="hintline" style="margin-top:7px">Move any of them and the others follow —
+           into a case, out on a show, and back.</div>`
+      : '<div class="muted" style="font-size:13.5px">Not part of a set.</div>'}
+    ${éditable ? `
+      <div class="ndlinkform">
+        <input id="nd-item" list="ndItems" placeholder="add an item to this set…"
+               onkeydown="if(event.key===\'Enter\')linkAdd(\'${i.id}\')">
+        <datalist id="ndItems">${liablesPour(i).map(x=>
+          `<option value="${esc(itemTitleText(x))} [${x.id}]"></option>`).join('')}</datalist>
+        <button class="btn sec small" onclick="linkAdd('${i.id}')">Add to set</button>
+      </div>` : ''}
+  </div>`;
+}
+
+/* ---- Qui peut rejoindre le lot ----
    On ne propose que ce qui sera accepté : la base refuserait le
    reste, mais un message d'erreur après coup se lit comme une panne
-   de l'application. Trois exclusions :
-     — lui-même (030) ;
-     — ce qui est déjà attitré ailleurs : un item lié n'a qu'un
-       parent, et le proposer quand même promettrait un lien qu'on
-       devrait reprendre à quelqu'un ;
-     — ce qui le réclame déjà, directement ou par une chaîne : la
-       boucle fige n'importe quel calcul de contenu. */
+   de l'application. Deux exclusions, et c'est tout ce qu'il reste —
+   une relation symétrique n'a ni boucle ni sens à surveiller.
+     — lui-même ;
+     — ce qui appartient DÉJÀ à un autre lot : un item n'est que dans
+       un seul, puisque deux lots qui se touchent n'en font qu'un.
+       Les membres du lot courant sont exclus pour la même raison. */
 function liablesPour(i){
-  const pris = new Set((db.needs||[]).filter(n=>n.needs_item_id)
-                                     .map(n=>n.needs_item_id));
-  const déjà = new Set(linkedOf(i.id).map(x=>x.id));
-  /* Tout ce qui dépend de i, à n'importe quelle profondeur. */
-  const amont = new Set();
-  (function remonter(id){
-    (db.needs||[]).filter(n=>n.needs_item_id === id).forEach(n=>{
-      if(amont.has(n.item_id)) return;
-      amont.add(n.item_id);
-      remonter(n.item_id);
-    });
-  })(i.id);
-
-  return db.items.filter(x=>x.id !== i.id && !pris.has(x.id)
-                         && !déjà.has(x.id) && !amont.has(x.id))
+  const placés = new Set((db.linkMembers||[]).map(m=>m.item_id));
+  const mien = linkGroupOf(i.id);
+  const miens = mien ? new Set(groupItems(mien.id).map(x=>x.id)) : new Set();
+  return db.items.filter(x=>x.id !== i.id && !placés.has(x.id) && !miens.has(x.id))
     .sort((a,b)=>itemTitleText(a).localeCompare(itemTitleText(b),'fr'));
 }
 
-async function needLink(itemId){
+async function linkAdd(itemId){
   const champ = document.getElementById('nd-item');
   const saisie = (champ.value || '').trim();
   /* Le champ affiche « Nom [ID] » : c'est l'identifiant qui fait foi,
@@ -1676,19 +1699,62 @@ async function needLink(itemId){
   const cible = m ? item(m[1].trim()) : null;
   if(!cible){ toast('Pick an item from the list.', 'warn'); return; }
   if(!liablesPour(item(itemId)).some(x=>x.id === cible.id)){
-    const p = requiredBy(cible.id);
-    toast(p ? `${itemTitleText(cible)} is already linked to ${itemTitleText(p)}.`
-            : 'That link would loop back on itself.', 'warn', null, null, 7000);
+    const autre = linkGroupOf(cible.id);
+    toast(autre ? `${itemTitleText(cible)} already belongs to another set (${groupLabel(autre)}).`
+                : 'That item cannot join this set.', 'warn', null, null, 7000);
     return;
   }
   try{
-    const rows = await apiInsertNeeds([{item_id:itemId, kind:'power', label:null,
-                                        needs_item_id:cible.id, qty:1, weight_g:null,
-                                        pos: needsOf(itemId).length}]);
-    db.needs.push(...rows);
+    let g = linkGroupOf(itemId);
+    /* Le lot n'existe qu'au moment où il a une raison d'exister :
+       deux membres. On ne crée pas de lot à un seul item. */
+    if(!g){
+      g = await apiCreateLinkGroup(null);
+      db.linkGroups.push(g);
+      await apiAddLinkMembers(g.id, [itemId, cible.id]);
+      db.linkMembers.push({group_id:g.id, item_id:itemId},
+                          {group_id:g.id, item_id:cible.id});
+    }else{
+      await apiAddLinkMembers(g.id, [cible.id]);
+      db.linkMembers.push({group_id:g.id, item_id:cible.id});
+    }
+    await linkRenommer(g.id);
     openDetail(itemId);
     toast(`${itemTitleText(cible)} now travels with this item.`, 'ok');
   }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
+async function linkRemove(itemId){
+  const g = linkGroupOf(itemId);
+  if(!g) return;
+  const restants = groupItems(g.id).filter(x=>x.id !== itemId);
+  try{
+    await apiRemoveLinkMember(g.id, itemId);
+    db.linkMembers = db.linkMembers.filter(m=>!(m.group_id === g.id && m.item_id === itemId));
+    /* Un lot d'un seul item n'est plus un lot : on le dissout plutôt
+       que de laisser traîner une coquille qui ressemble à une
+       relation. */
+    if(restants.length <= 1){
+      await apiDeleteLinkGroup(g.id);
+      db.linkGroups  = db.linkGroups.filter(x=>x.id !== g.id);
+      db.linkMembers = db.linkMembers.filter(m=>m.group_id !== g.id);
+      toast('Set dissolved — a set of one is not a set.', 'info');
+    }else{
+      await linkRenommer(g.id);
+    }
+    openDetail(restants.length ? restants[0].id : itemId);
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
+/* Le nom suit les membres tant que personne ne l'a choisi lui-même.
+   Un lot sans nom n'est pas un lot sans identité : il faut pouvoir
+   en parler dans une ligne d'historique. */
+async function linkRenommer(groupId){
+  const g = (db.linkGroups||[]).find(x=>x.id === groupId);
+  if(!g) return;
+  const nom = groupItems(groupId).map(x=>itemTitleText(x)).join(' + ');
+  g.name = nom;
+  await apiRenameLinkGroup(groupId, nom);
 }
 
 /* Les autres exemplaires du même modèle : « SM57 #2 » quand on est
@@ -1757,7 +1823,6 @@ async function needCopyTo(itemId, portée){
   cibles.forEach(c=>{
     const déjà = new Set(needsOf(c.id).map(n=>needKeyOf(n)));
     source.forEach(n=>{
-      if(n.needs_item_id) return;          // un objet unique ne se duplique pas
       if(déjà.has(needKeyOf(n))) return;
       rows.push({item_id:c.id, kind:n.kind, label:n.label,
                  qty:n.qty, weight_g:n.weight_g, pos:n.pos});

@@ -192,8 +192,10 @@ const TESTS = `
   var src = read_views;
   T(/Nothing is overwritten/.test(src), 'la confirmation le dit à l’utilisateur');
   T(/déjà\\.has\\(needKeyOf\\(n\\)\\)/.test(src), 'et le code saute ce qui existe déjà');
-  T(/if\\(n\\.needs_item_id\\) return;/.test(src),
-    'un besoin suivi comme un item ne se duplique pas : c’est un objet unique');
+  /* Depuis la 031, tous les besoins sont des consommables : les
+     objets qui ont une fiche vivent dans un LOT (t230), pas ici. */
+  T(!src.includes('needs_item_id'),
+    'et la vue ne connaît plus de besoin « suivi comme un item »');
 
   S('11. Un item ne peut pas avoir besoin de lui-même');
   T(/item_needs_pas_soi_chk/.test(read_sql), 'la base le refuse');
@@ -244,6 +246,7 @@ const script = [STUBS, read('js/config.js'), read('js/helpers.js'),
                 'var read_db   = ' + JSON.stringify(read('js/db.js')) + ';',
                 'var read_app  = ' + JSON.stringify(read('js/app.js')) + ';',
                 'var read_css  = ' + JSON.stringify(read('css/styles.css')) + ';',
+                'var read_sql31 = ' + JSON.stringify(read('sql/031-lots-indissociables.sql')) + ';',
                 /* projProgress vit dans db.js, qui parle à Supabase. On ne
                    charge donc que la fonction, pas le fichier. */
                 'function projProgress(p){' +

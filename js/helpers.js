@@ -485,16 +485,9 @@ function needsOf(itemId){
     .sort((a,b)=>(a.pos||0)-(b.pos||0)
               || String(needText(a)).localeCompare(String(needText(b)),'fr'));
 }
-/* Le nom à lire. Un besoin suivi comme un item emprunte le sien :
-   le renommer dans l'inventaire doit se voir partout, sans recopie. */
-function needText(n){
-  if(!n) return '';
-  if(n.needs_item_id){
-    const i = item(n.needs_item_id);
-    return i ? itemTitleText(i) : '(deleted item)';
-  }
-  return n.label || '';
-}
+/* Le nom à lire. Depuis la 031 un besoin porte toujours un libellé :
+   les objets qui ont une fiche vivent dans un LOT, pas ici. */
+function needText(n){ return (n && n.label) || ''; }
 
 /* ---- Agrégation ----
    Quatre appareils qui réclament chacun un C13 ne font pas quatre
@@ -505,12 +498,10 @@ function needText(n){
    l'identifiant de la ligne : « C13 » saisi sur deux fiches
    différentes désigne le même cordon dans la caisse.
 
-   Un besoin suivi comme un item, lui, ne fusionne jamais : c'est un
-   objet unique, et le confondre avec un autre masquerait précisément
-   le conflit qu'on a créé cette colonne pour voir. */
+   Tous les besoins fusionnent donc, sans exception : depuis la 031
+   ils n'ont plus de cible unique à distinguer. */
 function needKeyOf(n){
-  return n.needs_item_id ? 'n#' + n.needs_item_id
-                         : 'n:' + (n.kind||'power') + '|' + needText(n).trim().toLowerCase();
+  return 'n:' + (n.kind||'power') + '|' + needText(n).trim().toLowerCase();
 }
 function needsForItems(items){
   const par = new Map();
@@ -520,7 +511,6 @@ function needsForItems(items){
       const q = n.qty || 1;
       if(!par.has(k)) par.set(k, {
         key: k, kind: n.kind || 'power', label: needText(n),
-        itemId: n.needs_item_id || null,
         qty: 0, weight_g: n.weight_g || null, pour: []
       });
       const a = par.get(k);
@@ -557,60 +547,64 @@ function projNeedKeys(c){
 }
 
 /* ============================================================
-   UN ITEM ATTITRÉ À UN AUTRE (v2.4)
+   DES LOTS INDISSOCIABLES (v2.5)
 
-   Le Germanium Preamp ne fonctionne pas sans le Germanium PSU, et ce
-   PSU est un VRAI objet : une valeur, un numéro de série, une
-   histoire, des pannes. Le réduire à une ligne de checklist perdrait
-   tout ça — c'est la différence avec une Schuko anonyme.
+   Les deux enceintes Amphion et leur Amp 700 ne sont pas trois
+   objets dont l'un sert les autres : c'est UN LOT. On ne sort jamais
+   une enceinte seule. Le Germanium Preamp et son alimentation non
+   plus.
 
-   Un item lié SUIT son parent : partout où le parent va, il va. Il
-   n'est donc jamais inscrit dans une caisse ni dans un projet, il en
-   est déduit — exactement comme un besoin ordinaire, et pour la même
-   raison : il n'y a rien à synchroniser, donc rien à désynchroniser.
+   La relation est donc SYMÉTRIQUE — pas de parent, pas d'enfant : on
+   bouge l'un, tout suit. La v2.4 l'avait posée dirigée, et le payait
+   en règles de rattrapage (« il ne rentre que quand tous ses parents
+   sont rentrés ») ; elles disparaissent ici, parce qu'un lot ne se
+   divise jamais et qu'il n'y a plus de moitié à retenir.
 
-   La 030 garantit qu'un item lié n'a QU'UN parent. C'est ce qui rend
-   tout le reste simple : il ne peut pas être réclamé par deux
-   projets à la fois, et la question du conflit ne se pose pas.
+   Un item n'appartient qu'à UN lot. Ce n'est pas une restriction,
+   c'est la définition : si A voyage avec B et B avec C, alors A, B
+   et C forment un seul lot. La 031 l'impose en base, ce qui évite
+   d'avoir à calculer une fermeture transitive à chaque lecture.
+
+   À ne pas confondre avec les BESOINS de la v2.2 — « IEC C13 »,
+   « DC 12V ». Ceux-là sont légitimement dirigés : un appareil a
+   besoin d'un cordon, un cordon n'a besoin de rien. Ils n'ont pas de
+   fiche ; un membre de lot en a une.
    ============================================================ */
 
-/* Les items suivis que celui-ci réclame, au premier niveau. */
-function linkedOf(itemId){
-  return needsOf(itemId)
-    .filter(n=>n.needs_item_id)
-    .map(n=>item(n.needs_item_id))
-    .filter(Boolean);
+/* Le lot d'un item, ou null. */
+function linkGroupOf(itemId){
+  const m = (db.linkMembers||[]).find(x=>x.item_id === itemId);
+  if(!m) return null;
+  return (db.linkGroups||[]).find(g=>g.id === m.group_id) || null;
 }
-/* Et toute la chaîne : un préampli peut réclamer un PSU qui réclame
-   lui-même son cordon suivi. `vus` coupe les boucles — la base les
-   refuse depuis la 030, mais un calcul sans fin fige l'écran sans
-   rien dire, et une base d'avant la migration peut en contenir. */
-function linkedDeep(i, vus){
-  vus = vus || new Set();
-  if(!i || vus.has(i.id)) return [];
-  vus.add(i.id);
-  const out = [];
-  linkedOf(i.id).forEach(l=>{
-    if(vus.has(l.id)) return;
-    out.push(l);
-    out.push(...linkedDeep(l, vus));
-  });
-  return out;
+/* Tous les membres d'un lot, l'item compris. */
+function groupItems(groupId){
+  return (db.linkMembers||[])
+    .filter(m=>m.group_id === groupId)
+    .map(m=>item(m.item_id))
+    .filter(Boolean)
+    .sort((a,b)=>itemTitleText(a).localeCompare(itemTitleText(b),'fr'));
 }
-/* Le sens inverse : quel appareil réclame CET item ? Un seul, depuis
-   la 030. C'est ce qui permet de prévenir avant de le sortir seul. */
-function requiredBy(itemId){
-  const n = (db.needs||[]).find(x=>x.needs_item_id === itemId);
-  return n ? item(n.item_id) : null;
+/* Ce qui suit un item quand on le bouge : les autres membres. */
+function groupMates(itemId){
+  const g = linkGroupOf(itemId);
+  return g ? groupItems(g.id).filter(i=>i.id !== itemId) : [];
 }
-/* Une liste d'items, augmentée de tout ce qu'ils entraînent. Les
-   doublons sautent : un PSU n'est emporté qu'une fois, même si son
-   parent figure deux fois dans le lot. */
+/* Le nom à afficher. Construit des membres si personne n'en a donné :
+   un lot sans nom n'est pas un lot sans identité. */
+function groupLabel(g){
+  if(!g) return '';
+  if(g.name) return g.name;
+  return groupItems(g.id).map(i=>itemTitleText(i)).join(' + ');
+}
+/* Une liste d'items, complétée de tout ce qui voyage avec eux. Les
+   doublons sautent : un Amp 700 n'est emporté qu'une fois, même si
+   les deux enceintes qui le réclament sont dans le lot. */
 function withLinked(items){
   const vus = new Set((items||[]).map(i=>i.id));
   const out = [...(items||[])];
-  (items||[]).forEach(i=>linkedDeep(i).forEach(l=>{
-    if(!vus.has(l.id)){ vus.add(l.id); out.push(l); }
+  (items||[]).forEach(i=>groupMates(i.id).forEach(m=>{
+    if(!vus.has(m.id)){ vus.add(m.id); out.push(m); }
   }));
   return out;
 }
@@ -634,10 +628,10 @@ function itemWeightDeep(i, vus){
      poids réel dans la caisse. Ceux qui n'en ont pas n'ajoutent
      rien — mieux vaut un total incomplet qu'un total inventé. */
   let g = (i.weight_g || 0) + needsWeight([i]);
-  /* Son alimentation attitrée voyage avec lui : son poids est dans
-     la caisse, qu'on l'y ait mise ou non. `vus` évite de la compter
+  /* Ce qui voyage avec lui est dans la caisse, qu'on l'y ait mis ou
+     non : son poids y est aussi. `vus` évite de la compter
      deux fois si elle y figure aussi par elle-même. */
-  linkedOf(i.id).forEach(l=>{ g += itemWeightDeep(l, vus); });
+  groupMates(i.id).forEach(l=>{ g += itemWeightDeep(l, vus); });
   const p = packOfContainer(i.id);
   if(p) packItemsOf(p.id).forEach(m=>{ g += itemWeightDeep(m, vus); });
   return g;
@@ -687,9 +681,9 @@ function packAllItems(p, vus){
   if(c && !vus.has(c.id)){ vus.add(c.id); out.push(c); }
   packItemsOf(p.id).forEach(i=>{
     if(!vus.has(i.id)){ vus.add(i.id); out.push(i); }
-    /* Son alimentation attitrée vient avec lui, sans avoir été
-       ajoutée à la caisse : elle suit l'appareil, pas la caisse. */
-    linkedDeep(i).forEach(l=>{
+    /* Ce qui voyage avec lui vient aussi, sans avoir été ajouté à la
+       caisse : le lot suit ses membres, pas la caisse. */
+    groupMates(i.id).forEach(l=>{
       if(!vus.has(l.id)){ vus.add(l.id); out.push(l); }
     });
     const sous = packOfContainer(i.id);
@@ -881,9 +875,8 @@ function projContent(p){
     });
   });
 
-  /* Un item isolé entraîne lui aussi son alimentation attitrée : on
-     n'ajoute pas le Germanium Preamp à un projet en laissant son PSU
-     au studio. `withLinked` saute ce qu'une caisse a déjà pris. */
+  /* Un item isolé entraîne lui aussi son lot : on n'ajoute pas le
+     Germanium Preamp à un projet en laissant son PSU au studio. `withLinked` saute ce qu'une caisse a déjà pris. */
   const loose = withLinked((p.item_ids||[])
     .filter(id=>!vus.has(id)).map(id=>item(id)).filter(Boolean))
     .filter(i=>!vus.has(i.id));
