@@ -4,7 +4,7 @@ Application web de gestion de l'inventaire du studio AFM : matériel, prêts,
 réparations, emplacements et projets de tournée. Réservée au personnel du studio,
 utilisable sur ordinateur comme sur mobile.
 
-> Version actuelle : **2.1.1** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
+> Version actuelle : **2.2.0** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet.
 
 ## À quoi ça sert
 
@@ -136,6 +136,8 @@ config → auth → helpers → db → vues → app. Ne pas le modifier.
 | Ajouter un thème                            | `css/styles.css` — copier le bloc `html[data-theme="light"]`, puis l'ajouter à `THEMES` dans `js/app.js` |
 | Changer les sous-catégories pouvant servir de contenant | `js/config.js` (`CONTAINER_SUBS`) |
 | Changer les états du matériel               | `js/config.js` (`CONDS`) — les menus s'y adaptent seuls |
+| Modifier la liste des alimentations et cordons courants | `js/config.js` (`NEED_PRESETS`) — elle ne sert qu'à la saisie, aucune migration |
+| Ajouter une famille de besoin (autre que *power* / *cable*) | `js/helpers.js` (`NEED_KINDS`) **et** la contrainte `item_needs_kind_chk` dans une nouvelle migration |
 | Ajouter / renommer une catégorie            | `js/config.js` (`CATS`)              |
 | Changer le titre, les noms d'onglets        | `js/config.js` (`LABELS`)            |
 | Changer le seuil d'alerte (7 jours)         | `js/config.js` (`ALERT_DAYS`)        |
@@ -203,7 +205,7 @@ automatique et export manuel) sont acceptés.
 ## Tests
 
 ```bash
-./tests/run.sh          # les vingt-deux harnais
+./tests/run.sh          # les vingt-trois harnais
 ./tests/run.sh t124     # un seul
 ```
 

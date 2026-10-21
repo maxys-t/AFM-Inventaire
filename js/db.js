@@ -9,6 +9,7 @@ let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:fa
           repairs:[],providers:[],repairsSupported:true,
           packs:[],packItems:[],packsSupported:true,
           packExtras:[],packExtrasSupported:true,
+          needs:[],needsSupported:true,
           trash:[],trashSupported:true,profiles:[]};
 let syncState = 'off';   // 'ok' | 'off' | 'error'
 
@@ -169,10 +170,11 @@ async function loadAll(){
   ]);
   /* Packs (migration 019). Tolérant à son absence, comme les
      réparations : sans eux l'onglet est vide, l'app tourne. */
-  const [pk, pit, pex] = await Promise.all([
+  const [pk, pit, pex, bes] = await Promise.all([
     sb.from('packs').select('*').order('name'),
     sb.from('pack_items').select('*'),
-    sb.from('pack_extras').select('*').order('pos')
+    sb.from('pack_extras').select('*').order('pos'),
+    sb.from('item_needs').select('*').order('pos')
   ]);
   db.packsSupported = !pk.error;
   db.packs = pk.error ? [] : pk.data.map(p=>({...p, permanent: !!p.permanent}));
@@ -181,6 +183,13 @@ async function loadAll(){
      vider l'onglet Packs, elle doit juste ne rien afficher. */
   db.packExtrasSupported = !pex.error;
   db.packExtras = pex.error ? [] : pex.data;
+  /* Les besoins datent de la 029. Même tolérance : sans la migration,
+     la carte « Needs » explique quoi lancer, et rien d'autre ne
+     change. Une application qui refuse de démarrer parce qu'une
+     table manque est une application qu'on n'ose plus mettre à
+     jour. */
+  db.needsSupported = !bes.error;
+  db.needs = bes.error ? [] : bes.data;
 
   db.repairsSupported = !rp.error;
   db.repairs = rp.error ? [] : rp.data.map(r=>({...r, item_id:r.item_id}));
@@ -220,7 +229,8 @@ async function refresh(){
    le moindre enregistrement de préférence d'affichage déclencherait
    un rechargement complet de l'inventaire à chaque case cochée. */
 const SYNC_TABLES = ['items','people','locations','history','projects','profiles',
-                     'repairs','repair_providers','packs','pack_items','pack_extras'];
+                     'repairs','repair_providers','packs','pack_items','pack_extras',
+                     'item_needs'];
 function subscribe(){
   let t = null;
   try{
@@ -321,7 +331,14 @@ function outForRepair(i){ return !!(i.out && i.out.repairId); }
 function projItems(p){ return projContent(p).items; }
 function projProgress(p){
   const c = projContent(p);
-  const clés = c.items.map(i=>i.id).concat(c.extras.map(e=>e.key));
+  /* Les besoins comptent dans la progression : une caisse dont il
+     manque l'alimentation n'est pas une caisse finie, et une barre
+     qui afficherait 100 % le dirait faux. La clé est préfixée par la
+     caisse — la même alimentation cochée dans deux caisses reste
+     deux gestes. */
+  const clés = c.items.map(i=>i.id)
+    .concat(c.extras.map(e=>e.key))
+    .concat(projNeedKeys(c));
   return {done: clés.filter(k=>p.prep && p.prep[k]).length, total: clés.length};
 }
 
@@ -478,6 +495,18 @@ async function apiInsertPackExtra(e){
 }
 async function apiUpdatePackExtra(id, f){ await run(sb.from('pack_extras').update(f).eq('id', id)); }
 async function apiDeletePackExtra(id){ await run(sb.from('pack_extras').delete().eq('id', id)); }
+
+/* ---------------- Besoins d'un item (v2.2) ----------------
+   Alimentations et cordons. Portés par l'item, dérivés partout
+   ailleurs : rien à écrire dans une caisse ou un projet — voir la
+   029 pour le raisonnement. */
+async function apiInsertNeeds(rows){
+  const {data, error} = await sb.from('item_needs').insert(rows).select();
+  if(error) throw error;
+  return data;
+}
+async function apiUpdateNeed(id, f){ await run(sb.from('item_needs').update(f).eq('id', id)); }
+async function apiDeleteNeed(id){ await run(sb.from('item_needs').delete().eq('id', id)); }
 /* ---------------- Lecture complète, pour la sauvegarde ----------------
 
    `loadAll` plafonne l'historique à 1 000 lignes : c'est un choix
@@ -507,6 +536,7 @@ async function apiUpsertPackItems(rows){
   await run(sb.from('pack_items').upsert(rows, {onConflict:'pack_id,item_id'}));
 }
 async function apiUpsertPackExtras(rows){ await run(sb.from('pack_extras').upsert(rows)); }
+async function apiUpsertNeeds(rows){ await run(sb.from('item_needs').upsert(rows)); }
 
 async function apiUpsertRepairs(rows){ await run(sb.from('repairs').upsert(rows)); }
 async function apiUpsertProviders(rows){ await run(sb.from('repair_providers').upsert(rows)); }

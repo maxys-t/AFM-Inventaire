@@ -60,6 +60,7 @@ continue de servir l'ancien fichier.
 | t128 | Ranger les items d'un projet dans ses caisses |
 | t200 | Le rail, les thèmes, la fiche en colonnes |
 | t210 | Regroupement à deux niveaux, filtre sans saut, caisses dehors au tableau de bord |
+| t220 | Les besoins d'un item : alimentations et cordons dérivés |
 
 ## En écrire un
 

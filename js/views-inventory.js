@@ -446,6 +446,16 @@ function renderHeaderMenu(btn){
   const c = INV_COLUMNS.find(x=>x.k === k);
   if(!c) return closeHeaderMenu();
 
+  /* Ce qu'on doit retrouver après la reconstruction : où l'on en
+     était dans la liste, et ce qu'on avait tapé pour y arriver. */
+  const l0 = document.getElementById('hmList');
+  const c0 = m.querySelector('.hm-search');
+  const avant = {
+    top:   l0 ? l0.scrollTop : 0,
+    q:     c0 ? c0.value : '',
+    focus: !!(c0 && document.activeElement === c0)
+  };
+
   const r = sortRank(k);
   const vals = filterValues(k);
   const sel = colFilters[k];
@@ -475,6 +485,31 @@ function renderHeaderMenu(btn){
     </div>
     ${c.fixed ? '' : `<div class="hm-sec">
       <button class="hm-it" onclick="hideColumn('${k}')">Hide this column</button></div>`}`;
+
+  /* ============================================================
+     LE MENU NE SE REMET PLUS EN HAUT (v2.1.2)
+
+     On règle un filtre en cochant plusieurs valeurs d'affilée. Chaque
+     clic reconstruisait tout le menu : la liste revenait à son
+     sommet, et le texte tapé dans « Search values… » disparaissait.
+     Avec quarante sous-catégories, cocher la quatrième demandait de
+     redescendre quatre fois.
+
+     On remet donc la position et la recherche là où elles étaient.
+     C'est le pendant du correctif de la v2.1.0 sur la liste
+     d'inventaire : la même gêne, à un autre étage.
+     ============================================================ */
+  const liste = document.getElementById('hmList');
+  if(liste && avant.top) liste.scrollTop = avant.top;
+  const champ = m.querySelector('.hm-search');
+  if(champ && avant.q){
+    champ.value = avant.q;
+    filterValueSearch(avant.q);
+    /* Le curseur aussi : sans ça, la frappe suivante repart du début
+       du mot et l'on tape à l'envers. */
+    try{ champ.setSelectionRange(avant.q.length, avant.q.length); }catch(e){}
+    if(avant.focus) champ.focus();
+  }
 
   m.classList.add('open');
   // Positionnement sous le bouton, sans déborder de l'écran
@@ -1394,6 +1429,7 @@ function openDetail(id){
           ${kv('Caisse', packLines(i) ? packLines(i).replace(/^<br>/, '') : '')}
           ${kv('Conditionnement', i.has_case ? esc(i.case_note || 'oui, non précisé') : 'aucun')}
         </div>
+        ${needsBlock(i)}
         ${(i.price!=null || i.purchase_date || i.provider || i.sales_order) ? `<div class="fcard">
           <h4>Achat</h4>
           ${kv('Fournisseur', i.provider ? esc(i.provider) : '')}
@@ -1414,6 +1450,156 @@ function openDetail(id){
       <button class="btn sec" onclick="close_('ovDetail')">Close</button>
     </div>`;
   open_('ovDetail');
+}
+
+/* ============================================================
+   CE DONT CET ITEM A BESOIN (v2.2)
+
+   La carte vit sur la fiche et nulle part ailleurs : c'est une
+   propriété de l'appareil, pas de la caisse. On la déclare une fois,
+   elle se voit partout — voir needsOf() dans helpers.js et la 029
+   pour le raisonnement.
+
+   Deux boutons de recopie accompagnent la saisie, et ils ne sont pas
+   du confort. Déclarer les besoins de six cents items un par un est
+   un travail qu'on abandonne au trentième ; sans eux la table reste
+   vide et la fonction ne sert à rien.
+   ============================================================ */
+function needsBlock(i){
+  if(!db.needsSupported){
+    return `<div class="fcard"><h4>Needs</h4>
+      <div class="hintline">Run <b>sql/029-besoins-items.sql</b> in Supabase, then refresh.</div></div>`;
+  }
+  const liste = needsOf(i.id);
+  const éditable = can('edit');
+  if(!liste.length && !éditable) return '';
+
+  const ligne = n => `<div class="ndline">
+    <span class="ndkind ${n.kind}">${n.kind === 'power' ? '⚡' : '〰'}</span>
+    <span class="ndlbl">${esc(needText(n))}${
+      (n.qty||1) > 1 ? ` <span class="muted">× ${n.qty}</span>` : ''}${
+      n.needs_item_id ? ' <span class="tag conf">tracked</span>' : ''}</span>
+    <span class="muted ndw">${n.weight_g ? esc(fweight(n.weight_g)) : ''}</span>
+    ${éditable ? `<button class="btn small sec" onclick="needDelete('${n.id}')">✕</button>` : ''}
+  </div>`;
+
+  const parFamille = Object.keys(NEED_KINDS).map(k=>{
+    const l = liste.filter(n=>(n.kind||'power') === k);
+    return l.length ? `<div class="ndsub">${NEED_KINDS[k]}</div>${l.map(ligne).join('')}` : '';
+  }).join('');
+
+  const jumeaux = copiesDe(i).length;
+  const mêmeSub = db.items.filter(x=>x.cat === i.cat && x.subcat === i.subcat && x.id !== i.id).length;
+
+  return `<div class="fcard">
+    <h4>Needs <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">— travels with this item</span></h4>
+    ${parFamille || '<div class="muted" style="font-size:13.5px">Nothing declared.</div>'}
+    ${éditable ? `
+      <div class="ndform">
+        <select id="nd-preset" onchange="needPreset()">
+          <option value="">— pick a common one —</option>
+          ${Object.keys(NEED_KINDS).map(k=>`<optgroup label="${NEED_KINDS[k]}">${
+            NEED_PRESETS.map((pz, n)=>pz.kind === k
+              ? `<option value="${n}">${esc(pz.label)}</option>` : '').join('')
+          }</optgroup>`).join('')}
+        </select>
+        <input id="nd-label" placeholder="or type one — e.g. Minimoog PSU"
+               onkeydown="if(event.key==='Enter')needAdd('${i.id}')">
+        <select id="nd-kind">
+          ${Object.keys(NEED_KINDS).map(k=>`<option value="${k}">${NEED_KINDS[k]}</option>`).join('')}
+        </select>
+        <input id="nd-qty" type="number" min="1" max="9999" value="1" title="Quantity">
+        <input id="nd-weight" placeholder="weight, optional" title="Leave empty if too light to matter">
+        <button class="btn small" onclick="needAdd('${i.id}')">Add</button>
+      </div>
+      ${liste.length ? `<div class="ndcopy">
+        ${jumeaux ? `<button class="btn sec small" onclick="needCopyTo('${i.id}','copies')">
+          Copy to the ${jumeaux} other cop${jumeaux>1?'ies':'y'}</button>` : ''}
+        ${mêmeSub ? `<button class="btn sec small" onclick="needCopyTo('${i.id}','sub')">
+          Copy to all ${mêmeSub} in ${esc(subLabel(i.cat, i.subcat))}</button>` : ''}
+      </div>` : ''}` : ''}
+  </div>`;
+}
+
+/* Les autres exemplaires du même modèle : « SM57 #2 » quand on est
+   sur « SM57 #1 ». Ils ont presque toujours les mêmes besoins. */
+function copiesDe(i){
+  const k = groupKeyOf(i.name);
+  if(!k) return [];
+  return db.items.filter(x=>x.id !== i.id && groupKeyOf(x.name) === k);
+}
+
+/* Choisir un besoin courant remplit les champs — sans les verrouiller :
+   un cordon de 10 m n'a pas le poids de celui de 3 m. */
+function needPreset(){
+  const n = document.getElementById('nd-preset').value;
+  if(n === '') return;
+  const pz = NEED_PRESETS[Number(n)];
+  if(!pz) return;
+  document.getElementById('nd-label').value = pz.label;
+  document.getElementById('nd-kind').value = pz.kind;
+  document.getElementById('nd-weight').value = pz.g ? fweight(pz.g) : '';
+}
+
+async function needAdd(itemId){
+  const label = (document.getElementById('nd-label').value || '').trim();
+  if(!label){ toast('Pick one from the list or type a name.', 'warn'); return; }
+  const kind = document.getElementById('nd-kind').value || 'power';
+  const qty  = Math.max(1, Math.min(9999, parseInt(document.getElementById('nd-qty').value, 10) || 1));
+  const weight_g = parseWeight(document.getElementById('nd-weight').value);
+  try{
+    const rows = await apiInsertNeeds([{item_id:itemId, kind, label, qty, weight_g,
+                                        pos: needsOf(itemId).length}]);
+    db.needs.push(...rows);
+    openDetail(itemId);
+    toast('Added.', 'ok');
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
+async function needDelete(id){
+  const n = (db.needs||[]).find(x=>x.id === id);
+  if(!n) return;
+  try{
+    await apiDeleteNeed(id);
+    db.needs = db.needs.filter(x=>x.id !== id);
+    openDetail(n.item_id);
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
+/* ---- Recopie ----
+   On n'écrase rien : chaque cible garde ce qu'elle a et ne reçoit
+   que ce qui lui manque. Écraser ferait perdre en silence une
+   déclaration propre à un exemplaire, et c'est exactement le genre
+   de perte qu'on ne remarque qu'une fois la caisse partie. */
+async function needCopyTo(itemId, portée){
+  const i = item(itemId);
+  const source = needsOf(itemId);
+  if(!i || !source.length) return;
+  const cibles = portée === 'copies' ? copiesDe(i)
+    : db.items.filter(x=>x.cat === i.cat && x.subcat === i.subcat && x.id !== i.id);
+  if(!cibles.length) return;
+
+  const où = portée === 'copies' ? `the ${cibles.length} other cop${cibles.length>1?'ies':'y'}`
+                                 : `all ${cibles.length} items in ${subLabel(i.cat, i.subcat)}`;
+  if(!confirm(`Copy these ${source.length} need(s) to ${où}?\n\nNothing is overwritten — each item only receives what it is missing.`)) return;
+
+  const rows = [];
+  cibles.forEach(c=>{
+    const déjà = new Set(needsOf(c.id).map(n=>needKeyOf(n)));
+    source.forEach(n=>{
+      if(n.needs_item_id) return;          // un objet unique ne se duplique pas
+      if(déjà.has(needKeyOf(n))) return;
+      rows.push({item_id:c.id, kind:n.kind, label:n.label,
+                 qty:n.qty, weight_g:n.weight_g, pos:n.pos});
+    });
+  });
+  if(!rows.length){ toast('They already have all of them.', 'info'); return; }
+  try{
+    const crées = await apiInsertNeeds(rows);
+    db.needs.push(...crées);
+    openDetail(itemId);
+    toast(`${crées.length} line(s) added across ${cibles.length} item(s).`, 'ok');
+  }catch(err){ toast(String(err.message||err), 'error'); }
 }
 
 /* Ouverture d'une fiche après scan d'un QR code */

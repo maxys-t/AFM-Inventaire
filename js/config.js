@@ -216,6 +216,41 @@ const DESTINATIONS = {service:"Back in service", repair:"Still needs repair",
    chez un réparateur est un matériel perdu. */
 const REPAIR_STALE_DAYS = 30;
 
+/* ============================================================
+   BESOINS COURANTS (v2.2)
+
+   Ce qu'on retape sans arrêt. Déclarer les besoins de six cents
+   items à la main est un travail qu'on abandonne au trentième : la
+   bibliothèque n'est pas un confort, c'est ce qui décide si la
+   fonction sert ou pourrit.
+
+   Les poids sont des ordres de grandeur mesurés sur du matériel
+   courant, pour que le total d'un transport soit utile avant d'avoir
+   pesé quoi que ce soit. Laisser `g` vide signifie « trop léger pour
+   compter » — mieux vaut un total incomplet qu'un total inventé.
+
+   Liste modifiable ici, sans migration : elle ne sert qu'à la
+   saisie, c'est le libellé qui est enregistré.
+   ============================================================ */
+const NEED_PRESETS = [
+  {kind:'power', label:'IEC C13 mains lead',      g:180},
+  {kind:'power', label:'IEC C7 mains lead',       g:110},
+  {kind:'power', label:'Schuko mains lead',       g:180},
+  {kind:'power', label:'External PSU brick',      g:450},
+  {kind:'power', label:'9V DC adapter',           g:160},
+  {kind:'power', label:'12V DC adapter',          g:220},
+  {kind:'power', label:'48V phantom supply',      g:900},
+  {kind:'power', label:'USB-C charger',           g:90},
+  {kind:'cable', label:'XLR 3 m',                 g:230},
+  {kind:'cable', label:'XLR 10 m',                g:700},
+  {kind:'cable', label:'Jack 6.35 mm 3 m',        g:150},
+  {kind:'cable', label:'Speakon 5 m',             g:400},
+  {kind:'cable', label:'MIDI DIN',                g:80},
+  {kind:'cable', label:'USB-B',                   g:70},
+  {kind:'cable', label:'Ethernet Cat5e 5 m',      g:140},
+  {kind:'cable', label:'BNC word clock',          g:60}
+];
+
 /* --- Project status --- */
 const PSTAT = {inactif:"Idle", preparation:"Packing", show:"On show"};
 const PTAG  = {inactif:"pinactif", preparation:"pprep", show:"pshow"};

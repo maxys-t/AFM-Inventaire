@@ -224,6 +224,8 @@ function renderPackDetail(){
       ${st.manque ? '' : '<div class="hintline" style="margin-top:6px">This pack is a configuration, not a place: these items are simply busy right now.</div>'}
     </div>` : ''}
 
+    ${packNeedsBlock(p)}
+
     ${packExtrasBlock(p)}
 
     <div class="hintline" style="margin-top:12px">Weight:
@@ -253,6 +255,36 @@ function renderPackDetail(){
    un libellé, une quantité. Volontairement sans poids — le total d'un
    projet est le chiffre qu'on lit face à un transporteur.
    ============================================================ */
+/* ============================================================
+   CE QUE LA CAISSE EMPORTE SANS QU'ON L'Y AIT MIS (v2.2.0)
+
+   Les alimentations et les cordons déclarés sur chaque appareil. Ils
+   ne sont inscrits nulle part dans la caisse : ils sont déduits de
+   son contenu, imbriqués compris. Retirer l'appareil retire son
+   alimentation, sans qu'aucun code n'ait à y penser.
+
+   Le bloc est en lecture seule, et c'est volontaire : un besoin
+   appartient à l'appareil, pas à la caisse. Le modifier ici
+   donnerait l'illusion qu'il vaut pour cette caisse seulement, et
+   l'on retrouverait la confusion que la 028 a servi à effacer.
+   ============================================================ */
+function packNeedsBlock(p){
+  if(!db.needsSupported) return '';
+  const familles = needsGrouped(packAllItems(p));
+  if(!familles.length) return '';
+
+  return familles.map(f=>`
+    <div class="fieldlbl" style="margin-top:14px">${esc(f.titre)}
+      <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">— from the gear inside</span></div>
+    <div class="pklist">
+      ${f.lignes.map(n=>`<div class="pkline">
+        <div class="repbody"><div>${esc(n.label)} <span class="muted">× ${n.qty}</span></div>
+          <div class="repmeta">${n.pour.length} item(s)${
+            n.weight_g ? ' · ' + esc(fweight(n.weight_g * n.qty)) : ''}</div></div>
+      </div>`).join('')}
+    </div>`).join('');
+}
+
 function packExtrasBlock(p){
   if(!db.packExtrasSupported){
     return `<div class="hintline" style="margin-top:12px">Consumables need <b>sql/024-packs-presets-projets.sql</b> — run it in Supabase, then refresh.</div>`;

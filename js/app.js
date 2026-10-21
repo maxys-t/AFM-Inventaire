@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '2.1.1';
+const APP_VERSION = '2.2.0';
 
 /* ---- le thème ----
 
@@ -242,6 +242,7 @@ async function exportJSON(){
   delete out.trash; delete out.trashSupported; delete out.projectsError;
   delete out.repairsSupported; delete out.packsSupported;
   delete out.packExtrasSupported;
+  delete out.needsSupported;
   try{
     toast('Reading the full history…', 'info');
     const [hist, items] = await Promise.all([
@@ -344,8 +345,21 @@ function normalizeImport(d){
               qty:e.qty||1, pos:e.pos||0}))
     .filter(e=>e.id && e.pack_id && e.label);
 
+  /* Les besoins (v2.2). Oubliée ici, une restauration rendrait un
+     parc complet dont chaque appareil aurait perdu son alimentation
+     — et personne ne s'en apercevrait avant la caisse suivante.
+     C'est la cinquième table que la restauration aurait pu perdre en
+     silence, après les photos, les réparations, les packs et les
+     consommables : la liste s'allonge à chaque migration, et c'est
+     exactement pourquoi le protocole de restauration se rejoue. */
+  const needs = (d.needs || d.item_needs || [])
+    .map(n=>({id:n.id, item_id:n.item_id, kind:n.kind || 'power',
+              label:n.label || null, needs_item_id:n.needs_item_id || null,
+              qty:n.qty || 1, weight_g:n.weight_g ?? null, pos:n.pos || 0}))
+    .filter(n=>n.id && n.item_id && (n.label || n.needs_item_id));
+
   return {items:d.items||[], users, locations, history, projects:d.projects||[],
-          repairs, providers, packs, packItems, packExtras};
+          repairs, providers, packs, packItems, packExtras, needs};
 }
 function importJSON(inp){
   const f = inp.files[0]; if(!f) return;
@@ -372,6 +386,7 @@ function importJSON(inp){
       if(d.packs.length) await apiUpsertPacks(d.packs);
       if(d.packItems.length) await apiUpsertPackItems(d.packItems);
       if(d.packExtras.length) await apiUpsertPackExtras(d.packExtras);
+      if(d.needs.length) await apiUpsertNeeds(d.needs);
       if(d.providers.length) await apiUpsertProviders(d.providers);
       if(d.repairs.length)   await apiUpsertRepairs(d.repairs);
       if(d.projects.length) await apiUpsertProjects(d.projects.map(p=>({

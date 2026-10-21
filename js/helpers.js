@@ -462,6 +462,107 @@ function packAllExtras(p, vus){
   return out;
 }
 
+/* ============================================================
+   CE DONT UN ITEM A BESOIN POUR FONCTIONNER (v2.2)
+
+   Le Minimoog ne part jamais seul : son bloc d'alim et une Schuko
+   vont avec. Ce ne sont PAS des items de l'inventaire — voir la 029
+   pour le raisonnement complet, mais l'essentiel tient en une
+   phrase : une alimentation attitrée ne peut pas être en conflit,
+   puisque l'appareil qu'elle sert n'est qu'à un endroit à la fois.
+
+   Un besoin est donc une déclaration portée par l'item, et tout le
+   reste en est DÉRIVÉ. C'est ce qui rend l'ajout automatique sûr :
+   mettre le Minimoog dans une caisse y fait apparaître son alim,
+   l'en retirer la fait disparaître, et il n'existe aucun état à
+   synchroniser entre les deux — donc aucune ligne orpheline
+   possible.
+   ============================================================ */
+const NEED_KINDS = {power:'Power supplies', cable:'Cables'};
+
+function needsOf(itemId){
+  return (db.needs||[]).filter(n=>n.item_id === itemId)
+    .sort((a,b)=>(a.pos||0)-(b.pos||0)
+              || String(needText(a)).localeCompare(String(needText(b)),'fr'));
+}
+/* Le nom à lire. Un besoin suivi comme un item emprunte le sien :
+   le renommer dans l'inventaire doit se voir partout, sans recopie. */
+function needText(n){
+  if(!n) return '';
+  if(n.needs_item_id){
+    const i = item(n.needs_item_id);
+    return i ? itemTitleText(i) : '(deleted item)';
+  }
+  return n.label || '';
+}
+
+/* ---- Agrégation ----
+   Quatre appareils qui réclament chacun un C13 ne font pas quatre
+   lignes : ils en font une, « C13 × 4 ». Une checklist de packing se
+   coche en comptant, pas en relisant quatre fois le même mot.
+
+   La clé de fusion est volontairement le libellé normalisé et non
+   l'identifiant de la ligne : « C13 » saisi sur deux fiches
+   différentes désigne le même cordon dans la caisse.
+
+   Un besoin suivi comme un item, lui, ne fusionne jamais : c'est un
+   objet unique, et le confondre avec un autre masquerait précisément
+   le conflit qu'on a créé cette colonne pour voir. */
+function needKeyOf(n){
+  return n.needs_item_id ? 'n#' + n.needs_item_id
+                         : 'n:' + (n.kind||'power') + '|' + needText(n).trim().toLowerCase();
+}
+function needsForItems(items){
+  const par = new Map();
+  (items||[]).forEach(i=>{
+    needsOf(i.id).forEach(n=>{
+      const k = needKeyOf(n);
+      const q = n.qty || 1;
+      if(!par.has(k)) par.set(k, {
+        key: k, kind: n.kind || 'power', label: needText(n),
+        itemId: n.needs_item_id || null,
+        qty: 0, weight_g: n.weight_g || null, pour: []
+      });
+      const a = par.get(k);
+      a.qty += q;
+      if(n.weight_g && !a.weight_g) a.weight_g = n.weight_g;
+      if(!a.pour.includes(i.id)) a.pour.push(i.id);
+    });
+  });
+  return [...par.values()].sort((a,b)=>
+    (a.kind === b.kind ? 0 : (a.kind === 'power' ? -1 : 1))
+    || String(a.label).localeCompare(String(b.label),'fr'));
+}
+/* Par famille, dans l'ordre d'affichage : alimentations d'abord — on
+   branche avant de câbler. */
+function needsGrouped(items){
+  const tous = needsForItems(items);
+  return Object.keys(NEED_KINDS)
+    .map(k=>({kind:k, titre:NEED_KINDS[k], lignes:tous.filter(n=>n.kind === k)}))
+    .filter(g=>g.lignes.length);
+}
+/* Le poids des besoins déclarés. Un transformateur de 1,5 kg compte
+   face à un transporteur ; un besoin sans poids n'ajoute rien plutôt
+   que d'ajouter une estimation inventée. */
+function needsWeight(items){
+  return needsForItems(items).reduce((t,n)=>t + (n.weight_g ? n.weight_g * n.qty : 0), 0);
+}
+/* Toutes les clés de besoin d'un projet, caisse par caisse. */
+function projNeedKeys(c){
+  const out = [];
+  (c.groups||[]).forEach(g=>(g.needs||[]).forEach(f=>
+    f.lignes.forEach(n=>out.push(g.packId + '/' + n.key))));
+  (c.looseNeeds||[]).forEach(f=>f.lignes.forEach(n=>out.push('loose/' + n.key)));
+  return out;
+}
+
+/* Le poids de familles DÉJÀ agrégées — celles d'un groupe de projet
+   ou d'une photographie figée, où les items ne sont plus à portée. */
+function besoinsPoids(familles){
+  return (familles||[]).reduce((t,f)=>t +
+    f.lignes.reduce((u,n)=>u + (n.weight_g ? n.weight_g * n.qty : 0), 0), 0);
+}
+
 /* Poids effectif d'un item : le sien, plus celui du pack dont il est
    le contenant. Un lunchbox « pèse » ses modules. `vus` coupe les
    boucles — la base les refuse, mais un calcul sans fin fige l'écran
@@ -470,7 +571,10 @@ function itemWeightDeep(i, vus){
   vus = vus || new Set();
   if(!i || vus.has(i.id)) return 0;
   vus.add(i.id);
-  let g = i.weight_g || 0;
+  /* Les besoins déclarés voyagent avec l'item : leur poids est du
+     poids réel dans la caisse. Ceux qui n'en ont pas n'ajoutent
+     rien — mieux vaut un total incomplet qu'un total inventé. */
+  let g = (i.weight_g || 0) + needsWeight([i]);
   const p = packOfContainer(i.id);
   if(p) packItemsOf(p.id).forEach(m=>{ g += itemWeightDeep(m, vus); });
   return g;
@@ -679,7 +783,7 @@ function projSub(p, packId, itemId){
 
 function projContent(p){
   if(!p) return {groups:[], loose:[], items:[], extras:[], doublons:[],
-                 weight:0, missing:0, frozen:false};
+                 needs:[], looseNeeds:[], weight:0, missing:0, frozen:false};
   if(p.snapshot && p.status === 'show') return projFromSnapshot(p);
 
   const groups = [], vus = new Set(), doublons = [];
@@ -702,7 +806,10 @@ function projContent(p){
       items:   tous.filter(i=>!projBusy(i, p)),
       écartés: tous.filter(i=>projBusy(i, p)),
       doublons: doublons.filter(d=>d.packId === k.id),
-      extras:  packAllExtras(k).map(e=>({...e, key: extraKey(e)}))
+      extras:  packAllExtras(k).map(e=>({...e, key: extraKey(e)})),
+      /* Dérivés des items retenus, pas stockés : un item écarté faute
+         d'être disponible n'emporte pas son alimentation. */
+      needs:   needsGrouped(tous.filter(i=>!projBusy(i, p)))
     });
   });
 
@@ -712,13 +819,18 @@ function projContent(p){
 
   const items  = groups.reduce((a,g)=>a.concat(g.items), []).concat(loose);
   const extras = groups.reduce((a,g)=>a.concat(g.extras), []);
+  /* Les besoins des items isolés. Agrégés par caisse pour la lecture,
+     comptés à plat pour la progression : la même ligne cochée dans
+     deux caisses reste deux gestes à faire. */
+  const looseNeeds = needsGrouped(loose);
+  const needs = groups.reduce((a,g)=>a.concat(g.needs), []).concat(looseNeeds);
   /* Les items supprimés de l'inventaire depuis la création du projet.
      On les compte pour pouvoir le dire, plutôt que de laisser le
      total baisser sans explication. */
   const missing = (p.item_ids||[]).filter(id=>!item(id)).length;
 
-  return {groups, loose, items, extras, doublons,
-          weight: items.reduce((t,i)=>t + (i.weight_g||0), 0),
+  return {groups, loose, items, extras, doublons, needs, looseNeeds,
+          weight: items.reduce((t,i)=>t + (i.weight_g||0), 0) + needsWeight(items),
           missing, frozen:false};
 }
 
@@ -750,13 +862,20 @@ function projFromSnapshot(p){
   const groups = (s.packs||[]).map(g=>({
     packId: g.id, name: g.name, permanent: !!g.permanent,
     items: résoudre(g.items), écartés: [], doublons: [],
-    extras: (g.extras||[]).map(e=>({...e, key: extraKey(e)}))
+    extras: (g.extras||[]).map(e=>({...e, key: extraKey(e)})),
+    /* Une photographie antérieure à la v2.2 n'en a pas : la relire
+       doit rendre un projet sans besoins, pas une erreur. */
+    needs: g.needs || []
   }));
   const loose  = résoudre(s.items);
+  const looseNeeds = s.needs || [];
   const items  = groups.reduce((a,g)=>a.concat(g.items), []).concat(loose);
   const extras = groups.reduce((a,g)=>a.concat(g.extras), []);
-  return {groups, loose, items, extras, doublons:[],
-          weight: items.reduce((t,i)=>t + (i.weight_g||0), 0),
+  const needs  = groups.reduce((a,g)=>a.concat(g.needs), []).concat(looseNeeds);
+  const poidsBesoins = needs.reduce((t,f)=>t +
+    f.lignes.reduce((u,n)=>u + (n.weight_g ? n.weight_g * n.qty : 0), 0), 0);
+  return {groups, loose, items, extras, doublons:[], needs, looseNeeds,
+          weight: items.reduce((t,i)=>t + (i.weight_g||0), 0) + poidsBesoins,
           missing, frozen:true};
 }
 
@@ -768,9 +887,17 @@ function projSnapshot(p){
     packs: c.groups.map(g=>({
       id: g.packId, name: g.name, permanent: g.permanent,
       items: g.items.map(i=>i.id),
-      extras: g.extras.map(e=>({id:e.id, label:e.label, qty:e.qty}))
+      extras: g.extras.map(e=>({id:e.id, label:e.label, qty:e.qty})),
+      /* Figés comme le reste. Déclarer une alimentation de plus le
+         lendemain ne doit pas réécrire ce qui est déjà parti. */
+      needs: g.needs.map(f=>({kind:f.kind, titre:f.titre,
+        lignes: f.lignes.map(n=>({key:n.key, kind:n.kind, label:n.label,
+                                  qty:n.qty, weight_g:n.weight_g}))}))
     })),
-    items: c.loose.map(i=>i.id)
+    items: c.loose.map(i=>i.id),
+    needs: c.looseNeeds.map(f=>({kind:f.kind, titre:f.titre,
+      lignes: f.lignes.map(n=>({key:n.key, kind:n.kind, label:n.label,
+                                qty:n.qty, weight_g:n.weight_g}))}))
   };
 }
 

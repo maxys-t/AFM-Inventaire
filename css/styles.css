@@ -1611,6 +1611,26 @@ body.railshut .railtop{justify-content:center;padding-bottom:10px}
 @media(max-width:560px){.kv{flex-direction:column;gap:1px}.kv .k{width:auto}}
 
 /* ============================================================
+   LES BESOINS D'UN ITEM (v2.2.0)
+   Alimentations et cordons : ce qui part AVEC l'appareil. Lignes
+   denses — on en lit cinq d'un coup d'œil, pas une à la fois.
+   ============================================================ */
+.ndsub{font-size:10px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);margin:9px 0 3px}
+.ndsub:first-child{margin-top:0}
+.ndline{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13.5px}
+.ndline + .ndline{border-top:1px solid var(--border)}
+.ndkind{flex:none;width:19px;text-align:center;font-size:12px;opacity:.75}
+.ndlbl{flex:1;min-width:0;word-break:break-word}
+.ndw{flex:none;font-size:12px}
+.ndform{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:11px}
+.ndform input,.ndform select{min-width:0;font-size:13px;padding:7px 9px}
+.ndform #nd-label{grid-column:1 / -1}
+.ndform button{grid-column:1 / -1}
+.ndcopy{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ndcopy .btn{font-size:12px}
+
+/* ============================================================
    UNE SEULE LARGEUR (v2.0.1)
 
    Certaines vues étaient bridées à 1 100 px, d'autres prenaient tout

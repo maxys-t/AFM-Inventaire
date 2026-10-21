@@ -711,7 +711,30 @@ function projPrep(){
   const pct = pr.total ? Math.round(pr.done/pr.total*100) : 0;
   const figé = p.status === 'show';
 
-  const bloc = (titre, lignes, extras, écartés, poids) => {
+  /* ============================================================
+     LES BESOINS, SOUS LES ITEMS QUI LES RÉCLAMENT (v2.2.0)
+
+     Les alimentations et les cordons ne sont pas des items : ils sont
+     DÉRIVÉS de ce que la caisse contient. Quatre appareils réclamant
+     chacun un C13 donnent une ligne « × 4 », parce qu'une checklist
+     se coche en comptant.
+
+     Ils comptent dans la progression : une caisse sans son
+     alimentation n'est pas une caisse finie, et une barre à 100 %
+     le dirait faux.
+
+     La clé porte le nom de la caisse — la même alimentation cochée
+     dans deux caisses reste deux gestes.
+     ============================================================ */
+  const lignesBesoins = (préfixe, familles) =>
+    (familles||[]).reduce((a,f)=>a.concat(f.lignes.map(n=>({
+      key: préfixe + '/' + n.key,
+      html: esc(n.label),
+      sub: '× ' + n.qty + (n.weight_g ? ' · ' + fweight(n.weight_g * n.qty) : ''),
+      besoin: f.titre
+    }))), []);
+
+  const bloc = (titre, lignes, extras, écartés, poids, familles) => {
     const clés = lignes.map(l=>l.key);
     const ok = clés.filter(k=>p.prep && p.prep[k]).length;
     return `<div class="pjgrp">
@@ -721,7 +744,11 @@ function projPrep(){
         ${(!figé && can('projectPrep') && clés.length)?`<button class="btn sec small" onclick="projTickAll(${JSON.stringify(clés).replace(/"/g,'&quot;')})">Tick all</button>`:''}
       </div>
       <div class="bd">
-        ${lignes.filter(l=>!l.extra).map(l=>projLine(l, p, figé)).join('')}
+        ${lignes.filter(l=>!l.extra && !l.besoin).map(l=>projLine(l, p, figé)).join('')}
+        ${(familles||[]).map(f=>
+          `<div class="pjsub">${esc(f.titre)}</div>` +
+          lignes.filter(l=>l.besoin === f.titre).map(l=>projLine(l, p, figé)).join('')
+        ).join('')}
         ${extras.length?'<div class="pjsub">Consumables</div>' + lignes.filter(l=>l.extra).map(l=>projLine(l, p, figé)).join(''):''}
         ${écartés.length?'<div class="pjsub warntxt">Left out — unavailable</div>' +
           écartés.map(i=>`<div class="pjrow off">
@@ -739,17 +766,22 @@ function projPrep(){
   let blocs = c.groups.map(g=>bloc(
     g.name,
     g.items.map(ligne)
+      .concat(lignesBesoins(g.packId, g.needs))
       .concat(g.extras.map(e=>({key:e.key, html:esc(e.label), sub:'× ' + e.qty, extra:true}))),
     g.extras, g.écartés,
-    g.items.reduce((t,i)=>t+(i.weight_g||0), 0)
+    g.items.reduce((t,i)=>t+(i.weight_g||0), 0) + besoinsPoids(g.needs),
+    g.needs
   )).join('');
 
   if(c.loose.length){
     blocs += bloc('Loose items',
       c.loose.map(i=>({key:i.id, html:itemTitle(i), photo:i.photo,
                        sub:i.id + ' · ' + fweight(i.weight_g||0)
-                           + (itemFlag(i) ? ' · ⚠ ' + itemFlag(i) : '')})),
-      [], [], c.loose.reduce((t,i)=>t+(i.weight_g||0), 0));
+                           + (itemFlag(i) ? ' · ⚠ ' + itemFlag(i) : '')}))
+        .concat(lignesBesoins('loose', c.looseNeeds)),
+      [], [],
+      c.loose.reduce((t,i)=>t+(i.weight_g||0), 0) + besoinsPoids(c.looseNeeds),
+      c.looseNeeds);
   }
 
   let actions = '';
@@ -1018,9 +1050,15 @@ function deliveryMailBody(p){
   L.push(`Cases: ${c.groups.length} — items: ${c.items.length} — total weight: ${fweight(c.weight)}`, '');
 
   c.groups.forEach(g=>{
-    const poids = g.items.reduce((t,i)=>t+(i.weight_g||0), 0);
+    const poids = g.items.reduce((t,i)=>t+(i.weight_g||0), 0) + besoinsPoids(g.needs);
     L.push(`${g.name} (${g.items.length} items, ${fweight(poids)})`);
     g.items.forEach(i=>L.push(`  - ${itemTitleText(i)} [${i.id}]`));
+    /* Les alimentations et cordons comptent sur un quai : c'est ce
+       qu'on cherche quand une caisse arrive et que rien ne s'allume. */
+    (g.needs||[]).forEach(f=>{
+      L.push(`  ${f.titre}:`);
+      f.lignes.forEach(n=>L.push(`    · ${n.label} × ${n.qty}`));
+    });
     g.extras.forEach(e=>L.push(`  · ${e.label} × ${e.qty}`));
     L.push('');
   });
@@ -1028,6 +1066,10 @@ function deliveryMailBody(p){
     const poids = c.loose.reduce((t,i)=>t+(i.weight_g||0), 0);
     L.push(`Loose items (${c.loose.length}, ${fweight(poids)})`);
     c.loose.forEach(i=>L.push(`  - ${itemTitleText(i)} [${i.id}]`));
+    (c.looseNeeds||[]).forEach(f=>{
+      L.push(`  ${f.titre}:`);
+      f.lignes.forEach(n=>L.push(`    · ${n.label} × ${n.qty}`));
+    });
     L.push('');
   }
   if(c.missing > 0) L.push(`(${c.missing} item(s) of this project are no longer in the inventory)`, '');

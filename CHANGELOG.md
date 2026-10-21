@@ -1,5 +1,82 @@
 # Changelog
 
+## [2.2.0] — 2026-10-21
+
+⚠️ **Migration SQL : `sql/029-besoins-items.sql`.** À lancer dans
+Supabase avant de déployer. Elle n'ajoute que du neuf — aucune table
+existante n'est modifiée, aucune donnée touchée — et se rejoue sans
+dommage. Sauvegarde avant, comme toujours.
+
+### Ajouté
+
+- **Chaque item peut déclarer ce qu'il emporte avec lui** :
+  alimentations et cordons. Le Minimoog ne part jamais sans son bloc
+  d'alim ni sa Schuko ; rien ne le disait, on le savait par cœur —
+  jusqu'au jour où quelqu'un d'autre fait la caisse.
+
+  **Ce ne sont pas des items de l'inventaire**, et c'est la décision
+  centrale de cette version. La réponse évidente était d'en créer un
+  par alimentation : elle doublait presque le parc pour n'apprendre
+  rien de neuf. Un item existe pour répondre à « où est-il ? » et
+  « dans quel état ? ». Une alimentation attitrée ne pose ni l'une ni
+  l'autre, parce qu'**elle ne peut pas être en conflit** : elle suit
+  son appareil, et son appareil n'est qu'à un endroit à la fois. Le
+  conflit de disponibilité est déjà attrapé là où il se produit.
+
+  Un besoin est donc une déclaration portée par l'item, et tout le
+  reste en est **dérivé**. Ajouter le Minimoog à une caisse y fait
+  apparaître son alimentation ; l'en retirer la fait disparaître. Il
+  n'existe aucun état à synchroniser entre les deux, donc aucune
+  ligne orpheline possible — c'est ce qui rend l'ajout automatique
+  sûr plutôt que risqué.
+
+- **Les besoins identiques fusionnent.** Quatre appareils réclamant
+  chacun un C13 donnent une ligne « × 4 » et non quatre lignes : une
+  checklist de packing se coche en comptant. La fusion se fait sur le
+  libellé — « Schuko » saisi sur deux fiches désigne le même cordon.
+
+- **Ils comptent dans la préparation d'un projet**, caisse par
+  caisse. Une caisse à qui il manque son alimentation n'est pas une
+  caisse finie, et une barre affichant 100 % le dirait faux. La clé
+  de la case porte le nom de la caisse : la même alimentation dans
+  deux caisses reste deux gestes.
+
+- **Ils comptent dans le poids**, quand on l'a renseigné. C'est ce
+  qui les distingue des consommables de la v1.22 : on ne pèse pas du
+  gaffer, mais un transformateur de 1,5 kg compte face à un
+  transporteur. Un besoin sans poids n'ajoute rien — un total
+  incomplet vaut mieux qu'un total inventé.
+
+- **Une bibliothèque de besoins courants**, et deux boutons de
+  recopie : vers les autres exemplaires du même modèle, ou vers toute
+  la sous-catégorie. Ce n'est pas du confort. Déclarer six cents
+  items un par un est un travail qu'on abandonne au trentième, et la
+  table resterait vide. La recopie **n'écrase jamais** : chaque item
+  garde ce qu'il a et ne reçoit que ce qui lui manque.
+
+- **Le départ d'un projet fige les besoins** avec le reste de son
+  contenu. Déclarer une alimentation de plus le lendemain ne réécrit
+  pas ce qui est déjà parti. Les projets partis avant cette version
+  se relisent sans erreur — ils n'ont simplement pas de besoins.
+
+- **L'échappatoire, pour le cas rare.** Une alimentation *partagée*
+  entre deux appareils peut, elle, manquer : si les deux partent le
+  même soir, il en faut deux. Là, et là seulement, il faut un vrai
+  item ; la colonne `needs_item_id` existe pour ça. Par défaut on ne
+  s'en sert pas, et l'interface ne la met pas en avant.
+
+### Corrigé
+
+- **Le menu d'un en-tête ne se remet plus en haut** à chaque case
+  cochée. C'était le pendant du correctif de la v2.1.0 : la liste
+  d'inventaire gardait sa position, mais le menu, lui, se
+  reconstruisait entièrement — la liste des valeurs revenait à son
+  sommet et le texte tapé dans « Search values… » disparaissait. Avec
+  quarante sous-catégories, cocher la quatrième demandait de
+  redescendre quatre fois. La position, la recherche et le curseur
+  sont maintenant conservés.
+
+
 ## [2.1.1] — 2026-10-21
 
 ### Modifié
