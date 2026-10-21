@@ -72,12 +72,40 @@ function filterText(c, i){
   return (invCellText(c, i) || '').trim() || '(empty)';
 }
 
-/* Valeurs distinctes d'une colonne, avec leur nombre d'items. */
+/* ============================================================
+   UN MENU DE FILTRE NE PROPOSE QUE CE QUI RESTE (v2.3.0)
+
+   Le menu listait les valeurs de TOUT l'inventaire, quels que soient
+   les autres filtres. Cocher la famille « Microphones » laissait donc
+   la colonne Category proposer ses soixante sous-catégories, dont
+   cinquante-cinq ne pouvaient plus rien donner : on cochait, et la
+   liste se vidait sans explication.
+
+   Chaque menu lit maintenant les lignes qui passent TOUS LES AUTRES
+   filtres, le sien excepté. Cette exception n'est pas un détail : si
+   une colonne se filtrait elle-même, cocher « Synth » ferait
+   disparaître toutes les autres sous-catégories de son propre menu,
+   et l'on ne pourrait plus jamais en cocher une deuxième ni revenir
+   en arrière.
+
+   Le compte affiché à droite de chaque valeur suit la même règle :
+   « Condenser mic · 12 » veut dire douze items PARMI CE QUI RESTE,
+   ce qui est la seule lecture utile — c'est le nombre de lignes que
+   la case va faire apparaître.
+
+   La recherche en haut de page compte comme un filtre, pour la même
+   raison : elle restreint les lignes, donc elle restreint les choix.
+   ============================================================ */
 function filterValues(k){
   const c = INV_COLUMNS.find(x=>x.k === k);
   if(!c) return [];
   const n = new Map();
-  db.items.forEach(i=>{ const v = filterText(c, i); n.set(v, (n.get(v)||0) + 1); });
+  invFiltered(k).forEach(i=>{ const v = filterText(c, i); n.set(v, (n.get(v)||0) + 1); });
+  /* Ce qui est coché doit rester affiché même si plus rien ne le
+     porte : sinon une case cochée disparaîtrait de son propre menu,
+     et l'on ne pourrait plus la décocher. */
+  const sel = colFilters[k];
+  if(sel) sel.forEach(v=>{ if(!n.has(v)) n.set(v, 0); });
   return [...n.entries()]
     .sort((a,b)=> a[0] === '(empty)' ? 1 : b[0] === '(empty)' ? -1
                 : a[0].localeCompare(b[0], 'fr', {numeric:true}))
@@ -87,9 +115,12 @@ function filterValues(k){
 function hasFilter(k){ return !!(colFilters[k] && colFilters[k].size); }
 function activeFilterKeys(){ return Object.keys(colFilters).filter(hasFilter); }
 
-function invFiltered(){
+/* `sauf` sert aux menus de filtre : ils ont besoin des lignes qui
+   passent tous les filtres SAUF le leur — voir filterValues(). */
+function invFiltered(sauf){
   const q = ((document.getElementById('q')||{}).value || "").toLowerCase().trim();
-  const actifs = activeFilterKeys().map(k=>({k, c:INV_COLUMNS.find(x=>x.k===k), set:colFilters[k]}))
+  const actifs = activeFilterKeys().filter(k=>k !== sauf)
+                                   .map(k=>({k, c:INV_COLUMNS.find(x=>x.k===k), set:colFilters[k]}))
                                    .filter(f=>f.c);
   return db.items.filter(i=>{
     if(q){

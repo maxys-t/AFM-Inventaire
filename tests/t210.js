@@ -155,6 +155,43 @@ const TESTS = `
   clearFilter('cat');
   T(invFiltered().length === 5, 'et le vider les rend tous');
 
+  S('4bis. Un menu de filtre ne propose que ce qui reste');
+  /* Cocher la famille « Microphones » laissait la colonne Category
+     proposer les sous-catégories des claviers : on cochait, et la
+     liste se vidait sans explication. */
+  sortLevels = []; colFilters = {};
+  var catsDe = () => filterValues('cat').map(x=>x.v).sort();
+  T(catsDe().length === 4, 'sans filtre, les quatre sous-catégories sont proposées');
+
+  toggleFilterValue('family', 'Microphones', true);
+  T(catsDe().join(' / ') === 'Condenser mic / Dynamic mic',
+    'famille Microphones cochée : seules ses sous-catégories restent (' + catsDe().join(' / ') + ')');
+  T(filterValues('cat').every(x=>x.nb > 0),
+    'et chaque compte annonce des lignes qui existent vraiment');
+
+  /* L'exception qui rend le mécanisme utilisable : une colonne ne se
+     filtre pas elle-même, sinon cocher une valeur ferait disparaître
+     toutes les autres de son propre menu. */
+  toggleFilterValue('cat', 'Condenser mic', true);
+  T(catsDe().join(' / ') === 'Condenser mic / Dynamic mic',
+    'cocher une sous-catégorie ne retire pas les autres de SON menu');
+  /* Le menu Family, lui, se restreint — c'est voulu : avec « Condenser
+     mic » coché, aucune autre famille ne peut plus rien donner. Ce qui
+     doit être garanti, c'est qu'on puisse DÉFAIRE : la famille cochée
+     reste là, donc décochable. */
+  T(filterValues('family').some(x=>x.v === 'Microphones'),
+    'la famille cochée reste dans son menu, donc on peut revenir en arrière');
+
+  /* Une valeur cochée que plus rien ne porte doit rester affichée :
+     autrement on ne pourrait plus la décocher. */
+  toggleFilterValue('family', 'Microphones', false);
+  toggleFilterValue('family', 'Instruments', true);
+  T(catsDe().includes('Condenser mic'),
+    'une case cochée devenue vide reste visible — sinon elle serait indécochable');
+  T((filterValues('cat').find(x=>x.v === 'Condenser mic')||{}).nb === 0,
+    'et son compte dit franchement zéro');
+  colFilters = {};
+
   S('5. Le tableau de bord sépare ce qui est dehors');
   renderDash();
   var d = document.getElementById('v-dash').innerHTML;

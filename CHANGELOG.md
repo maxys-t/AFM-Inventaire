@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.3.0] — 2026-10-21
+
+### Modifié
+
+- **Un menu de filtre ne propose plus que ce qui reste.** Cocher la
+  famille *Microphones* laissait la colonne Category proposer ses
+  soixante sous-catégories, dont cinquante-cinq ne pouvaient plus
+  rien donner : on cochait, et la liste se vidait sans explication.
+
+  Chaque menu lit maintenant les lignes qui passent **tous les autres
+  filtres, le sien excepté**. Cette exception fait tout le mécanisme :
+  si une colonne se filtrait elle-même, cocher *Synth* ferait
+  disparaître les autres sous-catégories de son propre menu et l'on
+  ne pourrait plus en cocher une deuxième. Pour la même raison, une
+  valeur cochée reste affichée même quand plus rien ne la porte —
+  sinon elle deviendrait indécochable. Son compte dit alors zéro.
+
+  Les comptes suivent la même règle : « Condenser mic · 12 » veut
+  dire douze items **parmi ce qui reste**, c'est-à-dire le nombre de
+  lignes que la case va faire apparaître. La recherche en haut de
+  page restreint les choix au même titre qu'un filtre.
+
+
 ## [2.2.1] — 2026-10-21
 
 ### Modifié
