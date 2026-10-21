@@ -151,7 +151,7 @@ dom.window.eval([
   R.push([ordre[1] === 'proj', 'Projects vient juste après le tableau de bord']);
   R.push([ordre.indexOf('proj') < ordre.indexOf('packs'), 'devant les packs']);
   R.push([ordre.indexOf('packs') < ordre.indexOf('inv'), 'eux-mêmes devant l’inventaire']);
-  R.push([/<div class="railhead">Faire partir<\/div>/.test(h),
+  R.push([/<div class="railhead">Send out<\/div>/.test(h),
           'et le rail groupe explicitement ce qui sert à faire partir']);
   const dash = read('js/views-dashboard.js');
   R.push([/function dashProjectsHTML/.test(dash) &&

@@ -25,7 +25,7 @@ T(liens.length === 8, `les huit destinations y sont (${liens.length})`);
 T(liens[1] === 'proj', 'Projects juste après le tableau de bord');
 T(liens.indexOf('proj') < liens.indexOf('packs'), 'devant les caisses');
 T(liens.indexOf('packs') < liens.indexOf('inv'), 'elles-mêmes devant l’inventaire');
-T(/railhead">Faire partir</.test(rail) && /railhead">Le parc</.test(rail),
+T(/railhead">Send out</.test(rail) && /railhead">The fleet</.test(rail),
   'et il groupe explicitement les deux familles');
 /* Dix dessins : les huit destinations, la corbeille, et le bouton de
    repli. La corbeille a rejoint le rail en v2.0.1 — c'est un
@@ -76,12 +76,12 @@ T(/<div class="fcols">/.test(inv), 'deux colonnes de cartes');
 T(/<div class="fstats">/.test(inv), 'précédées des quatre chiffres qui comptent');
 T(/id="detailBody"[\s\S]{0,40}/.test(html) && /class="modal wide" id="detailBody"/.test(html),
   'la fenêtre est élargie pour les accueillir');
-['Identité','Rangement','Historique'].forEach(c=>
+['Identity','Storage','History'].forEach(c=>
   T(new RegExp('<h4>'+c).test(inv), `la carte « ${c} » existe`));
 T(/@media\(max-width:780px\)\{\.fcols\{grid-template-columns:1fr\}\}/.test(css),
   'et sur écran étroit les colonnes s’empilent');
 /* Ce qui était dans le paragraphe doit s'y retrouver, pas disparaître. */
-['N° de série','Propriétaire','Conditionnement','Fournisseur'].forEach(k=>
+['Serial number','Owner','Case','Supplier'].forEach(k=>
   T(inv.includes(`kv('${k}'`), `${k} n’a pas été perdu en chemin`));
 
 S('6. Les vues n’ont pas bougé');

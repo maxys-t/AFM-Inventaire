@@ -1392,13 +1392,13 @@ function openDetail(id){
     </div>
 
     <div class="fstats">
-      <div class="fstat"><div class="k">État</div>
+      <div class="fstat"><div class="k">Condition</div>
         <div class="v" style="font-size:17px">${esc(condLabel(i.cond))}</div></div>
-      <div class="fstat"><div class="k">Poids</div>
-        <div class="v">${i.weight_g ? esc(fweight(i.weight_g)) : '<span class="muted" style="font-size:15px">non pesé</span>'}</div></div>
-      <div class="fstat"><div class="k">Où</div>
+      <div class="fstat"><div class="k">Weight</div>
+        <div class="v">${i.weight_g ? esc(fweight(i.weight_g)) : '<span class="muted" style="font-size:15px">not weighed</span>'}</div></div>
+      <div class="fstat"><div class="k">Where</div>
         <div class="v" style="font-size:16px">${où || '—'}</div></div>
-      <div class="fstat"><div class="k">Sorties</div>
+      <div class="fstat"><div class="k">Check-outs</div>
         <div class="v">${db.history.filter(h=>h.itemId===id && h.type==='out').length}</div></div>
     </div>
 
@@ -1409,33 +1409,33 @@ function openDetail(id){
     <div class="fcols">
       <div>
         <div class="fcard">
-          <h4>Identité</h4>
-          ${kv('Fabricant', i.brand ? esc(i.brand) : '')}
-          ${kv('Modèle', esc(i.name))}
-          ${kv('N° de série', i.serial ? `<span class="mono">${esc(i.serial)}</span>` : '')}
-          ${kv('Propriétaire', i.owner ? esc(i.owner) : '')}
+          <h4>Identity</h4>
+          ${kv('Brand', i.brand ? esc(i.brand) : '')}
+          ${kv('Model', esc(i.name))}
+          ${kv('Serial number', i.serial ? `<span class="mono">${esc(i.serial)}</span>` : '')}
+          ${kv('Owner', i.owner ? esc(i.owner) : '')}
         </div>
         <div class="fcard">
-          <h4>Historique <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">${db.history.filter(h=>h.itemId===id).length}</span></h4>
+          <h4>History <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">${db.history.filter(h=>h.itemId===id).length}</span></h4>
           <ul class="hist">${rows||'<li class="muted">No activity yet</li>'}</ul>
         </div>
       </div>
 
       <div>
         <div class="fcard">
-          <h4>Rangement</h4>
-          ${kv('Rangé à', esc(locLabel(i.home)))}
-          ${kv('Actuellement', où)}
-          ${kv('Caisse', packLines(i) ? packLines(i).replace(/^<br>/, '') : '')}
-          ${kv('Conditionnement', i.has_case ? esc(i.case_note || 'oui, non précisé') : 'aucun')}
+          <h4>Storage</h4>
+          ${kv('Home', esc(locLabel(i.home)))}
+          ${kv('Currently', où)}
+          ${kv('Pack', packLines(i) ? packLines(i).replace(/^<br>/, '') : '')}
+          ${kv('Case', i.has_case ? esc(i.case_note || 'yes, unspecified') : 'none')}
         </div>
         ${needsBlock(i)}
         ${(i.price!=null || i.purchase_date || i.provider || i.sales_order) ? `<div class="fcard">
-          <h4>Achat</h4>
-          ${kv('Fournisseur', i.provider ? esc(i.provider) : '')}
+          <h4>Purchase</h4>
+          ${kv('Supplier', i.provider ? esc(i.provider) : '')}
           ${kv('Date', i.purchase_date ? fdateOnly(i.purchase_date) : '')}
-          ${kv('Prix', i.price!=null ? fprice(i.price) : '')}
-          ${kv('Commande', i.sales_order ? esc(i.sales_order) : '')}
+          ${kv('Price', i.price!=null ? fprice(i.price) : '')}
+          ${kv('Sales order', i.sales_order ? esc(i.sales_order) : '')}
         </div>` : ''}
         ${i.notes ? `<div class="fcard"><h4>Notes</h4>
           <div class="muted" style="font-size:13.5px;line-height:1.5">${esc(i.notes)}</div></div>` : ''}

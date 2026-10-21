@@ -1,5 +1,43 @@
 # Changelog
 
+## [2.2.1] — 2026-10-21
+
+### Modifié
+
+- **La bibliothèque de besoins reprend la nomenclature du studio** :
+  IEC C13, C7, 5, Powercon, les DC de 48 à 5 V, USB PSU, l'inverseur
+  de polarité, et les liaisons USB côté cordons. Les listes
+  génériques de la 2.2.0 ne correspondaient à rien de ce qui traîne
+  réellement dans les caisses.
+
+- **Les poids préremplis ont disparu.** Un « DC 12V » couvre une
+  prise murale de 100 g comme un bloc d'un kilo : les inventer
+  faussait le total qu'on lit face à un transporteur. Le champ reste
+  là, à remplir quand on a pesé. Un poids mesuré une fois a sa place
+  dans `NEED_PRESETS` — il se préremplira ensuite.
+
+- **Les derniers libellés français sont passés à l'anglais.** La
+  fiche d'un item en gardait une quinzaine — *Identité*, *Rangement*,
+  *Fabricant*, *Conditionnement*, les quatre chiffres du bandeau — et
+  les deux intitulés de groupe du rail, *Faire partir* et *Le parc*.
+
+  Ils avaient tenu des mois pour une raison simple : le code est
+  pensé et commenté en français, donc un libellé français s'y lit
+  comme un commentaire. Un harnais (`t221`) les cherche désormais
+  là où ils comptent — dans le texte d'une balise, un libellé de
+  `kv()`, un `placeholder`, un `title` — et ignore les commentaires.
+  **On ne traduit pas le raisonnement**, seulement l'écran.
+
+### Corrigé
+
+- **Le libellé et la flèche du menu déroulant se chevauchaient** dans
+  la carte *Needs*. La règle générale des `select` réserve 38 px à
+  droite pour le chevron ; en redéfinissant le `padding` entier pour
+  resserrer le formulaire, je l'avais écrasée et la flèche retombait
+  sur le texte. Le menu prend maintenant toute la largeur de la
+  carte, et un libellé trop long s'abrège au lieu de passer dessous.
+
+
 ## [2.2.0] — 2026-10-21
 
 ⚠️ **Migration SQL : `sql/029-besoins-items.sql`.** À lancer dans

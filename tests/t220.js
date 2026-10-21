@@ -212,6 +212,27 @@ const TESTS = `
   T(/d\\.needs \\|\\| d\\.item_needs/.test(read_app),
     'la restauration ne perd pas la table — la cinquième qu’elle aurait pu perdre');
 
+  S('13. La liste de saisie et le formulaire');
+  /* Les poids sont vides à dessein : un « DC 12V » couvre une prise
+     murale de 100 g comme un bloc d'un kilo. Les préremplir
+     inventerait le total qu'on lit face à un transporteur. */
+  T(NEED_PRESETS.length >= 16, 'la bibliothèque couvre le secteur, le continu et l’USB');
+  T(NEED_PRESETS.every(z=>z.kind === 'power' || z.kind === 'cable'),
+    'chaque entrée appartient à une famille connue');
+  T(NEED_PRESETS.filter(z=>z.kind === 'cable').every(z=>/USB/.test(z.label)),
+    'les liaisons USB sont des cordons, pas des alimentations');
+  T(NEED_PRESETS.some(z=>z.label === 'DC Polarity Inverter'),
+    'l’inverseur de polarité y est : son oubli empêche l’appareil de s’allumer');
+  T(new Set(NEED_PRESETS.map(z=>z.label)).size === NEED_PRESETS.length,
+    'aucun libellé en double — deux entrées identiques fusionneraient à l’usage');
+  /* La flèche du menu déroulant se posait SUR le texte : la règle
+     générale réserve 38 px à droite, et les redéfinir tous les
+     écrasait. */
+  T(/\.ndform select\{padding-right:/.test(read_css),
+    'le menu déroulant garde la place de sa flèche');
+  T(read_css.includes('.ndform #nd-preset,.ndform #nd-label'),
+    'et il prend toute la largeur : un libellé y tient');
+
   window.__results = R;
 `;
 
@@ -222,6 +243,7 @@ const script = [STUBS, read('js/config.js'), read('js/helpers.js'),
                 'var read_sql  = ' + JSON.stringify(read('sql/029-besoins-items.sql')) + ';',
                 'var read_db   = ' + JSON.stringify(read('js/db.js')) + ';',
                 'var read_app  = ' + JSON.stringify(read('js/app.js')) + ';',
+                'var read_css  = ' + JSON.stringify(read('css/styles.css')) + ';',
                 /* projProgress vit dans db.js, qui parle à Supabase. On ne
                    charge donc que la fonction, pas le fichier. */
                 'function projProgress(p){' +

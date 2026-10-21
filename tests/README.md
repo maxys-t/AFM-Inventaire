@@ -61,6 +61,7 @@ continue de servir l'ancien fichier.
 | t200 | Le rail, les thèmes, la fiche en colonnes |
 | t210 | Regroupement à deux niveaux, filtre sans saut, caisses dehors au tableau de bord |
 | t220 | Les besoins d'un item : alimentations et cordons dérivés |
+| t221 | L'application parle anglais — aucun libellé français à l'écran |
 
 ## En écrire un
 

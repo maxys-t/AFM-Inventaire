@@ -1623,9 +1623,15 @@ body.railshut .railtop{justify-content:center;padding-bottom:10px}
 .ndkind{flex:none;width:19px;text-align:center;font-size:12px;opacity:.75}
 .ndlbl{flex:1;min-width:0;word-break:break-word}
 .ndw{flex:none;font-size:12px}
-.ndform{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:11px}
-.ndform input,.ndform select{min-width:0;font-size:13px;padding:7px 9px}
-.ndform #nd-label{grid-column:1 / -1}
+.ndform{display:grid;grid-template-columns:1fr 92px;gap:6px;margin-top:11px}
+.ndform input,.ndform select{min-width:0;font-size:13px;padding:8px 10px}
+/* La règle générale réserve 38 px à droite pour la flèche. Écraser le
+   `padding` tout entier la faisait retomber SUR le texte — c'est ce
+   qui empilait le libellé et le chevron. On ne redéfinit donc que le
+   côté gauche, et un libellé trop long s'abrège au lieu de passer
+   dessous. */
+.ndform select{padding-right:34px;text-overflow:ellipsis}
+.ndform #nd-preset,.ndform #nd-label,.ndform #nd-weight{grid-column:1 / -1}
 .ndform button{grid-column:1 / -1}
 .ndcopy{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .ndcopy .btn{font-size:12px}

@@ -224,31 +224,38 @@ const REPAIR_STALE_DAYS = 30;
    bibliothèque n'est pas un confort, c'est ce qui décide si la
    fonction sert ou pourrit.
 
-   Les poids sont des ordres de grandeur mesurés sur du matériel
-   courant, pour que le total d'un transport soit utile avant d'avoir
-   pesé quoi que ce soit. Laisser `g` vide signifie « trop léger pour
-   compter » — mieux vaut un total incomplet qu'un total inventé.
+   Les poids sont volontairement vides. Un « DC 12V » couvre aussi
+   bien une prise murale de 100 g qu'un bloc d'un kilo : remplir ces
+   champs d'avance reviendrait à inventer le total qu'on lit face à
+   un transporteur. Mieux vaut un total incomplet qu'un total faux.
+   Quand un type d'alimentation aura été pesé une fois, son poids a
+   sa place ici — il se préremplira à chaque saisie suivante.
 
    Liste modifiable ici, sans migration : elle ne sert qu'à la
    saisie, c'est le libellé qui est enregistré.
    ============================================================ */
 const NEED_PRESETS = [
-  {kind:'power', label:'IEC C13 mains lead',      g:180},
-  {kind:'power', label:'IEC C7 mains lead',       g:110},
-  {kind:'power', label:'Schuko mains lead',       g:180},
-  {kind:'power', label:'External PSU brick',      g:450},
-  {kind:'power', label:'9V DC adapter',           g:160},
-  {kind:'power', label:'12V DC adapter',          g:220},
-  {kind:'power', label:'48V phantom supply',      g:900},
-  {kind:'power', label:'USB-C charger',           g:90},
-  {kind:'cable', label:'XLR 3 m',                 g:230},
-  {kind:'cable', label:'XLR 10 m',                g:700},
-  {kind:'cable', label:'Jack 6.35 mm 3 m',        g:150},
-  {kind:'cable', label:'Speakon 5 m',             g:400},
-  {kind:'cable', label:'MIDI DIN',                g:80},
-  {kind:'cable', label:'USB-B',                   g:70},
-  {kind:'cable', label:'Ethernet Cat5e 5 m',      g:140},
-  {kind:'cable', label:'BNC word clock',          g:60}
+  // Secteur
+  {kind:'power', label:'IEC C13',        g:null},
+  {kind:'power', label:'IEC C7',         g:null},
+  {kind:'power', label:'IEC 5',          g:null},
+  {kind:'power', label:'Powercon',       g:null},
+  // Continu
+  {kind:'power', label:'DC 48V',         g:null},
+  {kind:'power', label:'DC 24V',         g:null},
+  {kind:'power', label:'DC 12V',         g:null},
+  {kind:'power', label:'DC 9V',          g:null},
+  {kind:'power', label:'DC 5V',          g:null},
+  {kind:'power', label:'USB PSU',        g:null},
+  // Un adaptateur, pas une alimentation — mais il vit dans la même
+  // poche et c'est son oubli qui empêche l'appareil de s'allumer.
+  {kind:'power', label:'DC Polarity Inverter', g:null},
+  // Données : ce sont des liaisons, pas des alimentations.
+  {kind:'cable', label:'USB C',          g:null},
+  {kind:'cable', label:'USB B - USB C',  g:null},
+  {kind:'cable', label:'USB B - USB A',  g:null},
+  {kind:'cable', label:'USB 3.0',        g:null},
+  {kind:'cable', label:'USB Micro',      g:null}
 ];
 
 /* --- Project status --- */

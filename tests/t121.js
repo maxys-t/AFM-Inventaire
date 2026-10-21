@@ -190,7 +190,7 @@ dom.window.eval([STUBS, read('js/config.js'), read('js/helpers.js'), read('js/pr
   /* v2.0 : la fiche est passée en cartes thématiques. Le
      conditionnement a quitté le paragraphe pour la carte Rangement,
      mais il doit toujours y figurer, et toujours être nommé. */
-  R.push([/kv\('Conditionnement'/.test(inv) && /case_note \|\| 'oui, non précisé'/.test(inv),
+  R.push([/kv\('Case'/.test(inv) && /case_note \|\| 'yes, unspecified'/.test(inv),
           'la fiche d’un item indique son conditionnement, nommé quand il l’est']);
   const vApp=(app.match(/APP_VERSION = '([\d.]+)'/)||[])[1];
   const vUniq=[...new Set((h.match(/\?v=[\d.]+/g)||[]).map(t=>t.slice(3)))];
