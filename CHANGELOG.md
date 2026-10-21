@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.1.1] — 2026-10-21
+
+### Modifié
+
+- **Le tableau de bord ne montre plus que trois caisses par groupe**,
+  avec un « Show all » pour les autres. Vingt caisses rangées
+  remplissaient le panneau pour ne rien dire : en place, elles ne
+  demandent rien. Le compte complet reste sur le titre du groupe, et
+  le dépliage tient le temps de la session — c'est un geste de
+  consultation, pas un réglage à enregistrer.
+
+- **Les caisses incomplètes passent en tête de « In place ».** Si
+  trois lignes seulement sont visibles, ce doivent être celles qui
+  demandent quelque chose. Une caisse à qui il manque un item remonte
+  donc avant les autres, par-dessus l'ordre alphabétique.
+
+
 ## [2.1.0] — 2026-10-21
 
 Trois frictions du travail quotidien. Aucune migration SQL.

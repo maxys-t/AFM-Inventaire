@@ -80,6 +80,10 @@ const DATA = `
     {pack_id:'pk1', item_id:'SYN-002'},
     {pack_id:'pk2', item_id:'MCN-001'}
   ];
+  /* Cinq caisses en place : au-delà de trois, le panneau doit replier. */
+  ['Ampli', 'Batterie', 'Câbles'].forEach((n,k)=>db.packs.push(
+    {id:'pk'+(3+k), name:n, permanent:false, archived:false,
+     container_id:null, parent_id:null}));
   item('SYN-002').status = 'sorti';
   item('SYN-002').out = {userId:'u1', date:'2026-10-01', reason:'Trianon',
                          due:null, loc:'Trianon'};
@@ -159,8 +163,11 @@ const TESTS = `
     'un groupe nommé pour chacun des deux états');
   T(d.indexOf('>Out ') < d.indexOf('>In place '),
     'et les sorties viennent en premier : c’est la question du matin');
-  T(d.indexOf('Pelicase tournée') < d.indexOf('Rack studio'),
-    'la caisse sortie est donc au-dessus de celle restée en place');
+  /* La caisse sortie doit tomber dans le premier groupe, pas quelque
+     part plus bas : c'est le groupe qui fait foi, pas la position. */
+  var grp = [...document.querySelectorAll('#v-dash .dpgroup')];
+  T(grp.length === 2 && /Pelicase tournée/.test(grp[0].innerHTML),
+    'et la caisse sortie est bien dans ce premier groupe');
 
   S('6. Un groupe vide disparaît au lieu de laisser un titre seul');
   item('SYN-002').status = 'dispo'; delete item('SYN-002').out;
@@ -168,6 +175,37 @@ const TESTS = `
   d = document.getElementById('v-dash').innerHTML;
   T(!/dphead">Out/.test(d), 'plus rien dehors : le groupe « Out » s’effface');
   T(/dphead">In place/.test(d), 'et les deux caisses se retrouvent en place');
+
+  S('7. Le panneau s’arrête à trois caisses par groupe');
+  /* Vingt caisses rangées remplissaient le tableau de bord pour ne
+     rien dire : en place, elles ne demandent rien. */
+  renderDash();
+  d = document.getElementById('v-dash').innerHTML;
+  var lignes = () => document.querySelectorAll('#v-dash .dpgroup .dpack').length;
+  T(lignes() === 3, 'trois lignes visibles sur les cinq caisses (' + lignes() + ')');
+  T(d.includes('In place <span class="tag dispo">5<'),
+    'mais le titre annonce bien les cinq');
+  T(/Show all 5/.test(d), 'et « Show all 5 » les propose');
+
+  dashPacksPlus('in');
+  T(lignes() === 5, 'déplié, les cinq apparaissent (' + lignes() + ')');
+  T(/Show less/.test(document.getElementById('v-dash').innerHTML),
+    'et l’on peut replier');
+  dashPacksPlus('in');
+  T(lignes() === 3, 'le repli remet l’aperçu à trois');
+
+  S('8. Ce sont les caisses incomplètes qui occupent les trois places');
+  /* Si l'on ne montre que trois lignes, ce doivent être celles qui
+     demandent quelque chose. « Câbles » passe en dernier par ordre
+     alphabétique ; incomplète, elle doit remonter. */
+  db.packItems.push({pack_id:'pk5', item_id:'PRC-001'});
+  item('PRC-001').status = 'sorti';
+  item('PRC-001').out = {userId:'u1', date:'2026-10-01', reason:'ailleurs', due:null};
+  renderDash();
+  var noms = [...document.querySelectorAll('#v-dash .dpgroup .dpack b')]
+    .map(b=>b.textContent.trim());
+  T(noms.includes('Câbles'), 'la caisse incomplète est dans les trois (' + noms.join(', ') + ')');
+  T(noms[0] === 'Câbles', 'et même en tête de son groupe');
 
   window.__results = R;
 `;

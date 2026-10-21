@@ -148,6 +148,14 @@ function dashProjectsHTML(){
    qui la contient, la proposer séparément inviterait à défaire un
    rangement sans le vouloir.
    ============================================================ */
+/* Déplié ou non, par groupe. Volontairement en mémoire et non dans
+   les préférences : c'est un geste de consultation, pas un réglage. */
+const dashPacksOuverts = {out:false, in:false};
+function dashPacksPlus(cle){
+  dashPacksOuverts[cle] = !dashPacksOuverts[cle];
+  renderDash();
+}
+
 function dashPacksHTML(){
   if(!db.packsSupported) return '';
   const racines = packRoots().sort((a,b)=>a.name.localeCompare(b.name,'fr'));
@@ -188,17 +196,47 @@ function dashPacksHTML(){
      donc un coup d'œil suffit même replié ; et un groupe vide
      disparaît au lieu d'occuper la place d'un titre sans contenu.
      ============================================================ */
-  const groupe = (titre, liste, etiquette) => !liste.length ? '' : `
+  /* ============================================================
+     TROIS CAISSES, PUIS « SHOW ALL » (v2.1.1)
+
+     Vingt caisses rangées remplissaient tout le tableau de bord pour
+     ne rien dire : si elles sont en place, il n'y a rien à en faire.
+     Le panneau n'est pas la page Packs — il répond à « quoi de neuf »,
+     pas à « montre-moi le parc ».
+
+     On en garde trois par groupe, et le compte complet reste lisible
+     sur le titre. Le reste se déplie d'un clic, et le choix tient le
+     temps de la session : qui l'ouvre une fois travaille souvent
+     dessus plusieurs minutes.
+
+     Les caisses incomplètes passent en tête de « In place » : si trois
+     lignes seulement sont visibles, ce sont celles qui demandent
+     quelque chose qui doivent y être.
+     ============================================================ */
+  const APERCU = 3;
+  const manquantes = p => packStatus(p).manque ? 0 : 1;
+  ici.sort((a,b)=> manquantes(a) - manquantes(b)
+                || a.name.localeCompare(b.name,'fr'));
+
+  const groupe = (cle, titre, liste, etiquette) => {
+    if(!liste.length) return '';
+    const ouvert = !!dashPacksOuverts[cle];
+    const vus = ouvert ? liste : liste.slice(0, APERCU);
+    const reste = liste.length - vus.length;
+    return `
     <div class="dpgroup">
       <div class="dphead">${titre} ${etiquette}</div>
-      <div class="dpacks">${liste.map(ligne).join('')}</div>
+      <div class="dpacks">${vus.map(ligne).join('')}</div>
+      ${reste > 0 || ouvert ? `<button class="dpmore" onclick="dashPacksPlus('${cle}')">
+        ${reste > 0 ? `Show all ${liste.length}` : 'Show less'}</button>` : ''}
     </div>`;
+  };
 
   return `<div class="panel">
     <h2>Packs ${dehors.length?`<span class="tag sorti">${dehors.length} out</span>`:''}</h2>
     <div class="dpcols">
-      ${groupe('Out', dehors, `<span class="tag sorti">${dehors.length}</span>`)}
-      ${groupe('In place', ici, `<span class="tag dispo">${ici.length}</span>`)}
+      ${groupe('out', 'Out', dehors, `<span class="tag sorti">${dehors.length}</span>`)}
+      ${groupe('in', 'In place', ici, `<span class="tag dispo">${ici.length}</span>`)}
     </div>
     <div class="hintline" style="margin-top:8px">Sending a case takes its container,
       its contents and any nested case with it.</div>
