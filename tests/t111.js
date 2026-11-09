@@ -167,15 +167,25 @@ const TESTS = `
 
   S('9. Brouillon de mail de livraison');
   var body = deliveryMailBody(db.projects[0]);
-  T(body.includes('Destination: Trianon'), 'destination reprise');
+  T(body.includes('DELIVER TO') && body.includes('Trianon'), 'destination reprise');
   T(body.includes('Rochechouart'), 'adresse du lieu reprise');
-  T(body.includes('2026/10/12 → 2026/10/13'), 'dates au bon format');
+  /* v2.6 : dates à la française DANS LE MAIL seulement — il part vers
+     des gens qui n'ouvriront jamais l'application. Les écrans gardent
+     « aaaa/mm/jj », qui se trie à l'œil. */
+  T(body.includes('12/10/2026 → 13/10/2026'), 'dates au format français');
+  T(!body.includes('2026/10/12'), 'et aucune date au format des écrans');
   T(body.includes('[SYN-001]') && body.includes('[MCN-001]'), 'identifiants du matériel listés');
   /* v1.22 : la liste suit les caisses, pas les sous-catégories —
      c'est elle qu'on lit sur un quai. */
-  T(/items: 2/.test(body), 'compte du matériel');
-  T(body.includes('Loose items'), 'liste groupée par caisse, le reste à part');
-  T(/total weight/.test(body), 'et le poids total, pour le transporteur');
+  T(body.includes('2 item(s)'), 'compte du matériel');
+  T(body.includes('LOOSE ITEMS'), 'liste groupée par caisse, le reste à part');
+  T(body.includes('Total weight'), 'et le poids total, pour le transporteur');
+  /* v2.6 : aucune ligne ne commence par une espace. Gmail et Apple
+     Mail basculent un bloc indenté en chasse fixe, et le message
+     arrivait avec deux polices sans qu'on comprenne pourquoi. */
+  T(body.split(String.fromCharCode(10)).every(l=>l === l.replace(/^[ \t]+/, '')),
+    'aucune ligne indentée : le client de messagerie ne change pas de police');
+  T(body.includes('RETURN TO'), 'et l’adresse de retour y est — ce que le transporteur cherche d’abord');
 
   db.projects[0].item_ids = ['SYN-001','MCN-001','FANTOME-999'];
   T(deliveryMailBody(db.projects[0]).includes('no longer in the inventory'),

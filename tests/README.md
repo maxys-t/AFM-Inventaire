@@ -63,6 +63,7 @@ continue de servir l'ancien fichier.
 | t220 | Les besoins d'un item : alimentations et cordons dérivés |
 | t221 | L'application parle anglais — aucun libellé français à l'écran |
 | t230 | Les lots indissociables : les deux Amphion et leur Amp 700 |
+| t240 | Dossiers de caisses, e-mail de livraison, écran de composition |
 
 ## En écrire un
 

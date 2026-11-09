@@ -9,6 +9,9 @@
 let packOpen = new Set();      // packs dépliés
 let packFilter = '';           // recherche
 let packOnlyIncomplete = false;
+/* Dossiers repliés. Le choix vit le temps de la session : c'est un
+   geste de consultation, pas un réglage à enregistrer. */
+let packFolderShut = new Set();
 
 function renderPacks(){
   const el = document.getElementById('v-packs');
@@ -55,7 +58,7 @@ function renderPacks(){
 
 function setPackFilter(v){
   packFilter = v;
-  document.getElementById('packTree').innerHTML = packTreeHTML();
+  redessinePackTree();
 }
 function togglePackIncomplete(){ packOnlyIncomplete = !packOnlyIncomplete; renderPacks(); }
 
@@ -71,15 +74,72 @@ function packMatches(p){
   return true;
 }
 
+/* ============================================================
+   DES DOSSIERS, PARCE QU'UNE LISTE DE VINGT NE SE LIT PLUS (v2.6.0)
+
+   Vingt-et-une caisses d'affilée, c'est une liste qu'on fait défiler
+   en cherchant un nom qu'on connaît déjà — l'écran n'apprend plus
+   rien. Un dossier n'est pas une catégorie savante, c'est un tiroir :
+   « LEASH Touring », « Studio ».
+
+   Les caisses sans dossier ne sont pas cachées dans un tiroir « à
+   ranger » : elles restent EN TÊTE, à plat, sans en-tête. Beaucoup
+   de parcs n'auront jamais de dossier du tout, et leur imposer un
+   niveau de titre vide serait leur faire payer une fonction qu'ils
+   n'utilisent pas.
+
+   Une recherche ignore les dossiers et aplatit tout : on cherche
+   justement parce qu'on ne sait pas où c'est rangé.
+   ============================================================ */
+function packFolders(){
+  const noms = new Set();
+  (db.packs||[]).forEach(p=>{ if(!p.archived && p.folder) noms.add(p.folder); });
+  return [...noms].sort((a,b)=>a.localeCompare(b,'fr'));
+}
+function togglePackFolder(nom){
+  if(packFolderShut.has(nom)) packFolderShut.delete(nom); else packFolderShut.add(nom);
+  redessinePackTree();
+}
+/* Redessiner l'arbre seul, et seulement s'il est à l'écran : ces
+   bascules peuvent être appelées avant le premier rendu. */
+function redessinePackTree(){
+  const el = document.getElementById('packTree');
+  if(el) el.innerHTML = packTreeHTML();
+}
+
 function packTreeHTML(){
   /* Une recherche aplatit l'arbre : sinon un pack trouvé au troisième
      niveau resterait caché sous un parent replié. */
   const chercheur = packFilter.trim() || packOnlyIncomplete;
-  const liste = chercheur
-    ? (db.packs||[]).filter(p=>!p.archived && packMatches(p)).map(p=>packRowHTML(p, 0, true))
-    : packRoots().map(p=>packBrancheHTML(p, 0));
-  return liste.join('') ||
-    `<div class="empty">${chercheur ? 'Nothing matches.' : 'No pack yet.'}</div>`;
+  if(chercheur){
+    const liste = (db.packs||[]).filter(p=>!p.archived && packMatches(p))
+      .map(p=>packRowHTML(p, 0, true));
+    return liste.join('') || '<div class="empty">Nothing matches.</div>';
+  }
+
+  const racines = packRoots();
+  const sansDossier = racines.filter(p=>!p.folder);
+  let h = sansDossier.map(p=>packBrancheHTML(p, 0)).join('');
+
+  packFolders().forEach(nom=>{
+    const dedans = racines.filter(p=>p.folder === nom);
+    if(!dedans.length) return;
+    const replié = packFolderShut.has(nom);
+    const dehors = dedans.filter(p=>packStatus(p).dehors).length;
+    const manque = dedans.filter(p=>packStatus(p).manque).length;
+    h += `<div class="pkfolder">
+      <div class="pkfhead" onclick="togglePackFolder(${JSON.stringify(nom).replace(/"/g,'&quot;')})">
+        <span class="chev">${replié?'▸':'▾'}</span>
+        <span class="t">${esc(nom)}</span>
+        <span class="muted">${dedans.length} case(s)</span>
+        ${dehors?`<span class="tag sorti">${dehors} out</span>`:''}
+        ${manque?`<span class="pkwarn">${manque} incomplete</span>`:''}
+      </div>
+      ${replié ? '' : dedans.map(p=>packBrancheHTML(p, 0)).join('')}
+    </div>`;
+  });
+
+  return h || '<div class="empty">No pack yet.</div>';
 }
 
 /* `parentId` : la branche d'où la ligne est affichée. Depuis la v1.22
@@ -627,6 +687,12 @@ function openPackForm(id, après){
         <label class="checkline">
           <input type="checkbox" ${packFormAll?'checked':''} onchange="packFormShowAll(this.checked)">
           Show all items (${db.items.length}) — not just bags, cases and racks</label></div>
+      <div class="field full">
+        <label data-tip="A drawer, not a category: « LEASH Touring », « Studio ». Type a new name to create one; leave empty and the case stays at the top of the list.">Folder ⓘ</label>
+        <input id="pf-folder" list="pf-folders" placeholder="e.g. LEASH Touring — leave empty for none"
+               value="${esc(p ? (p.folder||'') : '')}">
+        <datalist id="pf-folders">${packFolders().map(f=>
+          `<option value="${esc(f)}">`).join('')}</datalist></div>
       <div class="field full"><label>Notes</label>
         <input id="pf-notes" value="${esc(p ? (p.notes||'') : '')}"></div>
       <div class="field full">
@@ -677,8 +743,12 @@ async function packSave(){
       return;
     }
   }
+  /* Une chaîne vide n'est pas un dossier : c'est l'absence de
+     dossier. Sans ce `|| null`, l'écran afficherait un tiroir sans
+     nom à côté de celles qui n'en ont pas. */
+  const dossier = (document.getElementById('pf-folder').value || '').trim() || null;
   const row = {name, container_id: cont, notes: document.getElementById('pf-notes').value.trim() || null,
-               permanent: monté};
+               permanent: monté, folder: dossier};
   try{
     let neuf = null;
     if(packEditing) await apiUpdatePack(packEditing, row);

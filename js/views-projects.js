@@ -256,12 +256,25 @@ function projEditor(){
       <span class="hintline">A real pack — it stays, and serves again.</span></div>` + src;
   }
 
-  /* ---- colonne de droite ---- */
+  /* ---- colonne de droite ----
+     Quatre caisses dépliées font une colonne de trois mètres : on
+     défile pour atteindre la dernière, et l'on ne voit plus la
+     composition d'ensemble, qui est pourtant la question qu'on se
+     pose à ce moment-là. Chaque caisse se replie donc sur son titre,
+     qui porte déjà son compte et son poids.
+
+     Repliée, elle reste une cible de dépôt — c'est `.pjgrp` qui
+     porte `data-pjcase`, pas son contenu. Sans quoi replier
+     reviendrait à s'interdire d'y ranger quoi que ce soit. */
   let contenu = c.groups.map(g=>{
     const dedans = g.items;
+    const replié = pjCaseShut.has(g.packId);
     return `
-    <div class="pjgrp" data-pjcase="${g.packId}">
-      <div class="hd">${pjThumb({photo:packPhoto(pack(g.packId))})}<span class="t">${esc(g.name)}</span>
+    <div class="pjgrp${replié?' shut':''}" data-pjcase="${g.packId}">
+      <div class="hd">
+        <span class="chev" onclick="event.stopPropagation();pjToggleCase('${g.packId}')"
+              title="${replié?'Unfold':'Fold'}">${replié?'▸':'▾'}</span>
+        ${pjThumb({photo:packPhoto(pack(g.packId))})}<span class="t">${esc(g.name)}</span>
         <span class="muted">${dedans.length} item(s) · ${fweight(dedans.reduce((t,i)=>t+(i.weight_g||0),0))}</span>
         <button class="pjx" onclick="projRemovePack('${g.packId}')" title="Remove this case">✕</button></div>
       <div class="bd">
@@ -332,6 +345,9 @@ function projEditor(){
         <div><b>${c.groups.length}</b>case(s)</div>
         <div><b>${c.items.length}</b>item(s)</div>
         <div><b>${fweight(c.weight)}</b>total</div>
+        ${c.groups.length > 1 ? `<button class="btn sec small pjfoldall"
+          onclick="pjFoldAll(${pjCaseShut.size < c.groups.length})">${
+          pjCaseShut.size < c.groups.length ? 'Fold all' : 'Unfold all'}</button>` : ''}
       </div>
       ${c.missing?`<div class="alert">⚠️ ${c.missing} item(s) of this project are no longer in the inventory.</div>`:''}
       ${contenu}
@@ -353,6 +369,18 @@ async function projClearDate(f){
 function projDestOptions(p){
   let html = '<option value="">— no destination —</option>' + locOptions();
   const n = p.loc_name || '';
+  if(!n) return html;
+  const cible = `<option value="${esc(n)}">`;
+  if(html.includes(cible)) return html.replace(cible, `<option value="${esc(n)}" selected>`);
+  return html + `<option value="${esc(n)}" selected>${esc(n)} (archived)</option>`;
+}
+
+/* Les lieux proposés comme adresse de retour. Même garde-fou que
+   projDestOptions : un lieu archivé doit rester sélectionné, sinon
+   rouvrir le projet effacerait le choix sans rien dire. */
+function projReturnOptions(p){
+  let html = locOptions();
+  const n = p.return_loc || '';
   if(!n) return html;
   const cible = `<option value="${esc(n)}">`;
   if(html.includes(cible)) return html.replace(cible, `<option value="${esc(n)}" selected>`);
@@ -430,6 +458,21 @@ function pjThumb(i){
   return (i && i.photo)
     ? `<img class="repthumb sm" loading="lazy" src="${i.photo}">`
     : '<span class="repthumb sm rnophoto"></span>';
+}
+
+/* Caisses repliées dans la composition. En mémoire seulement : on
+   replie pour regarder autre chose, pas pour régler l'application. */
+let pjCaseShut = new Set();
+function pjToggleCase(id){
+  if(pjCaseShut.has(id)) pjCaseShut.delete(id); else pjCaseShut.add(id);
+  renderProj();
+}
+/* Tout plier ou tout déplier : avec huit caisses, les replier une à
+   une coûte autant que de défiler. */
+function pjFoldAll(tout){
+  const p = project(projView.id);
+  pjCaseShut = tout ? new Set(projContent(p).groups.map(g=>g.packId)) : new Set();
+  renderProj();
 }
 
 function projTab(t){ projView.tab = t; renderProj(); }
@@ -861,6 +904,17 @@ function projSettings(){
       <div class="field full"><label>Destination</label>
         <select id="pj-dest" onchange="projSetField('loc_name', this.value)">${projDestOptions(p)}</select>
         <div class="hintline">Add off-site addresses in Settings → Locations.</div></div>
+      <!-- Le transporteur cherche d'abord où ramener : par défaut le
+           studio, et ce champ sert aux dates où le camion repart
+           ailleurs. Le libellé par défaut nomme le lieu plutôt que de
+           dire « par défaut » — on doit savoir ce qui partira dans le
+           mail sans avoir à deviner. -->
+      <div class="field full"><label>Return to</label>
+        <select onchange="projSetField('return_loc', this.value||null)">
+          <option value="">— ${esc(locRoots()[0] ? locRoots()[0].name : 'home')}, as usual —</option>
+          ${projReturnOptions(p)}
+        </select>
+        <div class="hintline">Only set this when the gear comes back somewhere else than the studio.</div></div>
       <div class="field"><label>Start date</label>
         <!-- Safari n'offre aucun moyen de vider un champ date : sans
              ce bouton, une date posée par erreur restait là pour
@@ -912,14 +966,21 @@ function projLine(l, p, figé){
      Un consommable n'a pas de vignette du tout — pas même un carré
      vide. Il n'a pas de fiche, donc jamais de photo : lui réserver la
      place reviendrait à promettre une image qui n'arrivera pas, et à
-     le faire ressembler à un item. */
-  const vignette = l.extra ? ''
+     le faire ressembler à un item.
+
+     Même chose pour les alimentations et cordons dérivés (v2.2) : la
+     règle était écrite pour les consommables et ne les connaissait
+     pas, alors qu'ils n'ont pas de fiche non plus. Ils affichaient
+     donc un carré vide, et c'est exactement ce que ce paragraphe
+     prétendait éviter. (v2.6.0) */
+  const sansFiche = l.extra || l.besoin;
+  const vignette = sansFiche ? ''
     : (l.photo ? `<img class="repthumb sm" loading="lazy" src="${l.photo}">`
                : '<span class="repthumb sm rnophoto"></span>');
   if(figé || !can('projectPrep'))
-    return `<div class="pjrow${l.extra?' extra':''}">${vignette}<div class="pjnm">
+    return `<div class="pjrow${sansFiche?' extra':''}">${vignette}<div class="pjnm">
       <div class="t">${l.html}</div><div class="s">${esc(l.sub)}</div></div></div>`;
-  return `<label class="pjrow${l.extra?' extra':''}" style="cursor:pointer">
+  return `<label class="pjrow${sansFiche?' extra':''}" style="cursor:pointer">
     <input type="checkbox" ${on?'checked':''} onchange="toggleProjItem('${p.id}','${l.key}',this.checked)">
     ${vignette}
     <div class="pjnm"><div class="t"${on?' style="opacity:.5;text-decoration:line-through"':''}>${l.html}</div>
@@ -1030,58 +1091,137 @@ async function deleteProj(id){
   projGo('list');
 }
 
-/* ---- brouillon de mail de livraison ----
-   Volontairement un brouillon et non un envoi : le message part au nom
-   du studio, autant le relire. La liste suit les caisses — c'est elle
-   qu'on lit sur un quai, pas une liste par sous-catégorie. */
+/* ============================================================
+   BROUILLON DE MAIL DE LIVRAISON (refait en v2.6.0)
+
+   Volontairement un brouillon et non un envoi : le message part au
+   nom du studio, autant le relire.
+
+   TROIS CHOSES APPRISES EN S'EN SERVANT POUR DE VRAI.
+
+   1. Aucune ligne ne commence par une espace. Gmail et Apple Mail
+      basculent un bloc indenté en chasse fixe : le message arrivait
+      avec deux polices et deux tailles, sans qu'on comprenne
+      pourquoi. La hiérarchie passe donc par des intitulés et des
+      puces collés à gauche, jamais par des retraits.
+
+   2. Les niveaux se distinguent par leur NATURE, pas par leur
+      profondeur. Une caisse est un titre souligné, son contenu une
+      liste à tirets, ses alimentations une ligne préfixée. On lit la
+      structure même si le client de messagerie recompose tout.
+
+   3. Une adresse de RETOUR. Le message disait où le matériel allait
+      et jamais où le ramener — ce que le transporteur cherche en
+      premier. Par défaut le studio ; `return_loc` sert aux dates où
+      le camion repart ailleurs.
+
+   Les dates sont au format français ICI SEULEMENT : ce message part
+   vers des gens qui n'ouvriront jamais l'application. Les écrans,
+   eux, gardent « aaaa/mm/jj », qui se trie à l'œil.
+   ============================================================ */
+
+/* « 2026-11-09 » → « 09/11/2026 ». */
+function frDate(d){
+  if(!d) return '';
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(d);
+}
+function frDates(p){
+  if(!p.starts_on && !p.ends_on) return '';
+  if(p.starts_on && p.ends_on && p.starts_on !== p.ends_on)
+    return frDate(p.starts_on) + ' → ' + frDate(p.ends_on);
+  return frDate(p.starts_on || p.ends_on);
+}
+
+/* Où ramener. Le lieu choisi pour ce projet, sinon le studio —
+   c'est-à-dire le premier site de l'arborescence, là où les items
+   habitent. */
+function projReturnLoc(p){
+  if(p && p.return_loc && locObj(p.return_loc)) return p.return_loc;
+  const r = locRoots()[0];
+  return r ? r.name : '';
+}
+
 function deliveryMailBody(p){
   const c = projContent(p);
-  const dest = p.loc_name || '';
-  const dates = projDates(p);
-
   const L = [];
-  L.push(`Delivery details — ${p.name}`, '');
-  if(dest){
-    L.push(`Destination: ${dest}`);
-    locAddressLines(dest).forEach(line => L.push('  ' + line));
-    if(locPhone(dest)) L.push(`  Phone: ${locPhone(dest)}`);
-  }
-  if(dates) L.push(`Dates: ${dates}`);
-  L.push(`Cases: ${c.groups.length} — items: ${c.items.length} — total weight: ${fweight(c.weight)}`, '');
+  const titre = t => { L.push(t.toUpperCase(), '─'.repeat(Math.min(t.length, 40)), ''); };
+  const bloc  = (t, lignes) => {
+    if(!lignes.length) return;
+    L.push(t);
+    lignes.forEach(x=>L.push(x));
+    L.push('');
+  };
 
+  titre(p.name);
+
+  /* --- Où ça va, où ça revient --- */
+  const dest = p.loc_name || '';
+  const retour = projReturnLoc(p);
+  const adresse = (n) => {
+    const out = [n];
+    locAddressLines(n).forEach(l=>out.push(l));
+    if(locPhone(n)) out.push('Tel. ' + locPhone(n));
+    return out;
+  };
+  if(dest)   bloc('DELIVER TO', adresse(dest));
+  if(retour) bloc('RETURN TO',  adresse(retour));
+
+  const quand = frDates(p);
+  if(quand) bloc('DATES', [quand]);
+
+  bloc('LOAD', [
+    `${c.groups.length} case(s), ${c.items.length} item(s)`,
+    `Total weight ${fweight(c.weight)}`
+  ]);
+
+  /* --- Le détail, caisse par caisse ---
+     Chaque caisse est un titre, pas une ligne de plus dans une liste :
+     c'est l'unité qu'on manipule sur un quai. */
   c.groups.forEach(g=>{
     const poids = g.items.reduce((t,i)=>t+(i.weight_g||0), 0) + besoinsPoids(g.needs);
-    L.push(`${g.name} (${g.items.length} items, ${fweight(poids)})`);
-    g.items.forEach(i=>L.push(`  - ${itemTitleText(i)} [${i.id}]`));
+    titre(`${g.name} — ${g.items.length} item(s), ${fweight(poids)}`);
+    g.items.forEach(i=>L.push(`- ${itemTitleText(i)} [${i.id}]`));
     /* Les alimentations et cordons comptent sur un quai : c'est ce
        qu'on cherche quand une caisse arrive et que rien ne s'allume. */
     (g.needs||[]).forEach(f=>{
-      L.push(`  ${f.titre}:`);
-      f.lignes.forEach(n=>L.push(`    · ${n.label} × ${n.qty}`));
+      L.push('');
+      L.push(f.titre + ' :');
+      f.lignes.forEach(n=>L.push(`- ${n.label} x${n.qty}`));
     });
-    g.extras.forEach(e=>L.push(`  · ${e.label} × ${e.qty}`));
+    if(g.extras.length){
+      L.push('');
+      L.push('Consumables :');
+      g.extras.forEach(e=>L.push(`- ${e.label} x${e.qty}`));
+    }
     L.push('');
   });
+
   if(c.loose.length){
-    const poids = c.loose.reduce((t,i)=>t+(i.weight_g||0), 0);
-    L.push(`Loose items (${c.loose.length}, ${fweight(poids)})`);
-    c.loose.forEach(i=>L.push(`  - ${itemTitleText(i)} [${i.id}]`));
+    const poids = c.loose.reduce((t,i)=>t+(i.weight_g||0), 0) + besoinsPoids(c.looseNeeds);
+    titre(`Loose items — ${c.loose.length}, ${fweight(poids)}`);
+    c.loose.forEach(i=>L.push(`- ${itemTitleText(i)} [${i.id}]`));
     (c.looseNeeds||[]).forEach(f=>{
-      L.push(`  ${f.titre}:`);
-      f.lignes.forEach(n=>L.push(`    · ${n.label} × ${n.qty}`));
+      L.push('');
+      L.push(f.titre + ' :');
+      f.lignes.forEach(n=>L.push(`- ${n.label} x${n.qty}`));
     });
     L.push('');
   }
-  if(c.missing > 0) L.push(`(${c.missing} item(s) of this project are no longer in the inventory)`, '');
-  L.push('Consumables are packing reminders and are not included in the weight.', '');
+
+  if(c.missing > 0)
+    L.push(`Note: ${c.missing} item(s) of this project are no longer in the inventory.`, '');
+  L.push('Consumables are packing reminders and are not counted in the weight.', '');
   L.push(`— ${LABELS.appTitle}`);
-  return L.join('\n');
+  /* Deux lignes vides d'affilée deviennent une : les blocs vides
+     laissaient des trous que le client de messagerie étire encore. */
+  return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
 
 function openDeliveryMail(id){
   const p = project(id); if(!p) return;
   if(!projContent(p).items.length){ toast("This project has no gear to list.", 'warn'); return; }
-  const subject = `${p.name}${p.loc_name?` — ${p.loc_name}`:''}${projDates(p)?` — ${projDates(p)}`:''}`;
+  const subject = `${p.name}${p.loc_name?` — ${p.loc_name}`:''}${frDates(p)?` — ${frDates(p)}`:''}`;
   const href = 'mailto:?subject=' + encodeURIComponent(subject)
              + '&body=' + encodeURIComponent(deliveryMailBody(p));
   if(href.length > 16000){

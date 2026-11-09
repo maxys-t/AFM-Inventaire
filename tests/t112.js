@@ -151,7 +151,7 @@ const TESTS = `
   T(body.includes('80 Bd de Rochechouart'), 'rue reprise');
   T(body.includes('Loading dock rear'), 'complément repris');
   T(body.includes('75009 Paris'), 'code postal et ville repris');
-  T(body.includes('Phone: +33 1 23 45 67 89'), 'téléphone de contact repris');
+  T(body.includes('Tel. +33 1 23 45 67 89'), 'téléphone de contact repris');
   T(body.split('\\n').filter(l=>l.trim()==='').length > 0, 'le message reste aéré');
 
   S('6. Emprunteurs : tableau déplié');

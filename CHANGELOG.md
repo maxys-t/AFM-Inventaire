@@ -1,5 +1,83 @@
 # Changelog
 
+## [2.6.0] — 2026-11-09
+
+⚠️ **Migration SQL : `sql/032-dossiers-et-retour.sql`.** Deux colonnes
+facultatives, rien de modifié, rien de supprimé. Rejouable sans
+dommage.
+
+Cette version ne vient pas d'une relecture de code : elle vient d'une
+date préparée pour de bon, et à moitié abandonnée parce que l'outil
+gênait plus qu'il n'aidait. Chaque point ci-dessous correspond à un
+moment où il a fallu poser l'iPad.
+
+### Ajouté
+
+- **Des dossiers pour les caisses.** Vingt-et-une caisses d'affilée,
+  c'est une liste qu'on fait défiler en cherchant un nom qu'on
+  connaît déjà — l'écran n'apprend plus rien. Un dossier est un
+  tiroir, pas une catégorie : on tape son nom dans le formulaire
+  d'une caisse, il se crée.
+
+  Les caisses sans dossier restent **en tête, à plat, sans en-tête**.
+  Un parc qui n'utilise pas la fonction ne doit pas en payer le
+  niveau de titre. Chaque dossier se replie, en gardant son compte et
+  ses alertes — un coup d'œil suffit même fermé. Une recherche
+  ignore les dossiers et aplatit tout : on cherche justement parce
+  qu'on ne sait pas où c'est rangé.
+
+- **Une adresse de retour dans l'e-mail de livraison.** Le message
+  disait où le matériel allait, jamais où le ramener — ce que le
+  transporteur cherche en premier. Par défaut le studio ; le champ
+  *Return to* des réglages du projet sert aux dates où le camion
+  repart ailleurs. Un lieu supprimé entre-temps retombe sur le
+  studio plutôt que de vider l'adresse en silence.
+
+### Modifié
+
+- **L'e-mail de livraison, refait.** Trois corrections, toutes nées
+  de sa lecture sur un téléphone :
+
+  **Plus aucune ligne indentée.** Gmail et Apple Mail basculent un
+  bloc commençant par des espaces en chasse fixe : le message
+  arrivait avec deux polices et deux tailles, sans qu'on comprenne
+  d'où ça venait. La hiérarchie passe désormais par la **nature** des
+  lignes — une caisse est un titre souligné, son contenu une liste à
+  tirets, ses alimentations une rubrique nommée — et jamais par un
+  retrait. Elle tient même si le client de messagerie recompose tout.
+
+  **Dates à la française**, `09/11/2026`. Dans l'e-mail seulement :
+  il part vers des gens qui n'ouvriront jamais l'application, alors
+  que les écrans gardent `aaaa/mm/jj`, qui se trie à l'œil.
+
+- **La colonne de gauche de l'écran de composition reste à l'écran.**
+  La colonne de droite grandit avec le projet, pas celle de gauche :
+  en défilant pour atteindre la quatrième caisse, on perdait les
+  onglets et le champ de recherche — et avec eux la possibilité de
+  glisser quoi que ce soit, puisque la source avait quitté l'écran.
+  On tenait un objet sans pouvoir aller là où il va. Elle colle
+  maintenant en haut, et sa liste se dimensionne sur la hauteur
+  visible.
+
+- **Les caisses se replient dans la composition.** Quatre caisses
+  dépliées font une colonne de trois mètres, et l'on perd la vue
+  d'ensemble, qui est pourtant la question du moment. Chaque caisse
+  se replie sur son titre — qui porte déjà son compte et son poids —
+  et un bouton plie ou déplie tout. **Repliée, elle reste une cible
+  de dépôt** : sinon replier reviendrait à s'interdire d'y ranger
+  quoi que ce soit.
+
+### Corrigé
+
+- **Les alimentations et cordons n'affichent plus de vignette vide**
+  dans la préparation d'un projet. La règle « pas de place réservée à
+  une image pour ce qui n'a pas de fiche » existait depuis la v1.22,
+  mais elle avait été écrite pour les consommables et ne connaissait
+  pas les lignes dérivées de la v2.2 — qui n'ont pas de fiche non
+  plus. Elles réservaient donc la place d'une image qui n'arriverait
+  jamais, ce que ce paragraphe prétendait précisément éviter.
+
+
 ## [2.5.0] — 2026-10-21
 
 ⚠️ **Migration SQL : `sql/031-lots-indissociables.sql`.** Elle

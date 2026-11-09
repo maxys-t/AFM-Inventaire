@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.6.0';
 
 /* ---- le thème ----
 
@@ -332,7 +332,9 @@ function normalizeImport(d){
     id:p.id, name:p.name, notes:p.notes||null,
     container_id:p.container_id||null, archived:!!p.archived,
     // v1.22 : monté en permanence, ou simple configuration.
-    permanent: !!p.permanent
+    permanent: !!p.permanent,
+    // v2.6 : le tiroir où la caisse est rangée dans la liste.
+    folder: p.folder || null
   }));
   const packItems = (d.packItems || d.pack_items || [])
     .map(l=>({pack_id:l.pack_id, item_id:l.item_id}))
@@ -432,6 +434,8 @@ function importJSON(inp){
         item_ids:p.item_ids||[],prep:p.prep||{},last_used:p.last_used||null,
         // v1.22 : les caisses du projet, et le contenu figé au départ.
         pack_ids:p.pack_ids||[],snapshot:p.snapshot||null,subs:p.subs||{},
+        // v2.6 : où ramener le matériel, si ce n'est pas le studio.
+        return_loc:p.return_loc||null,
         // Destination, dates et archivage : ajoutés en v1.11, ils étaient
         // perdus à la restauration jusqu'ici.
         loc_name:p.loc_name||null,starts_on:p.starts_on||null,

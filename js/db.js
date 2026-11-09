@@ -180,7 +180,8 @@ async function loadAll(){
     sb.from('item_link_members').select('*')
   ]);
   db.packsSupported = !pk.error;
-  db.packs = pk.error ? [] : pk.data.map(p=>({...p, permanent: !!p.permanent}));
+  db.packs = pk.error ? [] : pk.data.map(p=>({...p, permanent: !!p.permanent,
+                                              folder: p.folder || null}));
   db.packItems = pit.error ? [] : pit.data;
   /* Les consommables datent de la 024 : leur absence ne doit pas
      vider l'onglet Packs, elle doit juste ne rien afficher. */

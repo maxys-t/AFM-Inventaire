@@ -1264,6 +1264,26 @@ tr.outpack .chev{margin-right:7px}
 .pjcol input[type=search]{width:100%}
 .pjsrc{margin-top:10px;max-height:60vh;overflow:auto}
 
+/* ============================================================
+   LA COLONNE SOURCE RESTE À L'ÉCRAN (v2.6.0)
+
+   La colonne de droite grandit avec le projet ; celle de gauche,
+   non. En faisant défiler pour atteindre la quatrième caisse, on
+   perdait les onglets et le champ de recherche — et avec eux la
+   possibilité de glisser quoi que ce soit, puisque la source avait
+   quitté l'écran. On tenait un objet sans pouvoir aller là où il va.
+
+   Elle colle donc en haut, et sa liste se dimensionne sur la hauteur
+   visible plutôt que sur une part arbitraire de la page. Un seul
+   `position:sticky` remplace tout ce qu'on aurait pu bricoler en
+   JavaScript — et ne peut pas se désynchroniser.
+   ============================================================ */
+@media(min-width:901px){
+  .pjcol.src{position:sticky;top:12px;max-height:calc(100vh - 24px);
+    display:flex;flex-direction:column;min-height:0}
+  .pjcol.src .pjsrc{max-height:none;flex:1;min-height:0}
+}
+
 /* Le glissement part de la poignée ⠿, pas de la ligne : voir le bloc
    « Glisser-déposer » plus haut. Une ligne qui retient le doigt
    empêche de faire défiler la liste. */
@@ -1299,6 +1319,15 @@ tr.outpack .chev{margin-right:7px}
 .pjgrp>.hd{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel2);flex-wrap:wrap}
 .pjgrp>.hd .t{flex:1;font-weight:600;font-size:14px;min-width:100px}
 .pjgrp>.bd{padding:2px 10px}
+/* Repliée, la caisse garde son titre — donc son compte, son poids, et
+   sa qualité de cible de dépôt. Une bordure plus marquée dit qu'il y
+   a quelque chose dessous. (v2.6.0) */
+.pjgrp.shut>.bd{display:none}
+.pjgrp.shut>.hd{border-bottom:2px solid var(--border2)}
+.pjgrp>.hd .chev{cursor:pointer;flex:none;width:16px;text-align:center;
+  color:var(--muted);font-size:12px}
+.pjgrp>.hd .chev:hover{color:var(--txt)}
+.pjsum .pjfoldall{margin-left:auto;align-self:center}
 .pjsub{font-size:11px;color:var(--muted);padding:8px 2px 3px;
   text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .warntxt{color:var(--warn)}
@@ -1339,6 +1368,17 @@ nav button.navmain:not(.active){box-shadow:inset 0 0 0 1px var(--border2)}
 .dpack .repbody{flex:1;min-width:0}
 .dpack .reptitle{font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dpack .repmeta{font-size:12px;color:var(--muted)}
+
+/* --- Dossiers de caisses (v2.6.0) ---
+   Un tiroir, pas une section de rapport : l'en-tête doit se voir et
+   se cliquer, sans peser plus que les caisses qu'il contient. */
+.pkfolder{margin-top:10px;border-top:1px solid var(--border);padding-top:4px}
+.pkfolder:first-child{margin-top:0;border-top:none;padding-top:0}
+.pkfhead{display:flex;align-items:center;gap:9px;padding:8px 6px;cursor:pointer;
+  border-radius:9px;user-select:none}
+.pkfhead:hover{background:var(--panel2)}
+.pkfhead .t{font-weight:650;font-size:14px}
+.pkfhead .muted{font-size:12px}
 
 /* --- Caisses dehors / en place, côte à côte quand il y a la place (v2.1.0) ---
    Le panneau vit dans la colonne étroite du tableau de bord : à deux
