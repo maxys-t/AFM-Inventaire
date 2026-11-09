@@ -37,6 +37,7 @@ function renderPacks(){
       </div>
       <div class="repbar-act">
         ${can('edit') ? `<button class="btn" onclick="openPackForm()">+ New pack</button>` : ''}
+        ${(can('edit') && db.foldersSupported) ? `<button class="btn sec" onclick="packNewFolder()">+ New folder</button>` : ''}
       </div>
     </div>
 
@@ -92,13 +93,75 @@ function packMatches(p){
    justement parce qu'on ne sait pas où c'est rangé.
    ============================================================ */
 function packFolders(){
-  const noms = new Set();
-  (db.packs||[]).forEach(p=>{ if(!p.archived && p.folder) noms.add(p.folder); });
-  return [...noms].sort((a,b)=>a.localeCompare(b,'fr'));
+  return [...(db.packFolders||[])]
+    .sort((a,b)=>(a.pos||0)-(b.pos||0) || a.name.localeCompare(b.name,'fr'));
 }
-function togglePackFolder(nom){
-  if(packFolderShut.has(nom)) packFolderShut.delete(nom); else packFolderShut.add(nom);
+function folderOf(id){ return (db.packFolders||[]).find(f=>f.id === id) || null; }
+function togglePackFolder(id){
+  if(packFolderShut.has(id)) packFolderShut.delete(id); else packFolderShut.add(id);
   redessinePackTree();
+}
+
+/* ---- Créer, renommer, supprimer ----
+   Un dossier se crée VIDE, avant d'avoir quoi que ce soit dedans :
+   c'est tout l'intérêt d'une table plutôt que d'une colonne texte.
+   On fait ensuite glisser les caisses dedans. */
+async function packNewFolder(){
+  const nom = (prompt('Folder name — e.g. LEASH Touring') || '').trim();
+  if(!nom) return;
+  try{
+    const f = await apiCreateFolder(nom, packFolders().length);
+    db.packFolders.push(f);
+    renderPacks();
+    toast(`Folder « ${nom} » created — drag cases into it.`, 'ok');
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+async function packRenameFolder(id){
+  const f = folderOf(id); if(!f) return;
+  const nom = (prompt('Rename this folder', f.name) || '').trim();
+  if(!nom || nom === f.name) return;
+  try{
+    await apiRenameFolder(id, nom);
+    f.name = nom;
+    renderPacks();
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+async function packDeleteFolder(id){
+  const f = folderOf(id); if(!f) return;
+  const dedans = (db.packs||[]).filter(p=>!p.archived && p.folder_id === id);
+  /* Supprimer un tiroir ne jette pas ce qu'il y a dedans : les
+     caisses remontent à la racine. C'est ce que fait un
+     gestionnaire de fichiers, et le seul comportement qui ne perde
+     rien par inadvertance. */
+  if(!confirm(`Delete the folder « ${f.name} »?\n\n${
+    dedans.length ? `Its ${dedans.length} case(s) move back to the top of the list — nothing is deleted.`
+                  : 'It is empty.'}`)) return;
+  try{
+    await apiDeleteFolder(id);
+    db.packFolders = db.packFolders.filter(x=>x.id !== id);
+    dedans.forEach(p=>{ p.folder_id = null; });
+    renderPacks();
+    toast('Folder deleted — its cases are back at the top.', 'ok');
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
+/* Ranger une caisse dans un tiroir, ou l'en sortir. Annulable :
+   c'est un geste de glissement, donc un geste qu'on fait vite. */
+async function packSetFolder(packId, folderId){
+  const p = pack(packId); if(!p) return;
+  const avant = p.folder_id || null;
+  if(avant === folderId) return;
+  try{
+    await apiSetPackFolder(packId, folderId);
+    p.folder_id = folderId;
+    renderPacks();
+    const f = folderId ? folderOf(folderId) : null;
+    toast(f ? `${p.name} → ${f.name}` : `${p.name} is back at the top`,
+          'ok', 'Undo', async ()=>{
+            await apiSetPackFolder(packId, avant);
+            p.folder_id = avant; renderPacks();
+          }, 8000);
+  }catch(err){ toast(String(err.message||err), 'error'); }
 }
 /* Redessiner l'arbre seul, et seulement s'il est à l'écran : ces
    bascules peuvent être appelées avant le premier rendu. */
@@ -118,24 +181,44 @@ function packTreeHTML(){
   }
 
   const racines = packRoots();
-  const sansDossier = racines.filter(p=>!p.folder);
-  let h = sansDossier.map(p=>packBrancheHTML(p, 0)).join('');
+  const dossiers = packFolders();
+  const sansDossier = racines.filter(p=>!p.folder_id);
 
-  packFolders().forEach(nom=>{
-    const dedans = racines.filter(p=>p.folder === nom);
-    if(!dedans.length) return;
-    const replié = packFolderShut.has(nom);
+  /* La racine est une zone de dépôt comme les autres : c'est ainsi
+     qu'on ressort une caisse d'un tiroir, sans bouton dédié. Elle ne
+     porte un titre que s'il existe des dossiers — sinon ce serait un
+     niveau de hiérarchie pour une liste qui n'en a pas. */
+  let h = '';
+  if(dossiers.length){
+    h += `<div class="pkroot" data-drop="folder:__none">
+      <div class="pkfhead plain"><span class="t muted">Not in a folder</span>
+        <span class="muted">${sansDossier.length} case(s)</span></div>
+      ${sansDossier.map(p=>packBrancheHTML(p, 0)).join('')
+        || '<div class="pkempty">Drag a case here to take it out of its folder.</div>'}
+    </div>`;
+  }else{
+    h += sansDossier.map(p=>packBrancheHTML(p, 0)).join('');
+  }
+
+  dossiers.forEach(f=>{
+    const dedans = racines.filter(p=>p.folder_id === f.id);
+    const replié = packFolderShut.has(f.id);
     const dehors = dedans.filter(p=>packStatus(p).dehors).length;
     const manque = dedans.filter(p=>packStatus(p).manque).length;
-    h += `<div class="pkfolder">
-      <div class="pkfhead" onclick="togglePackFolder(${JSON.stringify(nom).replace(/"/g,'&quot;')})">
+    h += `<div class="pkfolder" data-drop="folder:${f.id}">
+      <div class="pkfhead" onclick="togglePackFolder('${f.id}')">
         <span class="chev">${replié?'▸':'▾'}</span>
-        <span class="t">${esc(nom)}</span>
+        <span class="t">${esc(f.name)}</span>
         <span class="muted">${dedans.length} case(s)</span>
         ${dehors?`<span class="tag sorti">${dehors} out</span>`:''}
         ${manque?`<span class="pkwarn">${manque} incomplete</span>`:''}
+        ${can('edit')?`<span class="pkfacts" onclick="event.stopPropagation()">
+          <button class="pkfbtn" onclick="packRenameFolder('${f.id}')" title="Rename">✎</button>
+          <button class="pkfbtn" onclick="packDeleteFolder('${f.id}')" title="Delete the folder, keep the cases">✕</button>
+        </span>`:''}
       </div>
-      ${replié ? '' : dedans.map(p=>packBrancheHTML(p, 0)).join('')}
+      ${replié ? '' : (dedans.map(p=>packBrancheHTML(p, 0)).join('')
+        || '<div class="pkempty">Empty — drag a case here.</div>')}
     </div>`;
   });
 
@@ -485,6 +568,30 @@ function packDragMove(e){
       `<span class="ok">↥ out of ${esc(par ? par.name : '')}</span>`;
     return;
   }
+  /* ============================================================
+     RANGER UNE CAISSE DANS UN TIROIR (v2.6.0)
+
+     Même geste que pour emboîter deux caisses, autre destination :
+     le préfixe « folder: » suffit à les distinguer. Réutiliser le
+     glissement existant plutôt que d'en écrire un second, c'est
+     surtout n'avoir qu'un seul endroit où le défilement
+     automatique, l'appui long et le fantôme sont réglés.
+
+     Seule une CAISSE se range dans un dossier : un item n'a rien à
+     y faire, et le dire pendant le survol vaut mieux que de le
+     refuser après la dépose.
+     ============================================================ */
+  if(cible.startsWith('folder:')){
+    const ok = drag.type === 'pack';
+    zone.classList.add(ok ? 'dropok' : 'dropno');
+    drag.boucle = !ok;
+    const id = cible.slice(7);
+    const f = id === '__none' ? null : folderOf(id);
+    drag.fantome.innerHTML = packDragLabel() + (ok
+      ? `<span class="ok">→ ${esc(f ? f.name : 'top of the list')}</span>`
+      : `<span class="no">✕ only a case goes in a folder</span>`);
+    return;
+  }
   const boucle = drag.type === 'item' && packWouldLoop(cible, drag.id);
   zone.classList.add(boucle ? 'dropno' : 'dropok');
   drag.boucle = boucle;
@@ -548,11 +655,22 @@ async function packDragEnd(e){
   document.querySelectorAll('.dropok,.dropno').forEach(x=>x.classList.remove('dropok','dropno'));
   if(d && d.fantome) d.fantome.remove();
   if(!d || !d.actif || !d.cible) return;
-  if(d.boucle){ toast('That would put a pack inside itself.', 'error'); return; }
+  if(d.boucle){
+    toast(String(d.cible).startsWith('folder:')
+      ? 'Only a case goes in a folder.'
+      : 'That would put a pack inside itself.', 'error');
+    return;
+  }
 
   if(d.cible === '__out'){
     const itemId = d.type === 'pack' ? (pack(d.id) || {}).container_id : d.id;
     if(itemId) await packTakeOut(itemId, d.source);
+    return;
+  }
+  if(d.cible.startsWith('folder:')){
+    if(d.type !== 'pack'){ toast('Only a case goes in a folder.', 'warn'); return; }
+    const id = d.cible.slice(7);
+    await packSetFolder(d.id, id === '__none' ? null : id);
     return;
   }
   const cible = pack(d.cible);
@@ -687,12 +805,13 @@ function openPackForm(id, après){
         <label class="checkline">
           <input type="checkbox" ${packFormAll?'checked':''} onchange="packFormShowAll(this.checked)">
           Show all items (${db.items.length}) — not just bags, cases and racks</label></div>
-      <div class="field full">
-        <label data-tip="A drawer, not a category: « LEASH Touring », « Studio ». Type a new name to create one; leave empty and the case stays at the top of the list.">Folder ⓘ</label>
-        <input id="pf-folder" list="pf-folders" placeholder="e.g. LEASH Touring — leave empty for none"
-               value="${esc(p ? (p.folder||'') : '')}">
-        <datalist id="pf-folders">${packFolders().map(f=>
-          `<option value="${esc(f)}">`).join('')}</datalist></div>
+      ${db.foldersSupported ? `<div class="field full">
+        <label data-tip="A drawer in the pack list. Create folders from the Packs screen, then drag cases into them — this menu is here for when dragging is not handy.">Folder ⓘ</label>
+        <select id="pf-folder">
+          <option value="">— top of the list —</option>
+          ${packFolders().map(f=>`<option value="${f.id}"${
+            p && p.folder_id === f.id ? ' selected' : ''}>${esc(f.name)}</option>`).join('')}
+        </select></div>` : ''}
       <div class="field full"><label>Notes</label>
         <input id="pf-notes" value="${esc(p ? (p.notes||'') : '')}"></div>
       <div class="field full">
@@ -743,12 +862,13 @@ async function packSave(){
       return;
     }
   }
-  /* Une chaîne vide n'est pas un dossier : c'est l'absence de
-     dossier. Sans ce `|| null`, l'écran afficherait un tiroir sans
-     nom à côté de celles qui n'en ont pas. */
-  const dossier = (document.getElementById('pf-folder').value || '').trim() || null;
+  const champDossier = document.getElementById('pf-folder');
   const row = {name, container_id: cont, notes: document.getElementById('pf-notes').value.trim() || null,
-               permanent: monté, folder: dossier};
+               permanent: monté};
+  /* Le menu n'existe pas tant que la 032 n'est pas passée : ne rien
+     écrire vaut mieux qu'écrire un null qui effacerait un rangement
+     fait ailleurs. */
+  if(champDossier) row.folder_id = champDossier.value || null;
   try{
     let neuf = null;
     if(packEditing) await apiUpdatePack(packEditing, row);

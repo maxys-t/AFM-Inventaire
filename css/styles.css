@@ -1371,14 +1371,33 @@ nav button.navmain:not(.active){box-shadow:inset 0 0 0 1px var(--border2)}
 
 /* --- Dossiers de caisses (v2.6.0) ---
    Un tiroir, pas une section de rapport : l'en-tête doit se voir et
-   se cliquer, sans peser plus que les caisses qu'il contient. */
-.pkfolder{margin-top:10px;border-top:1px solid var(--border);padding-top:4px}
-.pkfolder:first-child{margin-top:0;border-top:none;padding-top:0}
+   se cliquer, sans peser plus que les caisses qu'il contient.
+
+   Le dossier ENTIER est la zone de dépôt, pas seulement son titre :
+   viser une bande de 36 px au doigt sur un iPad est un exercice,
+   viser un bloc ne l'est pas. */
+.pkfolder,.pkroot{margin-top:10px;border:1px solid transparent;border-radius:12px;padding:2px 4px}
+.pkfolder{border-top-color:var(--border)}
+.pkroot:first-child,.pkfolder:first-child{margin-top:0}
 .pkfhead{display:flex;align-items:center;gap:9px;padding:8px 6px;cursor:pointer;
   border-radius:9px;user-select:none}
 .pkfhead:hover{background:var(--panel2)}
+.pkfhead.plain{cursor:default}
+.pkfhead.plain:hover{background:none}
 .pkfhead .t{font-weight:650;font-size:14px}
 .pkfhead .muted{font-size:12px}
+/* Renommer et supprimer n'apparaissent qu'au survol du tiroir : deux
+   boutons permanents par dossier feraient plus de boutons que de
+   caisses. */
+.pkfacts{margin-left:auto;display:flex;gap:4px;opacity:0;transition:opacity .12s}
+.pkfhead:hover .pkfacts,.pkfacts:focus-within{opacity:1}
+.pkfbtn{background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:13px;padding:3px 7px;border-radius:7px;font-family:inherit}
+.pkfbtn:hover{background:var(--border);color:var(--txt)}
+.pkempty{padding:10px 12px;color:var(--muted);font-size:13px;font-style:italic}
+/* Survolé pendant un glissement : le tiroir entier s'allume. */
+.pkfolder.dropok,.pkroot.dropok{border-color:var(--ok);background:var(--t-ok)}
+.pkfolder.dropno,.pkroot.dropno{border-color:var(--bad);background:var(--t-bad)}
 
 /* --- Caisses dehors / en place, côte à côte quand il y a la place (v2.1.0) ---
    Le panneau vit dans la colonne étroite du tableau de bord : à deux

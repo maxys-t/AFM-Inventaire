@@ -13,18 +13,36 @@ moment où il a fallu poser l'iPad.
 
 ### Ajouté
 
-- **Des dossiers pour les caisses.** Vingt-et-une caisses d'affilée,
-  c'est une liste qu'on fait défiler en cherchant un nom qu'on
-  connaît déjà — l'écran n'apprend plus rien. Un dossier est un
-  tiroir, pas une catégorie : on tape son nom dans le formulaire
-  d'une caisse, il se crée.
+- **Des dossiers pour les caisses, comme dans un Drive.** Vingt-et-une
+  caisses d'affilée, c'est une liste qu'on fait défiler en cherchant
+  un nom qu'on connaît déjà — l'écran n'apprend plus rien.
 
-  Les caisses sans dossier restent **en tête, à plat, sans en-tête**.
-  Un parc qui n'utilise pas la fonction ne doit pas en payer le
-  niveau de titre. Chaque dossier se replie, en gardant son compte et
-  ses alertes — un coup d'œil suffit même fermé. Une recherche
-  ignore les dossiers et aplatit tout : on cherche justement parce
+  **« + New folder » crée un tiroir vide**, puis on y fait glisser
+  les caisses. C'est le geste qui a décidé du modèle : la première
+  écriture de cette version rangeait le nom du dossier dans une
+  colonne de `packs`, en défendant qu'un dossier n'a pas de
+  propriétés propres et n'a donc pas à exister seul. Le raisonnement
+  était juste, la prémisse fausse — un dossier qu'on crée **avant**
+  d'y mettre quoi que ce soit doit exister vide, et une colonne texte
+  ne sait pas porter ça. Le geste a changé, le modèle a suivi.
+
+  Le glissement réutilise celui des caisses, pas un second : un seul
+  endroit où le défilement automatique, l'appui long de l'iPad et le
+  fantôme sont réglés. **Le tiroir entier est la cible**, pas son
+  titre — viser une bande de 36 px au doigt est un exercice, viser un
+  bloc ne l'est pas. Et la racine est une zone de dépôt comme les
+  autres : c'est ainsi qu'on ressort une caisse, sans bouton dédié.
+
+  Les caisses sans dossier restent **en tête, à plat**. Tant qu'aucun
+  dossier n'existe, la liste n'a aucun niveau de titre : un parc qui
+  n'utilise pas la fonction ne doit pas en payer le prix. Chaque
+  dossier se replie en gardant son compte et ses alertes. Une
+  recherche les ignore et aplatit tout — on cherche justement parce
   qu'on ne sait pas où c'est rangé.
+
+  **Supprimer un dossier ne supprime pas ses caisses** : elles
+  remontent à la racine. La confirmation le dit, et la base le
+  garantit indépendamment de l'écran.
 
 - **Une adresse de retour dans l'e-mail de livraison.** Le message
   disait où le matériel allait, jamais où le ramener — ce que le

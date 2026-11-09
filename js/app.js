@@ -243,6 +243,7 @@ async function exportJSON(){
   delete out.repairsSupported; delete out.packsSupported;
   delete out.packExtrasSupported;
   delete out.needsSupported;
+  delete out.foldersSupported;
   delete out.linksSupported;
   try{
     toast('Reading the full history…', 'info');
@@ -334,8 +335,11 @@ function normalizeImport(d){
     // v1.22 : monté en permanence, ou simple configuration.
     permanent: !!p.permanent,
     // v2.6 : le tiroir où la caisse est rangée dans la liste.
-    folder: p.folder || null
+    folder_id: p.folder_id || null
   }));
+  const packFolders = (d.packFolders || d.pack_folders || [])
+    .map(f=>({id:f.id, name:f.name, pos:f.pos||0}))
+    .filter(f=>f.id && f.name);
   const packItems = (d.packItems || d.pack_items || [])
     .map(l=>({pack_id:l.pack_id, item_id:l.item_id}))
     .filter(l=>l.pack_id && l.item_id);
@@ -396,7 +400,7 @@ function normalizeImport(d){
   }
 
   return {items:d.items||[], users, locations, history, projects:d.projects||[],
-          repairs, providers, packs, packItems, packExtras, needs,
+          repairs, providers, packs, packItems, packExtras, packFolders, needs,
           linkGroups, linkMembers};
 }
 function importJSON(inp){
@@ -421,6 +425,9 @@ function importJSON(inp){
         notes:i.notes||"",photo:i.photo||null,owner:i.owner||"",provider:i.provider||"",price:i.price??null,sales_order:i.sales_order||"",purchase_date:i.purchase_date||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null,weight_g:i.weight_g??null,has_case:!!i.has_case,case_note:i.case_note||null,
         ...(db.trashSupported ? {deleted_at:i.deleted_at||null} : {})
       })));
+      /* Les dossiers AVANT les caisses : une caisse qui désigne un
+         dossier inexistant serait refusée par la clé étrangère. */
+      if(d.packFolders.length) await apiUpsertPackFolders(d.packFolders);
       if(d.packs.length) await apiUpsertPacks(d.packs);
       if(d.packItems.length) await apiUpsertPackItems(d.packItems);
       if(d.packExtras.length) await apiUpsertPackExtras(d.packExtras);

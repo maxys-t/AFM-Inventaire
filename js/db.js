@@ -9,6 +9,7 @@ let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:fa
           repairs:[],providers:[],repairsSupported:true,
           packs:[],packItems:[],packsSupported:true,
           packExtras:[],packExtrasSupported:true,
+          packFolders:[],foldersSupported:true,
           needs:[],needsSupported:true,
           linkGroups:[],linkMembers:[],linksSupported:true,
           trash:[],trashSupported:true,profiles:[]};
@@ -171,17 +172,22 @@ async function loadAll(){
   ]);
   /* Packs (migration 019). Tolérant à son absence, comme les
      réparations : sans eux l'onglet est vide, l'app tourne. */
-  const [pk, pit, pex, bes, lg, lm] = await Promise.all([
+  const [pk, pit, pex, pfo, bes, lg, lm] = await Promise.all([
     sb.from('packs').select('*').order('name'),
     sb.from('pack_items').select('*'),
     sb.from('pack_extras').select('*').order('pos'),
+    sb.from('pack_folders').select('*').order('pos'),
     sb.from('item_needs').select('*').order('pos'),
     sb.from('item_link_groups').select('*').order('name'),
     sb.from('item_link_members').select('*')
   ]);
   db.packsSupported = !pk.error;
   db.packs = pk.error ? [] : pk.data.map(p=>({...p, permanent: !!p.permanent,
-                                              folder: p.folder || null}));
+                                              folder_id: p.folder_id || null}));
+  /* Les dossiers datent de la 032. Sans eux, la liste des caisses
+     reste celle d'avant : à plat, et parfaitement utilisable. */
+  db.foldersSupported = !pfo.error;
+  db.packFolders = pfo.error ? [] : pfo.data;
   db.packItems = pit.error ? [] : pit.data;
   /* Les consommables datent de la 024 : leur absence ne doit pas
      vider l'onglet Packs, elle doit juste ne rien afficher. */
@@ -239,7 +245,7 @@ async function refresh(){
    le moindre enregistrement de préférence d'affichage déclencherait
    un rechargement complet de l'inventaire à chaque case cochée. */
 const SYNC_TABLES = ['items','people','locations','history','projects','profiles',
-                     'repairs','repair_providers','packs','pack_items','pack_extras',
+                     'repairs','repair_providers','packs','pack_items','pack_extras','pack_folders',
                      'item_needs','item_link_groups','item_link_members'];
 function subscribe(){
   let t = null;
@@ -504,6 +510,22 @@ async function apiInsertPackExtra(e){
   return data;
 }
 async function apiUpdatePackExtra(id, f){ await run(sb.from('pack_extras').update(f).eq('id', id)); }
+
+/* ---------------- Dossiers de caisses (v2.6) ----------------
+   Des tiroirs pour la liste des packs. Supprimer un dossier ramène
+   ses caisses à la racine, il ne les emporte pas — voir la 032. */
+async function apiCreateFolder(name, pos){
+  const {data, error} = await sb.from('pack_folders').insert({name, pos:pos||0}).select().single();
+  if(error) throw error;
+  return data;
+}
+async function apiRenameFolder(id, name){
+  await run(sb.from('pack_folders').update({name}).eq('id', id));
+}
+async function apiDeleteFolder(id){ await run(sb.from('pack_folders').delete().eq('id', id)); }
+async function apiSetPackFolder(packId, folderId){
+  await run(sb.from('packs').update({folder_id: folderId}).eq('id', packId));
+}
 async function apiDeletePackExtra(id){ await run(sb.from('pack_extras').delete().eq('id', id)); }
 
 /* ---------------- Besoins d'un item (v2.2) ----------------
@@ -570,6 +592,7 @@ async function apiUpsertPackItems(rows){
   await run(sb.from('pack_items').upsert(rows, {onConflict:'pack_id,item_id'}));
 }
 async function apiUpsertPackExtras(rows){ await run(sb.from('pack_extras').upsert(rows)); }
+async function apiUpsertPackFolders(rows){ await run(sb.from('pack_folders').upsert(rows)); }
 async function apiUpsertNeeds(rows){ await run(sb.from('item_needs').upsert(rows)); }
 async function apiUpsertLinkGroups(rows){ await run(sb.from('item_link_groups').upsert(rows)); }
 async function apiUpsertLinkMembers(rows){

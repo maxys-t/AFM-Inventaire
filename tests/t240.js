@@ -32,6 +32,9 @@ const STUBS = `
   function outBy(i){ return i.out ? (i.out.reason||'') : ''; }
   function repairOf(){ return null; }
   function openDetail(){}
+  function renderPacks(){}
+  function refresh(){ return Promise.resolve(); }
+  function packPhoto(){ return null; }
   function renderProj(){}
   function renderPackDetail(){}
   function projDestOptions(){ return ''; }
@@ -58,13 +61,18 @@ const DATA = `
     it('CAS-001','Pelicase'), it('CAS-002','Flightcase')
   ];
 
-  /* Trois caisses : deux dans un dossier, une sans. */
+  /* Un dossier, deux caisses dedans, une à la racine — plus un
+     dossier VIDE, que seule une table sait porter. */
+  db.packFolders = [
+    {id:'f1', name:'LEASH Touring', pos:0},
+    {id:'f2', name:'Studio',        pos:1}
+  ];
   db.packs = [
-    {id:'pk1', name:'SQ5+ Kit',   folder:'LEASH Touring', permanent:false,
+    {id:'pk1', name:'SQ5+ Kit',   folder_id:'f1', permanent:false,
      archived:false, container_id:'CAS-001', parent_id:null},
-    {id:'pk2', name:'K10 #1',     folder:'LEASH Touring', permanent:false,
+    {id:'pk2', name:'K10 #1',     folder_id:'f1', permanent:false,
      archived:false, container_id:null, parent_id:null},
-    {id:'pk3', name:'Rack studio', folder:null, permanent:true,
+    {id:'pk3', name:'Rack studio', folder_id:null, permanent:true,
      archived:false, container_id:'CAS-002', parent_id:null}
   ];
   db.packItems = [{pack_id:'pk1', item_id:'SYN-001'}];
@@ -83,27 +91,36 @@ const TESTS = `
   function T(cond, label){ R.push([!!cond, label]); }
   function S(label){ R.push([null, label]); }
 
-  S('1. Les caisses se rangent dans des tiroirs');
-  /* Vingt-et-une caisses d'affilée, c'est une liste qu'on fait
-     défiler en cherchant un nom qu'on connaît déjà. */
-  T(packFolders().join() === 'LEASH Touring', 'les dossiers existants sont listés');
+  S('1. Un dossier existe par lui-même, même vide');
+  /* C'est ce qui a imposé une table plutôt qu'une colonne texte :
+     on crée le tiroir AVANT d'y glisser quoi que ce soit. */
+  T(packFolders().map(f=>f.name).join() === 'LEASH Touring,Studio',
+    'les dossiers suivent leur ordre, pas l’alphabet');
   var h = packTreeHTML();
-  T(h.includes('pkfhead'), 'l’arbre porte un en-tête de dossier');
-  T(h.includes('LEASH Touring'), 'et il est nommé');
-  /* Une caisse sans dossier reste À PLAT, en tête : beaucoup de parcs
-     n'en auront jamais, et leur imposer un titre vide serait leur
-     faire payer une fonction qu'ils n'utilisent pas. */
-  T(h.indexOf('Rack studio') < h.indexOf('pkfhead'),
-    'les caisses sans dossier restent en tête, sans en-tête');
+  T(h.includes('>Studio<'), 'un dossier vide s’affiche quand même');
+  T(h.includes('Empty — drag a case here'),
+    'et dit quoi en faire plutôt que de rester muet');
 
-  S('2. Un dossier se replie');
-  togglePackFolder('LEASH Touring');
+  S('2. Les caisses s’y rangent, et le dossier se replie');
+  T(h.includes('data-drop="folder:f1"'), 'chaque dossier est une zone de dépôt');
+  T(h.includes('data-drop="folder:__none"'),
+    'et la racine aussi : c’est ainsi qu’on ressort une caisse, sans bouton dédié');
+  togglePackFolder('f1');
   var replié = packTreeHTML();
   T(!replié.includes('SQ5+ Kit'), 'replié, il cache ses caisses');
   T(replié.includes('LEASH Touring'), 'mais garde son titre');
   T(replié.includes('2 case(s)'), 'et son compte — un coup d’œil suffit');
-  togglePackFolder('LEASH Touring');
+  togglePackFolder('f1');
   T(packTreeHTML().includes('SQ5+ Kit'), 'et se rouvre');
+
+  S('2bis. Sans dossier, aucun niveau de hiérarchie');
+  /* Un parc qui n'utilise pas la fonction ne doit pas en payer le
+     titre. */
+  var vrais = db.packFolders; db.packFolders = [];
+  var plat = packTreeHTML();
+  T(!plat.includes('pkfhead') && !plat.includes('Not in a folder'),
+    'la liste reste à plat tant qu’aucun dossier n’existe');
+  db.packFolders = vrais;
 
   S('3. Une recherche ignore les dossiers');
   /* On cherche justement parce qu'on ne sait pas où c'est rangé. */
@@ -181,11 +198,34 @@ const TESTS = `
   T(!read_proj.includes('const vignette = l.extra ?'),
     'l’ancienne règle, qui ne voyait que les consommables, a disparu');
 
-  S('10. La base');
-  T(read_sql.includes('add column if not exists folder'), 'packs.folder existe');
-  T(read_sql.includes('packs_folder_chk'), 'et refuse un nom aberrant');
-  T(read_sql.includes("btrim(folder) = ''"),
-    'une chaîne vide n’est pas un dossier : c’est l’absence de dossier');
+  S('10. Glisser une caisse dans un tiroir');
+  /* Le même glissement que pour emboîter deux caisses, avec une
+     autre destination : un seul endroit où le défilement
+     automatique, l'appui long et le fantôme sont réglés. */
+  var vp = read_packs;
+  T(vp.includes("cible.startsWith('folder:')"),
+    'la dépose distingue un dossier d’une caisse au préfixe');
+  T(vp.includes("const ok = drag.type === 'pack';"),
+    'seule une caisse se range dans un dossier');
+  T(vp.includes('only a case goes in a folder'),
+    'et un item s’en voit refuser l’entrée PENDANT le survol, pas après la dépose');
+  T(vp.includes('packSetFolder'), 'la dépose enregistre le rangement');
+  T(vp.includes("'Undo'"), 'et il s’annule : un glissement est un geste qu’on fait vite');
+
+  S('11. Supprimer un tiroir ne jette pas ce qu’il y a dedans');
+  T(vp.includes('move back to the top of the list — nothing is deleted'),
+    'la confirmation le dit');
+  T(read_sql.includes('on delete set null'),
+    'et la base le garantit, même si quelqu’un supprime la ligne autrement');
+
+  S('12. La base');
+  T(read_sql.includes('create table if not exists public.pack_folders'),
+    'une table de dossiers, parce qu’un dossier se crée vide');
+  T(read_sql.includes('pack_folders_nom_uniq'),
+    'deux tiroirs du même nom seraient indiscernables');
+  T(read_sql.includes('add column if not exists folder_id'), 'packs.folder_id existe');
+  T(read_sql.includes("column_name='folder'"),
+    'et la colonne texte d’une version antérieure est reprise puis retirée');
   T(read_sql.includes('add column if not exists return_loc'), 'projects.return_loc aussi');
 
   window.__results = R;
@@ -197,6 +237,7 @@ const script = [STUBS, read('js/config.js'), read('js/helpers.js'),
                 'var read_css  = ' + JSON.stringify(read('css/styles.css')) + ';',
                 'var read_proj = ' + JSON.stringify(read('js/views-projects.js')) + ';',
                 'var read_sql  = ' + JSON.stringify(read('sql/032-dossiers-et-retour.sql')) + ';',
+                'var read_packs = ' + JSON.stringify(read('js/views-packs.js')) + ';',
                 DATA, TESTS].join('\n;\n');
 
 try{ dom.window.eval(script); }

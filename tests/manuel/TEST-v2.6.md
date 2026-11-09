@@ -7,32 +7,49 @@ Dix minutes. Rien de destructeur.
 1. Exporte une sauvegarde depuis **Settings → Backup**.
 2. Passe `sql/032-dossiers-et-retour.sql` dans un **onglet neuf** de
    l'éditeur SQL de Supabase.
-3. Le script se termine par un tableau : `colonne_dossier` et
-   `colonne_retour` doivent dire **ok**.
+3. Le script se termine par un tableau : les quatre colonnes de
+   contrôle doivent dire **ok**.
 4. Pousse, recharge, vérifie **v2.6.0** en haut à gauche.
 
 ---
 
-## 1. Ranger les caisses
+## 1. Créer un dossier, y glisser des caisses
 
-- Packs → ouvre **LEASH Touring - SQ5+ Kit** → **Edit**.
-- Nouveau champ **Folder** : tape `LEASH Touring`. Enregistre.
-- Recommence sur deux ou trois autres caisses LEASH. À partir de la
-  deuxième, le nom est proposé dans la liste — tu n'as plus qu'à le
-  choisir.
-- **Attendu** : un en-tête « LEASH Touring » apparaît dans la liste,
-  avec le nombre de caisses, et les alertes s'il y en a.
-- Clique l'en-tête.
-- **Attendu** : le dossier se replie. Son compte reste lisible — un
-  coup d'œil doit suffire même fermé.
+- Packs → **+ New folder** → nomme-le `LEASH Touring`.
+- **Attendu** : le tiroir apparaît, **vide**, et dit « Empty — drag a
+  case here ». C'est tout l'intérêt : il existe avant d'avoir un
+  contenu.
+- Attrape une caisse LEASH par sa poignée ⠿ et lâche-la **n'importe
+  où sur le bloc du dossier**, pas seulement sur son titre.
+- **Attendu** : le tiroir entier s'allume en vert pendant le survol,
+  et le fantôme annonce « → LEASH Touring ». Après la dépose, un
+  bouton **Undo** reste disponible quelques secondes.
+- Recommence avec deux ou trois autres caisses.
+- Clique le titre du dossier.
+- **Attendu** : il se replie, en gardant son compte et ses alertes —
+  un coup d'œil doit suffire même fermé.
 
-Puis la règle qui compte :
+Puis l'inverse :
 
-- Regarde les caisses **sans** dossier (AF Sidecar, dLive DM0…).
-- **Attendu** : elles sont **en tête, à plat, sans en-tête**. Pas de
-  tiroir « Ungrouped ». Un parc qui n'utilise pas les dossiers ne
-  doit pas en payer le niveau de titre.
+- Déplie-le, et glisse une caisse vers le bloc **« Not in a folder »**
+  en haut.
+- **Attendu** : elle en ressort. Il n'y a pas de bouton « retirer du
+  dossier » — la racine est une zone de dépôt comme une autre.
 
+Et ce qui doit être refusé :
+
+- Ouvre une caisse, attrape un **item** dedans, et traîne-le sur un
+  dossier.
+- **Attendu** : le tiroir s'allume en **rouge** et le fantôme dit
+  « only a case goes in a folder ». Le refus arrive pendant le
+  survol, pas après la dépose.
+
+Enfin :
+
+- **✎** sur un dossier le renomme, **✕** le supprime.
+- **Attendu sur ✕** : la confirmation annonce que les caisses
+  remontent en haut de la liste et que rien n'est supprimé. Vérifie
+  qu'elles y sont bien.
 - Tape `K10` dans la recherche.
 - **Attendu** : les dossiers disparaissent, la liste est à plat. On
   cherche justement parce qu'on ne sait pas où c'est rangé.
