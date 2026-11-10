@@ -230,14 +230,14 @@ function projEditor(){
       const tous = packAllItems(k);
       const ind = tous.filter(i=>projBusy(i, p));
       const dedans = (p.pack_ids||[]).includes(k.id);
-      const ex = packExtrasOf(k.id).length;
+      const ex = supplyLinesOf(k.id).length;
       return `<div class="pjrow${dedans?' off':''}" data-kind="pack" data-key="${k.id}">
         <span class="pjgrip">⠿</span>${pjThumb({photo:packPhoto(k)})}
         <div class="pjnm"><div class="t">${esc(k.name)}
             <span class="tag ${k.permanent?'perm':'conf'}">${k.permanent?'assembled':'config'}</span></div>
           <div class="s">${tous.length} item(s) · ${fweight(tous.reduce((t,i)=>t+(i.weight_g||0),0))}${
             ind.length?` · <span class="warntxt">${ind.length} unavailable</span>`:''}${
-            ex?` · ${ex} consumable(s)`:''}</div></div>
+            ex?` · ${ex} supply line(s)`:''}</div></div>
         ${dedans ? '<span class="muted">in project</span>'
                  : `<button class="pjadd" onclick="projAddPack('${k.id}')">+</button>`}
       </div>`;
@@ -294,12 +294,14 @@ function projEditor(){
                  title="Use ${esc(itemTitleText(libre))} here instead">Use ${esc(libre.id)}</button>`:''}
             </div>`;
           }).join(''):''}
-        ${(g.extras.length || can('edit'))?`<div class="pjsub">Consumables</div>`:''}
-        ${g.extras.map(e=>`<div class="pjrow extra"><div class="pjnm"><div class="t">${esc(e.label)}</div>
-            <div class="s">× ${e.qty} · not counted in the weight</div></div>
+        ${supplySections(g.extras).map(sec=>`<div class="pjsub">${sec.titre}</div>` +
+          sec.lignes.map(e=>`<div class="pjrow extra"><div class="pjnm"><div class="t">${esc(e.label)}</div>
+            <div class="s">× ${e.qty}${e.supply && e.supply.weight_g
+              ? ' · ' + fweight(e.supply.weight_g * e.qty) : ' · no weight on file'}</div></div>
             ${(can('edit') && e.pack_id === g.packId)
               ? `<button class="pjx" onclick="projDelExtra('${e.id}')" title="Remove from this case">✕</button>` : ''}
-          </div>`).join('')}
+          </div>`).join('')).join('')}
+        ${(!g.extras.length && can('edit'))?`<div class="pjsub">Supplies</div>`:''}
         ${can('edit')?projExtraForm(g.packId):''}
       </div>
     </div>`; }).join('');
@@ -405,20 +407,39 @@ let projExtraOuvert = null;
 function projToggleExtra(packId){
   projExtraOuvert = (projExtraOuvert === packId) ? null : packId;
   renderProj();
-  const el = document.getElementById('px-proj-label');
+  const el = document.getElementById('px-proj-supply');
   if(el) el.focus();
 }
 
+/* ============================================================
+   AJOUTER UNE DOTATION SANS QUITTER LE PROJET (v2.7.0)
+
+   On ne tape plus un libellé : on choisit une fourniture qui existe.
+   C'est ce qui sépare la v2.7 de la v1.22 — « gaffer noir » était
+   un mot, « Gaffer noir : 4 possédés, 3 libres » est un fait.
+
+   Et l'ajout reste PERMANENT : il entre dans la dotation de la
+   caisse, pas dans ce projet-ci. Si l'on ressent le besoin de
+   l'ajouter en urgence, c'est qu'à la prochaine sortie il faut qu'il
+   soit prévu dans la checklist à la base — c'est le raisonnement de
+   la v1.29, et il n'a pas changé.
+   ============================================================ */
 function projExtraForm(packId){
+  if(db.suppliesSupported === false) return '';
   if(projExtraOuvert !== packId)
     return `<div class="pjrow" style="border:none">
-      <button class="btn sec small" onclick="projToggleExtra('${packId}')">+ Consumable</button>
-      <span class="hintline" style="margin:0">Tape, ties, batteries — a checklist line, no weight.</span>
+      <button class="btn sec small" onclick="projToggleExtra('${packId}')">+ Supply</button>
+      <span class="hintline" style="margin:0">Cables, tape, batteries — counted, and it stays in the case.</span>
     </div>`;
+  const choix = (db.supplies||[]).filter(x=>!x.archived)
+    .sort((a,b)=>supplyTitleText(a).localeCompare(supplyTitleText(b),'fr'));
   return `<div class="pjrow" style="border:none;gap:6px;flex-wrap:wrap">
-    <input id="px-proj-label" placeholder="e.g. Black gaffer tape" style="flex:1;min-width:140px"
-           onkeydown="if(event.key==='Enter')projAddExtra('${packId}');if(event.key==='Escape')projToggleExtra('${packId}')">
+    <select id="px-proj-supply" style="flex:1;min-width:150px">
+      <option value="">— pick one —</option>
+      ${choix.map(x=>`<option value="${x.id}">${esc(supplyTitleText(x))} · ${supplyFree(x)} free</option>`).join('')}
+    </select>
     <input id="px-proj-qty" type="number" min="1" max="9999" value="1" style="width:74px">
+    <label class="checkline" style="margin:0"><input type="checkbox" id="px-proj-spare"> spare</label>
     <button class="btn small" onclick="projAddExtra('${packId}')">Add</button>
     <button class="btn sec small" onclick="projToggleExtra('${packId}')">Cancel</button>
   </div>`;
@@ -426,19 +447,22 @@ function projExtraForm(packId){
 
 async function projAddExtra(packId){
   if(!can('edit')) return;
-  const el = document.getElementById('px-proj-label');
-  const label = ((el||{}).value||'').trim();
-  if(!label){ toast('Type a name first.', 'warn'); return; }
+  const id = ((document.getElementById('px-proj-supply')||{}).value || '');
+  if(!id){ toast('Pick one from the list first.', 'warn'); return; }
   const qty = Math.max(1, Math.min(9999,
     parseInt((document.getElementById('px-proj-qty')||{}).value, 10) || 1));
+  const spare = !!(document.getElementById('px-proj-spare')||{}).checked;
+  const déjà = (db.supplyLines||[]).find(l=>l.pack_id === packId
+                                         && l.supply_id === id && !!l.spare === spare);
+  if(déjà){ toast('Already in this case — change its quantity from the Packs screen.', 'warn'); return; }
   try{
-    const row = await apiInsertPackExtra({pack_id:packId, label, qty,
-                                          pos:packExtrasOf(packId).length});
-    db.packExtras.push(row);
+    const row = await apiInsertSupplyLine({supply_id:id, pack_id:packId, qty, spare,
+                                            pos: supplyLinesOf(packId).length});
+    db.supplyLines.push({...row, spare: !!row.spare});
     projExtraOuvert = null;
     renderProj();
-    const k = pack(packId);
-    toast(`${label} added to ${k?k.name:'the case'} — it stays.`, 'ok', 'Undo', async ()=>{
+    const k = pack(packId), s2 = supply(id);
+    toast(`${supplyTitleText(s2)} added to ${k?k.name:'the case'} — it stays.`, 'ok', 'Undo', async ()=>{
       await projDelExtra(row.id, true);
     }, 12000);
   }catch(err){ toast(String(err.message||err), 'error'); }
@@ -447,8 +471,8 @@ async function projAddExtra(packId){
 async function projDelExtra(id, silencieux){
   if(!can('edit')) return;
   try{
-    await apiDeletePackExtra(id);
-    db.packExtras = db.packExtras.filter(e=>e.id !== id);
+    await apiDeleteSupplyLine(id);
+    db.supplyLines = db.supplyLines.filter(l=>l.id !== id);
     renderProj();
     if(!silencieux) toast('Removed.', 'ok');
   }catch(err){ toast(String(err.message||err), 'error'); }
@@ -792,7 +816,9 @@ function projPrep(){
           `<div class="pjsub">${esc(f.titre)}</div>` +
           lignes.filter(l=>l.besoin === f.titre).map(l=>projLine(l, p, figé)).join('')
         ).join('')}
-        ${extras.length?'<div class="pjsub">Consumables</div>' + lignes.filter(l=>l.extra).map(l=>projLine(l, p, figé)).join(''):''}
+        ${supplySections(extras).map(sec=>`<div class="pjsub">${esc(sec.titre)}</div>` +
+          lignes.filter(l=>l.extra && l.section === sec.cle)
+                .map(l=>projLine(l, p, figé)).join('')).join('')}
         ${écartés.length?'<div class="pjsub warntxt">Left out — unavailable</div>' +
           écartés.map(i=>`<div class="pjrow off">
             ${i.photo?`<img class="repthumb sm" loading="lazy" src="${i.photo}">`:'<span class="repthumb sm rnophoto"></span>'}
@@ -810,9 +836,13 @@ function projPrep(){
     g.name,
     g.items.map(ligne)
       .concat(lignesBesoins(g.packId, g.needs))
-      .concat(g.extras.map(e=>({key:e.key, html:esc(e.label), sub:'× ' + e.qty, extra:true}))),
+      .concat(g.extras.map(e=>({key:e.key, html:esc(e.label), extra:true,
+        section: e.spare ? 'spare' : (e.kind === 'consumable' ? 'consumable' : 'accessory'),
+        sub:'× ' + e.qty + (e.supply && e.supply.weight_g
+              ? ' · ' + fweight(e.supply.weight_g * e.qty) : '')}))),
     g.extras, g.écartés,
-    g.items.reduce((t,i)=>t+(i.weight_g||0), 0) + besoinsPoids(g.needs),
+    g.items.reduce((t,i)=>t+(i.weight_g||0), 0) + besoinsPoids(g.needs)
+      + supplyLinesWeight(g.extras),
     g.needs
   )).join('');
 
@@ -1189,11 +1219,11 @@ function deliveryMailBody(p){
       L.push(f.titre + ' :');
       f.lignes.forEach(n=>L.push(`- ${n.label} x${n.qty}`));
     });
-    if(g.extras.length){
+    supplySections(g.extras).forEach(sec=>{
       L.push('');
-      L.push('Consumables :');
-      g.extras.forEach(e=>L.push(`- ${e.label} x${e.qty}`));
-    }
+      L.push(sec.titre + ' :');
+      sec.lignes.forEach(e=>L.push(`- ${e.label} x${e.qty}`));
+    });
     L.push('');
   });
 
@@ -1211,7 +1241,7 @@ function deliveryMailBody(p){
 
   if(c.missing > 0)
     L.push(`Note: ${c.missing} item(s) of this project are no longer in the inventory.`, '');
-  L.push('Consumables are packing reminders and are not counted in the weight.', '');
+  L.push('Supplies without a unit weight on file are not counted in the total.', '');
   L.push(`— ${LABELS.appTitle}`);
   /* Deux lignes vides d'affilée deviennent une : les blocs vides
      laissaient des trous que le client de messagerie étire encore. */

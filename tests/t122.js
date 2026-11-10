@@ -15,7 +15,7 @@ const STUBS = `
   var db={items:[],users:[],locations:[],history:[],projects:[],trash:[],
           repairs:[],providers:[],repairsSupported:true,
           packs:[],packItems:[],packsSupported:true,
-          packExtras:[],packExtrasSupported:true};
+          supplies:[],supplyLines:[],suppliesSupported:true,archived:[]};
   function item(id){ return db.items.find(i=>i.id===id); }
   function project(id){ return db.projects.find(p=>p.id===id); }
   function can(){ return true; }
@@ -71,10 +71,19 @@ const DATA = `
     {pack_id:'k-pel',  item_id:'MIC-001'},
     {pack_id:'k-pel',  item_id:'MIC-002'}    // celui-ci est sorti ailleurs
   ];
-  db.packExtras=[
-    {id:'x1', pack_id:'k-pel', label:'Gaffer noir', qty:2, pos:0},
-    {id:'x2', pack_id:'k-pel', label:'Bonnettes',   qty:4, pos:1},
-    {id:'x3', pack_id:'k-lbx', label:'Jarretières', qty:8, pos:0}
+  /* v2.7 : les consommables de caisse sont devenus des FOURNITURES
+     comptées, avec un stock. « Gaffer noir » était un mot ;
+     « Gaffer noir : 6 possédés » est un fait. */
+  db.supplies=[
+    {id:'s1', kind:'consumable', name:'Gaffer noir', qty_total:6, qty_hs:0, archived:false},
+    {id:'s2', kind:'consumable', name:'Bonnettes',   qty_total:10, qty_hs:0, archived:false},
+    {id:'s3', kind:'accessory',  name:'Jarretières', qty_total:20, qty_hs:0,
+     weight_g:40, archived:false}
+  ];
+  db.supplyLines=[
+    {id:'x1', pack_id:'k-pel', supply_id:'s1', qty:2, spare:false, pos:0},
+    {id:'x2', pack_id:'k-pel', supply_id:'s2', qty:4, spare:false, pos:1},
+    {id:'x3', pack_id:'k-lbx', supply_id:'s3', qty:8, spare:false, pos:0}
   ];
   db.projects=[{id:'pr1', name:'Trianon', status:'inactif', archived:false,
                 item_ids:['CBL-001','CBL-002','MIC-001'], pack_ids:['k-pel'],
@@ -126,14 +135,18 @@ const TESTS = `
     'et la boucle fermée par l’autre parent est vue aussi');
   db.packItems = db.packItems.filter(l=>!(l.pack_id==='k-pel' && l.item_id==='LBX-001'));
 
-  S('6. Les consommables sont des lignes, pas des items');
-  T(packExtrasOf('k-pel').length === 2, 'la Pelicase a deux consommables');
-  T(packAllExtras(pack('k-rack')).length === 1,
-    'un pack imbriqué apporte les siens');
+  S('6. Les fournitures sont des lignes comptées, pas des items');
+  T(supplyLinesOf('k-pel').length === 2, 'la Pelicase a deux lignes de dotation');
+  T(packAllSupplies(pack('k-rack')).length === 1,
+    'un pack imbriqué apporte les siennes');
   T(packAllItems(pack('k-pel')).every(i=>i.id !== 'x1'),
-    'ils n’apparaissent jamais parmi les items');
+    'elles n’apparaissent jamais parmi les items');
   T(packWeight(pack('k-pel')) === 11200 + 1900 + 1100 + 1100,
-    'et ne pèsent rien dans le total');
+    'et le poids de la caisse reste celui de ses items');
+  /* Ce qui change tout : la ligne connaît le stock. */
+  T(supplyUsable(supply('s1')) === 6 && supplyFree(supply('s1')) === 6,
+    'une dotation sait combien on en possède, et combien sont libres');
+  T(supplyCommitted('s3') === 8, 'et combien les caisses en réclament au total');
 
   S('7. La composition d’un projet');
   var p = project('pr1'), c = projContent(p);
@@ -304,13 +317,17 @@ dom.window.eval([
   R.push([/new\.pack_ids::text/.test(sql),
           'et la composition reste réservée aux administrateurs']);
 
-  R.push([/from\('pack_extras'\)\.select/.test(dbjs), 'les consommables sont chargés']);
-  R.push([/'pack_extras'\]/.test(dbjs) || /pack_items','pack_extras'/.test(dbjs),
-          'et suivis en temps réel']);
+  R.push([/from\('supplies'\)\.select/.test(dbjs)
+          && /from\('supply_lines'\)\.select/.test(dbjs),
+          'fournitures et dotations sont chargées']);
+  R.push([/'supplies','supply_lines'/.test(dbjs), 'et suivis en temps réel']);
   R.push([/pack_ids:p\.pack_ids\|\|\[\]/.test(dbjs), 'les caisses d’un projet sont normalisées']);
 
-  R.push([/packExtras/.test(app) && /apiUpsertPackExtras/.test(app),
-          'la restauration rend les consommables']);
+  R.push([/apiUpsertSupplies/.test(app) && /apiUpsertSupplyLines/.test(app),
+          'la restauration rend les fournitures']);
+  /* Une sauvegarde d'avant la v2.7 porte encore des packExtras : les
+     perdre en silence serait la pire façon de perdre des données. */
+  R.push([/anciensExtras/.test(app), 'et convertit celles des sauvegardes antérieures']);
   R.push([/permanent: !!p\.permanent/.test(app), 'et le drapeau des packs']);
   R.push([/pack_ids:p\.pack_ids\|\|\[\]/.test(app), 'et les caisses des projets']);
 

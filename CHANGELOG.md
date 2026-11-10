@@ -1,5 +1,152 @@
 # Changelog
 
+## [2.7.0] — 2026-11-10
+
+⚠️ **Deux migrations SQL, dans cet ordre.** Sauvegarde avant.
+
+1. **`sql/033-journal-des-migrations.sql`** — le registre de ce qui
+   est appliqué sur la base.
+2. **`sql/034-accessoires-consommables.sql`** — reprend les
+   consommables de caisse existants puis supprime la table qui les
+   portait.
+
+### Ajouté — un journal des migrations
+
+« Quelles migrations sont passées sur ma base ? » n'avait aucune
+réponse : on la reconstituait de mémoire, ou en interrogeant
+`information_schema` objet par objet — quatre fois en une semaine.
+
+Une table `schema_migrations` répond désormais en une requête, et
+**chaque migration s'y enregistre elle-même** en dernière ligne. Les
+trente-deux précédentes y sont inscrites avec une date nulle plutôt
+qu'inventée : une fausse date serait pire qu'une case vide.
+
+> **Pourquoi pas des onglets Supabase.** Un onglet de l'éditeur SQL
+> est un bloc-notes, pas un registre. Le dossier `sql/` du dépôt est
+> déjà la source de vérité ; tenir en plus une liste d'onglets
+> reviendrait à entretenir un second registre, qui divergerait du
+> premier au premier oubli. L'habitude d'un onglet neuf par migration
+> reste bonne — elle empêche de recoller une version périmée, ce qui
+> a fait échouer la 031 deux fois — mais c'est une hygiène de
+> travail, pas une mémoire.
+
+### Le problème
+
+Une date préparée pour de vrai, et un départ sans checklist fiable —
+l'approximation portait sur les câbles de rab.
+
+Ce n'était ni une négligence ni une fonction manquante, mais une
+**conséquence du modèle** : chaque câble était un item, avec son
+identifiant, sa fiche, son historique. Personne ne tient à jour
+quarante XLR numérotés un par un. La donnée dérive, la checklist
+devient incroyable, on pack à l'œil.
+
+Un XLR était au même rang qu'un Minimoog.
+
+### Ajouté — trois niveaux de matériel
+
+| | Suivi individuel | Compté | Revient |
+|---|---|---|---|
+| **Item** — un Minimoog, un U87 | oui | — | oui |
+| **Accessoire** — un XLR 3 m | non | **oui** | oui |
+| **Consommable** — une peau, du gaffer | non | oui | **non** |
+
+Les deux derniers partagent la même table : ils ne diffèrent que par
+le retour, et deux tables presque identiques auraient produit deux
+fois le même écran — c'est ainsi qu'ils divergent. C'est la leçon de
+la v1.20.
+
+- **Deux entrées de rail**, *Accessories* et *Consumables*. Le rail
+  passe de 8 à 10 : ces pages se consultent **pendant** qu'on
+  prépare, et un onglet imbriqué les aurait rendues secondaires
+  alors qu'elles ne le sont pas.
+
+- **Ce qui rend une checklist définitive**, et qui est tout l'intérêt
+  du chantier : « XLR 3 m × 12 » n'est un fait que si l'application
+  sait qu'on en possède 40, qu'un est hors service, et qu'il en reste
+  23 d'utilisables au studio. Sans ces chiffres, c'est un vœu.
+
+- **Hors service est compté à part.** Décrémenter purement ferait
+  baisser la valeur d'achat du parc alors que l'objet est encore là,
+  et surtout effacerait la trace de ce qu'il y a à réparer ou à
+  jeter.
+
+- **Un manque se voit à la préparation**, pas sur le quai : si les
+  dotations réclament plus que le stock utilisable, la ligne le dit.
+  Même mécanique qu'un item réclamé par deux caisses depuis la v1.22.
+
+- **Un seuil d'alerte** sur les consommables, et un **emplacement**
+  sur chaque ligne — « il en reste 24 » appelle aussitôt « où ? ».
+
+- **Le poids unitaire compte** dans le total transport, multiplié par
+  la quantité. Une fourniture sans poids n'ajoute rien : un total
+  incomplet vaut mieux qu'un total inventé.
+
+### Ajouté — la dotation d'une caisse
+
+« La malle câbles contient toujours douze XLR de 3 m. » Écrit une
+fois, part avec elle. Trois sections : *Accessories*, *Spares*,
+*Consumables*.
+
+**Un « spare » n'est pas un concept** : c'est une ligne comme une
+autre, avec une case qui ne change que le sous-titre sous lequel elle
+s'affiche. Son utilité est de lecture — au chargement, on sait
+quelles lignes on peut sacrifier si la place manque.
+
+Un **seul rattachement**, à une caisse. Un appoint par projet a été
+envisagé puis écarté : les spares de la dernière date n'étaient pas
+*mal comptés*, ils n'étaient **pas sur la liste du tout**, et une
+dotation fixe les y met. C'est la leçon de la v1.29.
+
+### Ajouté — la bascule des items en accessoires
+
+Un écran liste les modèles candidats avec leur compte, leur prix et
+les caisses où ils figurent, et coche d'office ceux à **trois
+exemplaires ou plus**.
+
+**La règle est par modèle, pas par sous-catégorie**, et le critère
+tient en une question : *y a-t-il quelque chose à compter ?* En
+dessous de trois exemplaires, non — vingt pieds de micro répartis sur
+neuf modèles sont un choix, pas un bac, et un Grace Design m900 seul
+de son espèce n'est pas du stock.
+
+Quatre garanties, dans cet ordre d'importance :
+
+1. **Les items sont archivés, pas supprimés.** Leur historique reste
+   lisible et une bascule ratée se défait.
+2. **Les caisses qui les contenaient reçoivent la dotation
+   correspondante.** Sans cette étape, les malles perdraient leur
+   câblage en silence.
+3. **Les besoins déclarés sont annoncés**, pas jetés : un accessoire
+   n'en porte pas, et perdre une déclaration sans le dire serait pire
+   que refuser la bascule.
+4. Les **contenants de caisse, les membres de lot et ce qui est sorti
+   ou en réparation** sont écartés d'office.
+
+- **Archivé n'est pas la corbeille.** Celle-ci marque « expiré » au
+  bout de trente jours ; cent soixante-dix câbles y deviendraient un
+  bruit permanent qu'on finirait par vider sans regarder. Un item
+  archivé reste retrouvable par son identifiant — sinon on trouerait
+  le passé des projets déjà partis.
+
+### Modifié
+
+- **Les consommables de la v1.22 deviennent des lignes de plein
+  droit**, avec un stock. « Gaffer noir » était un mot ; « Gaffer
+  noir : 4 possédés, 3 libres » est un fait. La reprise ne devine
+  rien : tout part en *consommable*, y compris ce qui ressemble à un
+  accessoire, et se requalifie d'un clic. Deviner ici reviendrait à
+  modifier des données sans que personne l'ait demandé.
+
+- **On n'ajoute plus une fourniture à une caisse en tapant un mot**,
+  on la choisit dans une liste. L'ajout reste permanent, c'est-à-dire
+  qu'il entre dans la dotation de la caisse et non dans ce projet-ci.
+
+- **Une sauvegarde d'avant la v2.7 se relit** : ses consommables de
+  caisse sont convertis à la lecture, comme la migration le fait en
+  base.
+
+
 ## [2.6.0] — 2026-11-09
 
 ⚠️ **Migration SQL : `sql/032-dossiers-et-retour.sql`.** Deux colonnes

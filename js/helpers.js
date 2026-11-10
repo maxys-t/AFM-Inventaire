@@ -440,26 +440,115 @@ function annulerAppuiLong(){
   _appuiLong = null;
 }
 
-/* ---- Consommables (v1.22) ----
-   Gaffer, colliers, piles, un multitool. Des lignes de checklist, pas
-   des items : ni identifiant, ni fiche, ni historique, ni poids. Le
-   poids d'un projet sert à parler à un transporteur ; y mêler une
-   estimation de scotch le rendrait faux. */
-function packExtrasOf(id){
-  return (db.packExtras||[]).filter(e=>e.pack_id === id)
-    .sort((a,b)=>(a.pos||0)-(b.pos||0) || String(a.label).localeCompare(String(b.label),'fr'));
+/* ============================================================
+   ACCESSOIRES ET CONSOMMABLES (v2.7)
+
+   Ce qui se compte au lieu de se suivre à l'unité. Un XLR 3 m n'est
+   pas au même rang qu'un Minimoog : personne ne tient à jour
+   quarante câbles numérotés, la donnée dérive, et la checklist
+   devient incroyable. On compte.
+
+   Accessoire : revient (câbles, adaptateurs).
+   Consommable : ne revient pas (peaux, gaffer, piles).
+   Même table — ils ne diffèrent que par le retour.
+
+   Ce qui rend une checklist DÉFINITIVE n'est pas la ligne « ×12 » :
+   c'est de savoir qu'on en possède 40, qu'un est hors service, et
+   qu'il en reste 23 d'utilisables au studio. Sans ces chiffres,
+   « ×12 » est un vœu.
+   ============================================================ */
+function supply(id){ return (db.supplies||[]).find(s=>s.id === id) || null; }
+function suppliesOfKind(kind){
+  return (db.supplies||[]).filter(s=>s.kind === kind && !s.archived)
+    .sort((a,b)=>supplyTitleText(a).localeCompare(supplyTitleText(b), 'fr'));
 }
-/* Les consommables d'un pack ET de ses packs imbriqués. */
-function packAllExtras(p, vus){
+function supplyTitleText(s){
+  if(!s) return '';
+  const b = (s.brand||'').trim();
+  return (b ? b + ' ' : '') + (s.name || '');
+}
+function supplyTitle(s){
+  if(!s) return '';
+  const b = (s.brand||'').trim();
+  return (b ? `<b>${esc(b)}</b> ` : '') + esc(s.name||'');
+}
+
+/* ---- La dotation d'une caisse ----
+   Les lignes brutes, et les lignes résolues avec leur fourniture.
+   Une ligne dont la fourniture a disparu ne doit pas faire planter
+   un écran : elle est simplement ignorée. */
+function supplyLinesOf(packId){
+  return (db.supplyLines||[])
+    .filter(l=>l.pack_id === packId)
+    .map(l=>({...l, supply: supply(l.supply_id)}))
+    .filter(l=>l.supply && !l.supply.archived)
+    .sort((a,b)=>(a.spare?1:0) - (b.spare?1:0)
+              || (a.pos||0) - (b.pos||0)
+              || supplyTitleText(a.supply).localeCompare(supplyTitleText(b.supply), 'fr'));
+}
+/* La dotation d'un pack ET de ses packs imbriqués. */
+function packAllSupplies(p, vus){
   vus = vus || new Set();
   if(!p || vus.has(p.id)) return [];
   vus.add(p.id);
-  let out = packExtrasOf(p.id).map(e=>({...e, packName:p.name}));
+  let out = supplyLinesOf(p.id).map(l=>({...l, packName: p.name}));
   packItemsOf(p.id).forEach(i=>{
     const sous = packOfContainer(i.id);
-    if(sous) out = out.concat(packAllExtras(sous, vus));
+    if(sous) out = out.concat(packAllSupplies(sous, vus));
   });
   return out;
+}
+/* Regroupées pour l'affichage : accessoires, puis rab, puis
+   consommables. L'ordre est celui dans lequel on charge. */
+const SUPPLY_SECTIONS = [
+  {cle:'accessory', titre:'Accessories', test:l=>l.supply.kind === 'accessory' && !l.spare},
+  {cle:'spare',     titre:'Spares',      test:l=>l.supply.kind === 'accessory' && l.spare},
+  {cle:'consumable',titre:'Consumables', test:l=>l.supply.kind === 'consumable'}
+];
+function supplySections(lignes){
+  return SUPPLY_SECTIONS
+    .map(sec=>({...sec, lignes:(lignes||[]).filter(sec.test)}))
+    .filter(sec=>sec.lignes.length);
+}
+
+/* ---- Disponibilité ----
+   « Engagé » : tout ce que les dotations réclament, caisses sorties
+   ou non. « Dehors » : ce qui est physiquement parti. « Libre » :
+   ce qui reste au studio, hors service déduit.
+
+   Un total engagé supérieur au stock utilisable n'est pas une
+   erreur à refuser — c'est un fait à montrer, exactement comme un
+   item réclamé par deux caisses depuis la v1.22. */
+function supplyUsable(s){ return s ? Math.max(0, (s.qty_total||0) - (s.qty_hs||0)) : 0; }
+function supplyCommitted(id){
+  return (db.supplyLines||[]).reduce((t,l)=>{
+    if(l.supply_id !== id) return t;
+    const p = pack(l.pack_id);
+    return (p && !p.archived) ? t + (l.qty||0) : t;
+  }, 0);
+}
+function supplyOut(id){
+  return (db.supplyLines||[]).reduce((t,l)=>{
+    if(l.supply_id !== id) return t;
+    const p = pack(l.pack_id);
+    return (p && !p.archived && packStatus(p).dehors) ? t + (l.qty||0) : t;
+  }, 0);
+}
+function supplyFree(s){ return s ? Math.max(0, supplyUsable(s) - supplyOut(s.id)) : 0; }
+/* Ce qui doit se voir à la préparation, pas sur le quai. */
+function supplyShort(s){
+  return s ? Math.max(0, supplyCommitted(s.id) - supplyUsable(s)) : 0;
+}
+function supplyLow(s){
+  return !!(s && s.min_qty != null && supplyUsable(s) < s.min_qty);
+}
+
+/* Le poids d'une dotation : unitaire × quantité. Une fourniture sans
+   poids n'ajoute rien — mieux vaut un total incomplet qu'un total
+   inventé, comme pour les besoins de la v2.2. */
+function supplyLinesWeight(lignes){
+  return (lignes||[]).reduce((t,l)=>
+    t + ((l.supply && l.supply.weight_g) ? l.supply.weight_g * (l.qty||0) : 0), 0);
 }
 
 /* ============================================================
@@ -829,8 +918,11 @@ function itemFlag(i){
   return '';
 }
 
-/* Clé de checklist d'un consommable : il n'a pas d'identifiant d'item,
-   et `prep` est une table à plat. Le préfixe évite toute collision. */
+/* Clé de checklist d'une dotation : elle n'a pas d'identifiant
+   d'item, et `prep` est une table à plat. Le préfixe évite toute
+   collision. Inchangé depuis la v1.22 : les cases déjà cochées d'un
+   projet en cours restent valides après la bascule, puisque la
+   reprise conserve une ligne par consommable de caisse. */
 function extraKey(e){ return 'x:' + e.id; }
 
 /* La substitution décidée pour CE projet : « dans la caisse K, le
@@ -868,7 +960,8 @@ function projContent(p){
       items:   tous.filter(i=>!projBusy(i, p)),
       écartés: tous.filter(i=>projBusy(i, p)),
       doublons: doublons.filter(d=>d.packId === k.id),
-      extras:  packAllExtras(k).map(e=>({...e, key: extraKey(e)})),
+      extras:  packAllSupplies(k).map(e=>({...e, key: extraKey(e),
+                 label: supplyTitleText(e.supply), kind: e.supply.kind})),
       /* Dérivés des items retenus, pas stockés : un item écarté faute
          d'être disponible n'emporte pas son alimentation. */
       needs:   needsGrouped(tous.filter(i=>!projBusy(i, p)))
@@ -894,8 +987,12 @@ function projContent(p){
      total baisser sans explication. */
   const missing = (p.item_ids||[]).filter(id=>!item(id)).length;
 
+  /* Une dotation pesée compte dans le total : elle est dans la
+     caisse. Celles qui n'ont pas de poids n'ajoutent rien — mieux
+     vaut un total incomplet qu'un total inventé. */
   return {groups, loose, items, extras, doublons, needs, looseNeeds,
-          weight: items.reduce((t,i)=>t + (i.weight_g||0), 0) + needsWeight(items),
+          weight: items.reduce((t,i)=>t + (i.weight_g||0), 0) + needsWeight(items)
+                + supplyLinesWeight(extras),
           missing, frozen:false};
 }
 
@@ -952,7 +1049,8 @@ function projSnapshot(p){
     packs: c.groups.map(g=>({
       id: g.packId, name: g.name, permanent: g.permanent,
       items: g.items.map(i=>i.id),
-      extras: g.extras.map(e=>({id:e.id, label:e.label, qty:e.qty})),
+      extras: g.extras.map(e=>({id:e.id, label:e.label, qty:e.qty,
+                                kind:e.kind || 'consumable', spare:!!e.spare})),
       /* Figés comme le reste. Déclarer une alimentation de plus le
          lendemain ne doit pas réécrire ce qui est déjà parti. */
       needs: g.needs.map(f=>({kind:f.kind, titre:f.titre,

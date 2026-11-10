@@ -29,6 +29,24 @@ dans le même geste, jamais séparément.
 - [ ] **7. Si la version ajoute une migration SQL**, la passer dans Supabase
       AVANT de déployer le code, et après avoir exporté une sauvegarde.
       Le code neuf lit des colonnes que l'ancienne base n'a pas.
+      - **Un onglet neuf par migration**, nommé comme le fichier. Jamais
+        recoller par-dessus un onglet existant : une version périmée y
+        traîne toujours, et un texte plus court laisse des lignes
+        orphelines en bas. C'est ce qui a fait échouer la 031 deux fois.
+      - **Le fichier du dépôt fait foi.** Une migration corrigée dans
+        Supabase mais pas dans Git, c'est une divergence que personne ne
+        retrouve six mois plus tard.
+      - **Chaque migration s'enregistre elle-même** dans
+        `schema_migrations` (voir la 033). Ce journal est la seule réponse
+        à « qu'est-ce qui est passé sur cette base ? » :
+
+        ```sql
+        select id, name, applied_at, note
+          from public.schema_migrations order by id;
+        ```
+      - **Une migration déjà jouée ne se relance pas.** Le dossier `sql/`
+        est un historique, pas une liste de tâches : la 030 décrit un état
+        que la 031 a remplacé, la rejouer ne peut qu'échouer.
 - [ ] **8. Commit Git** avec un message clair reprenant la version
       (ex : `v0.6.2 — correction filtre Sortis`).
 - [ ] **9. Uploader / déployer** sur GitHub Pages.

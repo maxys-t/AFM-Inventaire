@@ -8,7 +8,7 @@ let sb = null;
 let db = {items:[],users:[],locations:[],history:[],projects:[],projectsError:false,
           repairs:[],providers:[],repairsSupported:true,
           packs:[],packItems:[],packsSupported:true,
-          packExtras:[],packExtrasSupported:true,
+          supplies:[],supplyLines:[],suppliesSupported:true,archived:[],
           packFolders:[],foldersSupported:true,
           needs:[],needsSupported:true,
           linkGroups:[],linkMembers:[],linksSupported:true,
@@ -129,7 +129,13 @@ async function loadAll(){
   const all = it.data.map(i=>({...i,cond:normCond(i.cond),cat:i.cat||'divers',subcat:i.subcat||'autre'}));
   db.trashSupported = all.length===0 || Object.prototype.hasOwnProperty.call(all[0],'deleted_at');
   db.trash = all.filter(i=>i.deleted_at).sort((a,b)=>new Date(b.deleted_at)-new Date(a.deleted_at));
-  db.items = all.filter(i=>!i.deleted_at);
+  /* Les items ARCHIVÉS (033) sortent du parc courant sans entrer à la
+     corbeille : un câble basculé en accessoire compté n'a plus à
+     figurer dans l'inventaire, mais son historique doit rester
+     lisible et il ne doit pas expirer au bout de trente jours.
+     `item()` les retrouve, les écrans ne les listent pas. */
+  db.archived = all.filter(i=>!i.deleted_at && i.archived);
+  db.items = all.filter(i=>!i.deleted_at && !i.archived);
   db.users = pe.data;
   // kind/address/archived : valeurs de repli si la migration 012 n'est
   // pas encore passée, pour que l'application tourne quand même.
@@ -172,10 +178,11 @@ async function loadAll(){
   ]);
   /* Packs (migration 019). Tolérant à son absence, comme les
      réparations : sans eux l'onglet est vide, l'app tourne. */
-  const [pk, pit, pex, pfo, bes, lg, lm] = await Promise.all([
+  const [pk, pit, sup, sln, pfo, bes, lg, lm] = await Promise.all([
     sb.from('packs').select('*').order('name'),
     sb.from('pack_items').select('*'),
-    sb.from('pack_extras').select('*').order('pos'),
+    sb.from('supplies').select('*').order('name'),
+    sb.from('supply_lines').select('*').order('pos'),
     sb.from('pack_folders').select('*').order('pos'),
     sb.from('item_needs').select('*').order('pos'),
     sb.from('item_link_groups').select('*').order('name'),
@@ -189,10 +196,13 @@ async function loadAll(){
   db.foldersSupported = !pfo.error;
   db.packFolders = pfo.error ? [] : pfo.data;
   db.packItems = pit.error ? [] : pit.data;
-  /* Les consommables datent de la 024 : leur absence ne doit pas
-     vider l'onglet Packs, elle doit juste ne rien afficher. */
-  db.packExtrasSupported = !pex.error;
-  db.packExtras = pex.error ? [] : pex.data;
+  /* Accessoires et consommables (033). Même tolérance que partout :
+     sans la migration, les deux écrans disent quoi lancer et rien
+     d'autre ne change. */
+  db.suppliesSupported = !sup.error && !sln.error;
+  db.supplies = sup.error ? [] : sup.data.map(x=>({...x,
+    qty_total: x.qty_total || 0, qty_hs: x.qty_hs || 0, archived: !!x.archived}));
+  db.supplyLines = sln.error ? [] : sln.data.map(l=>({...l, spare: !!l.spare}));
   /* Les besoins datent de la 029. Même tolérance : sans la migration,
      la carte « Needs » explique quoi lancer, et rien d'autre ne
      change. Une application qui refuse de démarrer parce qu'une
@@ -245,7 +255,8 @@ async function refresh(){
    le moindre enregistrement de préférence d'affichage déclencherait
    un rechargement complet de l'inventaire à chaque case cochée. */
 const SYNC_TABLES = ['items','people','locations','history','projects','profiles',
-                     'repairs','repair_providers','packs','pack_items','pack_extras','pack_folders',
+                     'repairs','repair_providers','packs','pack_items','pack_folders',
+                     'supplies','supply_lines',
                      'item_needs','item_link_groups','item_link_members'];
 function subscribe(){
   let t = null;
@@ -329,7 +340,13 @@ function watchConnection(){
 }
 
 /* ================= LECTURES (état en mémoire) ================= */
-function item(id){ return db.items.find(i=>i.id===id); }
+/* Un item par son identifiant. Les ARCHIVÉS (033) en font partie :
+   ils ne figurent plus dans les écrans, mais leur historique doit
+   rester lisible et un projet parti avec eux doit pouvoir se relire.
+   Les cacher ici reviendrait à trouer le passé. */
+function item(id){
+  return db.items.find(i=>i.id===id) || (db.archived||[]).find(i=>i.id===id);
+}
 function project(id){ return db.projects.find(p=>p.id===id); }
 function userName(id){ const u = db.users.find(u=>u.id===id); return u?u.name:"?"; }
 function outBy(i){
@@ -501,15 +518,37 @@ async function apiRemovePackItems(packId, itemIds){
   await run(sb.from('pack_items').delete().eq('pack_id', packId).in('item_id', itemIds));
 }
 
-/* ---------------- Consommables d'un pack (v1.22) ----------------
-   Gaffer, colliers, piles : des lignes de checklist, pas des items.
-   Elles n'ont ni poids ni état, et c'est volontaire — voir la 024. */
-async function apiInsertPackExtra(e){
-  const {data,error} = await sb.from('pack_extras').insert(e).select().single();
+/* ---------------- Accessoires et consommables (v2.7) ----------------
+   Ce qui se compte au lieu de se suivre à l'unité. Même table pour
+   les deux : ils ne diffèrent que par le retour — voir la 033. */
+async function apiInsertSupply(row){
+  const {data, error} = await sb.from('supplies').insert(row).select().single();
   if(error) throw error;
   return data;
 }
-async function apiUpdatePackExtra(id, f){ await run(sb.from('pack_extras').update(f).eq('id', id)); }
+async function apiUpdateSupply(id, fields){
+  await run(sb.from('supplies').update(fields).eq('id', id));
+}
+async function apiDeleteSupply(id){ await run(sb.from('supplies').delete().eq('id', id)); }
+
+/* La dotation d'une caisse. */
+async function apiInsertSupplyLine(row){
+  const {data, error} = await sb.from('supply_lines').insert(row).select().single();
+  if(error) throw error;
+  return data;
+}
+async function apiUpdateSupplyLine(id, fields){
+  await run(sb.from('supply_lines').update(fields).eq('id', id));
+}
+async function apiDeleteSupplyLine(id){ await run(sb.from('supply_lines').delete().eq('id', id)); }
+
+/* Archiver un item : il quitte le parc courant sans être supprimé. */
+async function apiArchiveItem(id, on){
+  await run(sb.from('items').update({archived: !!on}).eq('id', id));
+}
+async function apiArchiveItemsIn(ids, on){
+  await run(sb.from('items').update({archived: !!on}).in('id', ids));
+}
 
 /* ---------------- Dossiers de caisses (v2.6) ----------------
    Des tiroirs pour la liste des packs. Supprimer un dossier ramène
@@ -526,7 +565,6 @@ async function apiDeleteFolder(id){ await run(sb.from('pack_folders').delete().e
 async function apiSetPackFolder(packId, folderId){
   await run(sb.from('packs').update({folder_id: folderId}).eq('id', packId));
 }
-async function apiDeletePackExtra(id){ await run(sb.from('pack_extras').delete().eq('id', id)); }
 
 /* ---------------- Besoins d'un item (v2.2) ----------------
    Alimentations et cordons. Portés par l'item, dérivés partout
@@ -591,7 +629,8 @@ async function apiUpsertPacks(rows){ await run(sb.from('packs').upsert(rows)); }
 async function apiUpsertPackItems(rows){
   await run(sb.from('pack_items').upsert(rows, {onConflict:'pack_id,item_id'}));
 }
-async function apiUpsertPackExtras(rows){ await run(sb.from('pack_extras').upsert(rows)); }
+async function apiUpsertSupplies(rows){ await run(sb.from('supplies').upsert(rows)); }
+async function apiUpsertSupplyLines(rows){ await run(sb.from('supply_lines').upsert(rows)); }
 async function apiUpsertPackFolders(rows){ await run(sb.from('pack_folders').upsert(rows)); }
 async function apiUpsertNeeds(rows){ await run(sb.from('item_needs').upsert(rows)); }
 async function apiUpsertLinkGroups(rows){ await run(sb.from('item_link_groups').upsert(rows)); }

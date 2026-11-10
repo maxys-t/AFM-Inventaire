@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.7.0';
 
 /* ---- le thème ----
 
@@ -66,7 +66,7 @@ function applyRailPref(){
 }
 
 /* ---- navigation entre onglets ---- */
-const VIEWS = ['dash','inv','people','proj','out','packs','rep','settings'];
+const VIEWS = ['dash','inv','people','proj','out','packs','acc','cons','rep','settings'];
 function show(v){
   document.querySelectorAll('#rail .nav').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
   VIEWS.forEach(x=>{ const el = document.getElementById('v-'+x); if(el) el.style.display = x===v?'':'none'; });
@@ -168,6 +168,8 @@ function render(){
   if(v==='proj') renderProj();
   if(v==='out') renderOut();
   if(v==='packs') renderPacks();
+  if(v==='acc')  renderSupplies('accessory');
+  if(v==='cons') renderSupplies('consumable');
   if(v==='rep') renderRep();
   if(v==='people') renderPeople();
   if(v==='settings') renderSettings();
@@ -241,8 +243,9 @@ async function exportJSON(){
   const out = {...db, items:[...db.items, ...db.trash]};
   delete out.trash; delete out.trashSupported; delete out.projectsError;
   delete out.repairsSupported; delete out.packsSupported;
-  delete out.packExtrasSupported;
+
   delete out.needsSupported;
+  delete out.suppliesSupported;
   delete out.foldersSupported;
   delete out.linksSupported;
   try{
@@ -347,10 +350,43 @@ function normalizeImport(d){
      reviendrait sans son gaffer ni ses piles — la quatrième fois que
      l'on oublie une table à la restauration, après les photos, les
      réparations et les packs. */
-  const packExtras = (d.packExtras || d.pack_extras || [])
-    .map(e=>({id:e.id, pack_id:e.pack_id, label:e.label,
-              qty:e.qty||1, pos:e.pos||0}))
+  /* Accessoires et consommables (v2.7). Une sauvegarde antérieure
+     porte encore des `packExtras` : on les convertit à la lecture,
+     exactement comme la migration 033 le fait en base. Sans ça,
+     restaurer un fichier de la v2.6 rendrait des caisses dont les
+     consommables auraient disparu — en silence. */
+  const supplies    = (d.supplies || []).map(s2=>({
+    id:s2.id, kind:s2.kind === 'consumable' ? 'consumable' : 'accessory',
+    name:s2.name, brand:s2.brand || '', cat:s2.cat || null, subcat:s2.subcat || null,
+    qty_total:s2.qty_total || 0, qty_hs:s2.qty_hs || 0, min_qty:s2.min_qty ?? null,
+    weight_g:s2.weight_g ?? null, loc:s2.loc || null, photo:s2.photo || null,
+    provider:s2.provider || '', price:s2.price ?? null, notes:s2.notes || '',
+    archived:!!s2.archived
+  })).filter(s2=>s2.id && s2.name);
+  const supplyLines = (d.supplyLines || d.supply_lines || []).map(l=>({
+    id:l.id, supply_id:l.supply_id, pack_id:l.pack_id,
+    qty:l.qty || 1, spare:!!l.spare, pos:l.pos || 0
+  })).filter(l=>l.id && l.supply_id && l.pack_id);
+
+  const anciensExtras = (d.packExtras || d.pack_extras || [])
     .filter(e=>e.id && e.pack_id && e.label);
+  if(anciensExtras.length && !supplies.length){
+    const parNom = new Map();
+    anciensExtras.forEach(e=>{
+      const cle = String(e.label).trim().toLowerCase();
+      if(!parNom.has(cle)){
+        const id = (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : e.id;
+        parNom.set(cle, id);
+        supplies.push({id, kind:'consumable', name:String(e.label).trim(), brand:'',
+          cat:null, subcat:null, qty_total:0, qty_hs:0, min_qty:null, weight_g:null,
+          loc:null, photo:null, provider:'', price:null,
+          notes:'Repris des consommables de caisse (v1.22). Stock à renseigner.',
+          archived:false});
+      }
+      supplyLines.push({id:e.id, supply_id:parNom.get(cle), pack_id:e.pack_id,
+                        qty:e.qty || 1, spare:false, pos:e.pos || 0});
+    });
+  }
 
   /* Les besoins (v2.2). Oubliée ici, une restauration rendrait un
      parc complet dont chaque appareil aurait perdu son alimentation
@@ -400,8 +436,8 @@ function normalizeImport(d){
   }
 
   return {items:d.items||[], users, locations, history, projects:d.projects||[],
-          repairs, providers, packs, packItems, packExtras, packFolders, needs,
-          linkGroups, linkMembers};
+          repairs, providers, packs, packItems, packFolders, supplies, supplyLines,
+          needs, linkGroups, linkMembers};
 }
 function importJSON(inp){
   const f = inp.files[0]; if(!f) return;
@@ -422,7 +458,7 @@ function importJSON(inp){
       if(d.users.length) await apiUpsertPeople(d.users);
       if(d.items.length) await apiUpsertItems(d.items.map(i=>({
         id:i.id,name:i.name,cat:i.cat||'divers',subcat:i.subcat||'autre',brand:i.brand||"",serial:i.serial||"",cond:normCond(i.cond),
-        notes:i.notes||"",photo:i.photo||null,owner:i.owner||"",provider:i.provider||"",price:i.price??null,sales_order:i.sales_order||"",purchase_date:i.purchase_date||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null,weight_g:i.weight_g??null,has_case:!!i.has_case,case_note:i.case_note||null,
+        notes:i.notes||"",photo:i.photo||null,owner:i.owner||"",provider:i.provider||"",price:i.price??null,sales_order:i.sales_order||"",purchase_date:i.purchase_date||null,home:i.home,loc:i.loc,status:i.status||"dispo",out:i.out||null,weight_g:i.weight_g??null,has_case:!!i.has_case,case_note:i.case_note||null,archived:!!i.archived,
         ...(db.trashSupported ? {deleted_at:i.deleted_at||null} : {})
       })));
       /* Les dossiers AVANT les caisses : une caisse qui désigne un
@@ -430,7 +466,10 @@ function importJSON(inp){
       if(d.packFolders.length) await apiUpsertPackFolders(d.packFolders);
       if(d.packs.length) await apiUpsertPacks(d.packs);
       if(d.packItems.length) await apiUpsertPackItems(d.packItems);
-      if(d.packExtras.length) await apiUpsertPackExtras(d.packExtras);
+      /* Les fournitures AVANT leurs dotations : une dotation qui
+         désigne une fourniture inexistante serait refusée. */
+      if(d.supplies.length) await apiUpsertSupplies(d.supplies);
+      if(d.supplyLines.length) await apiUpsertSupplyLines(d.supplyLines);
       if(d.needs.length) await apiUpsertNeeds(d.needs);
       if(d.linkGroups.length)  await apiUpsertLinkGroups(d.linkGroups);
       if(d.linkMembers.length) await apiUpsertLinkMembers(d.linkMembers);

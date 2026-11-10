@@ -64,6 +64,7 @@ continue de servir l'ancien fichier.
 | t221 | L'application parle anglais — aucun libellé français à l'écran |
 | t230 | Les lots indissociables : les deux Amphion et leur Amp 700 |
 | t240 | Dossiers de caisses, e-mail de livraison, écran de composition |
+| t250 | Trois niveaux de matériel : items, accessoires comptés, consommables |
 
 ## En écrire un
 

@@ -10,7 +10,7 @@ const STUBS = `
   var db={items:[],users:[],locations:[],history:[],projects:[],trash:[],
           repairs:[],providers:[],repairsSupported:true,
           packs:[],packItems:[],packsSupported:true,
-          packExtras:[],packExtrasSupported:true,projectsError:false};
+          supplies:[],supplyLines:[],suppliesSupported:true,archived:[],projectsError:false};
   function item(id){ return db.items.find(i=>i.id===id); }
   function project(id){ return db.projects.find(p=>p.id===id); }
   function can(){ return true; }
@@ -165,8 +165,14 @@ dom.window.eval([
           'les vignettes sont des deux côtés, items comme caisses']);
   R.push([/pjThumb\(\{photo:packPhoto\(k\)\}\)/.test(vp),
           'une caisse montre la photo de son contenant']);
-  R.push([/function projAddExtra/.test(vp) && /apiInsertPackExtra/.test(vp),
-          'on ajoute un consommable à une caisse depuis le projet']);
+  /* v2.7 : on ne tape plus un libellé, on choisit une fourniture qui
+     existe — avec son stock. L'ajout reste PERMANENT, c'est-à-dire
+     qu'il entre dans la dotation de la caisse et non dans ce
+     projet-ci (raisonnement de la v1.29, inchangé). */
+  R.push([/function projAddExtra/.test(vp) && /apiInsertSupplyLine/.test(vp),
+          'on ajoute une fourniture à une caisse depuis le projet']);
+  R.push([/px-proj-supply/.test(vp) && !/px-proj-label/.test(vp),
+          'en la choisissant dans une liste, plus en tapant un mot']);
   R.push([/it stays/.test(vp),
           'et il y reste — même règle que les items']);
 

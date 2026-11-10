@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=2.6.0">
+<link rel="stylesheet" href="css/styles.css?v=2.7.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -55,6 +55,12 @@
   <button data-v="inv" class="nav" onclick="show('inv')">
     <svg viewBox="0 0 20 20"><path d="M4 5h12M4 10h12M4 15h12"/></svg>
     <span>Inventory</span></button>
+  <button data-v="acc" class="nav" onclick="show('acc')">
+    <svg viewBox="0 0 20 20"><path d="M4 10a3 3 0 013-3h1.5M16 10a3 3 0 01-3 3h-1.5M8.5 7l-2 3 2 3M11.5 13l2-3-2-3"/></svg>
+    <span>Accessories</span></button>
+  <button data-v="cons" class="nav" onclick="show('cons')">
+    <svg viewBox="0 0 20 20"><path d="M5 4h10l-1 12.5a1.4 1.4 0 01-1.4 1.3H7.4A1.4 1.4 0 016 16.5zM4 4h12M7.8 8.5h4.4"/></svg>
+    <span>Consumables</span></button>
   <button data-v="rep" class="nav" onclick="show('rep')">
     <svg viewBox="0 0 20 20"><path d="M12.4 2.6a3.4 3.4 0 00-3.9 4.4l-5.6 5.6a1.6 1.6 0 002.3 2.3l5.6-5.6a3.4 3.4 0 004.4-3.9l-2 2-2.4-.4-.4-2.4zM4.2 3.3l3.2 3.2M14.6 12.1l2.9 2.9a1.5 1.5 0 01-2.1 2.1l-2.9-2.9"/></svg>
     <span>Repairs</span></button>
@@ -130,6 +136,8 @@
   </section>
 
   <section id="v-packs" style="display:none"></section>
+  <section id="v-acc" style="display:none"></section>
+  <section id="v-cons" style="display:none"></section>
   <section id="v-rep" style="display:none"></section>
 
   <section id="v-people" style="display:none">
@@ -456,6 +464,29 @@
   </div>
 </div></div>
 
+<div class="overlay" id="ovSupply"><div class="modal wide">
+  <h3 id="supTitle"></h3>
+  <div id="supBody"></div>
+</div></div>
+
+<div class="overlay" id="ovSupplyForm"><div class="modal">
+  <h3 id="sfTitle"></h3>
+  <div id="sfBody"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovSupplyForm')">Cancel</button>
+    <button class="btn" onclick="supplySave()">Save</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="ovConvert"><div class="modal wide">
+  <h3>Convert items into counted accessories</h3>
+  <div id="cvBody"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovConvert')">Cancel</button>
+    <button class="btn" onclick="convertRun()">Convert the ticked models</button>
+  </div>
+</div></div>
+
 <div class="overlay" id="ovPackForm"><div class="modal">
   <h3 id="pfTitle"></h3>
   <div id="pfBody"></div>
@@ -592,25 +623,26 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=2.6.0"></script>
-<script src="js/auth.js?v=2.6.0"></script>
-<script src="js/helpers.js?v=2.6.0"></script>
-<script src="js/crop.js?v=2.6.0"></script>
-<script src="js/prefs.js?v=2.6.0"></script>
-<script src="js/db.js?v=2.6.0"></script>
-<script src="js/views-dashboard.js?v=2.6.0"></script>
-<script src="js/views-inventory.js?v=2.6.0"></script>
-<script src="js/views-projects.js?v=2.6.0"></script>
-<script src="js/views-out.js?v=2.6.0"></script>
-<script src="js/views-packs.js?v=2.6.0"></script>
-<script src="js/views-repairs.js?v=2.6.0"></script>
-<script src="js/views-people-loc.js?v=2.6.0"></script>
-<script src="js/views-trash.js?v=2.6.0"></script>
-<script src="js/views-users.js?v=2.6.0"></script>
-<script src="js/views-settings.js?v=2.6.0"></script>
-<script src="js/import-csv.js?v=2.6.0"></script>
-<script src="js/import-weights.js?v=2.6.0"></script>
-<script src="js/photos-bulk.js?v=2.6.0"></script>
-<script src="js/app.js?v=2.6.0"></script>
+<script src="js/config.js?v=2.7.0"></script>
+<script src="js/auth.js?v=2.7.0"></script>
+<script src="js/helpers.js?v=2.7.0"></script>
+<script src="js/crop.js?v=2.7.0"></script>
+<script src="js/prefs.js?v=2.7.0"></script>
+<script src="js/db.js?v=2.7.0"></script>
+<script src="js/views-dashboard.js?v=2.7.0"></script>
+<script src="js/views-inventory.js?v=2.7.0"></script>
+<script src="js/views-projects.js?v=2.7.0"></script>
+<script src="js/views-out.js?v=2.7.0"></script>
+<script src="js/views-packs.js?v=2.7.0"></script>
+<script src="js/views-repairs.js?v=2.7.0"></script>
+<script src="js/views-people-loc.js?v=2.7.0"></script>
+<script src="js/views-supplies.js?v=2.7.0"></script>
+<script src="js/views-trash.js?v=2.7.0"></script>
+<script src="js/views-users.js?v=2.7.0"></script>
+<script src="js/views-settings.js?v=2.7.0"></script>
+<script src="js/import-csv.js?v=2.7.0"></script>
+<script src="js/import-weights.js?v=2.7.0"></script>
+<script src="js/photos-bulk.js?v=2.7.0"></script>
+<script src="js/app.js?v=2.7.0"></script>
 </body>
 </html>

@@ -369,7 +369,7 @@ function renderPackDetail(){
 
     ${packNeedsBlock(p)}
 
-    ${packExtrasBlock(p)}
+    ${packSuppliesBlock(p)}
 
     <div class="hintline" style="margin-top:12px">Weight:
       container ${esc(fweight(parts.contenant))}${
@@ -428,44 +428,96 @@ function packNeedsBlock(p){
     </div>`).join('');
 }
 
-function packExtrasBlock(p){
-  if(!db.packExtrasSupported){
-    return `<div class="hintline" style="margin-top:12px">Consumables need <b>sql/024-packs-presets-projets.sql</b> — run it in Supabase, then refresh.</div>`;
+/* ============================================================
+   LA DOTATION D'UNE CAISSE (v2.7.0)
+
+   « La malle câbles contient toujours douze XLR de 3 m. » Écrit une
+   fois, part avec elle.
+
+   Trois sections — accessoires, rab, consommables — et les colonnes
+   de droite qui font tout l'intérêt : « ×12 » n'est un fait que
+   parce que l'application sait qu'on en possède quarante et qu'il en
+   reste vingt-trois de libres.
+
+   Un « spare » n'est pas un concept : c'est une ligne comme une
+   autre, avec une case qui ne change que le sous-titre sous lequel
+   elle s'affiche. Son utilité est de lecture — au chargement, on
+   sait quelles lignes on peut sacrifier si la place manque.
+   ============================================================ */
+function packSuppliesBlock(p){
+  if(db.suppliesSupported === false){
+    return `<div class="hintline" style="margin-top:12px">Accessories and consumables need
+      <b>sql/034-accessoires-consommables.sql</b> — run it in Supabase, then refresh.</div>`;
   }
-  const ex = packExtrasOf(p.id);
-  return `
-    <div class="fieldlbl" style="margin-top:14px">Consumables
-      <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">— checklist only, no weight</span></div>
-    <div class="pklist">
-      ${ex.map(e=>`<div class="pkline">
-        <div class="repbody"><div>${esc(e.label)} <span class="muted">× ${e.qty}</span></div></div>
-        ${can('edit')?`<button class="btn small sec" onclick="packExtraDelete('${e.id}')">✕</button>`:''}
-      </div>`).join('') || '<div class="muted">None.</div>'}
+  const sections = supplySections(supplyLinesOf(p.id));
+
+  const ligne = l => {
+    const s = l.supply;
+    const libre = supplyFree(s);
+    const court = supplyShort(s);
+    return `<div class="pkline">
+      <div class="repbody">
+        <div>${supplyTitle(s)} <span class="muted">× ${l.qty}</span></div>
+        <div class="repmeta">${supplyUsable(s)} usable · ${libre} free${
+          s.weight_g ? ' · ' + esc(fweight(s.weight_g * l.qty)) : ''}${
+          court ? ` · <span class="pkwarn">${court} short across all cases</span>` : ''}</div>
+      </div>
+      ${can('edit')?`<button class="btn small sec" onclick="packSupplyDelete('${l.id}')">✕</button>`:''}
+    </div>`;
+  };
+
+  const blocs = sections.map(sec=>`
+    <div class="fieldlbl" style="margin-top:14px">${sec.titre}${
+      sec.cle === 'consumable'
+        ? ' <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">— they do not come back</span>' : ''}</div>
+    <div class="pklist">${sec.lignes.map(ligne).join('')}</div>`).join('');
+
+  const choix = (db.supplies||[]).filter(x=>!x.archived)
+    .sort((a,b)=>supplyTitleText(a).localeCompare(supplyTitleText(b),'fr'));
+
+  return blocs + (can('edit') ? `
+    <div class="fieldlbl" style="margin-top:14px">Add to this case</div>
+    <div class="toolbar" style="margin-top:4px">
+      <select id="sl-supply" style="flex:1;min-width:170px">
+        <option value="">— pick an accessory or consumable —</option>
+        ${choix.map(x=>`<option value="${x.id}">${esc(supplyTitleText(x))}${
+          x.kind === 'consumable' ? ' (consumable)' : ''}</option>`).join('')}
+      </select>
+      <input id="sl-qty" type="number" min="1" max="9999" value="1" style="width:84px">
+      <label class="checkline" style="margin:0"><input type="checkbox" id="sl-spare"> spare</label>
+      <button class="btn small" onclick="packSupplyAdd('${p.id}')">Add</button>
     </div>
-    ${can('edit')?`<div class="toolbar" style="margin-top:8px">
-      <input id="px-label" placeholder="e.g. Black gaffer tape" style="flex:1;min-width:150px"
-             onkeydown="if(event.key==='Enter')packExtraAdd('${p.id}')">
-      <input id="px-qty" type="number" min="1" max="9999" value="1" style="width:84px">
-      <button class="btn small" onclick="packExtraAdd('${p.id}')">Add</button>
-    </div>`:''}`;
+    <div class="hintline">Create a new one from the Accessories or Consumables screen.</div>`
+    : (blocs ? '' : '<div class="muted" style="margin-top:12px">Nothing in the loadout.</div>'));
 }
 
-async function packExtraAdd(packId){
-  const el = document.getElementById('px-label');
-  const label = (el.value||'').trim();
-  if(!label){ toast('Type a name first.', 'warn'); return; }
-  const qty = Math.max(1, Math.min(9999, parseInt(document.getElementById('px-qty').value, 10) || 1));
+async function packSupplyAdd(packId){
+  const id = document.getElementById('sl-supply').value;
+  if(!id){ toast('Pick one from the list first.', 'warn'); return; }
+  const qty = Math.max(1, Math.min(9999, parseInt(document.getElementById('sl-qty').value, 10) || 1));
+  const spare = !!document.getElementById('sl-spare').checked;
+  /* La même fourniture peut figurer deux fois — douze de service et
+     quatre de rab — mais pas deux fois dans le même rôle, sinon
+     l'objet apparaîtrait en double sur la checklist. */
+  const déjà = (db.supplyLines||[]).find(l=>l.pack_id === packId
+                                         && l.supply_id === id && !!l.spare === spare);
+  if(déjà){
+    toast(`Already in this case${spare?' as a spare':''} — change its quantity instead.`, 'warn');
+    return;
+  }
   try{
-    const row = await apiInsertPackExtra({pack_id:packId, label, qty, pos:packExtrasOf(packId).length});
-    db.packExtras.push(row);
+    const row = await apiInsertSupplyLine({supply_id:id, pack_id:packId, qty, spare,
+                                           pos: supplyLinesOf(packId).length});
+    db.supplyLines.push({...row, spare: !!row.spare});
     renderPackDetail();
-    toast('Added.', 'ok');
+    toast('Added to the loadout.', 'ok');
   }catch(err){ toast(String(err.message||err), 'error'); }
 }
-async function packExtraDelete(id){
+
+async function packSupplyDelete(id){
   try{
-    await apiDeletePackExtra(id);
-    db.packExtras = db.packExtras.filter(e=>e.id !== id);
+    await apiDeleteSupplyLine(id);
+    db.supplyLines = db.supplyLines.filter(l=>l.id !== id);
     renderPackDetail();
   }catch(err){ toast(String(err.message||err), 'error'); }
 }
