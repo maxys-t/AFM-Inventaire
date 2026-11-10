@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.7.2] — 2026-11-10
+
+### Modifié
+
+- **L'écran de bascule liste désormais les exemplaires uniques**, en
+  les laissant décochés.
+
+  La première version les écartait en silence : « un seul exemplaire,
+  donc rien à compter, donc rien à proposer ». C'était contredire la
+  promesse de l'écran — *il propose, on arbitre* — en rendant un
+  choix **invisible** plutôt qu'en le laissant simplement décoché.
+
+  Pour un patchbay Ghielmetti, garder une fiche est la bonne réponse.
+  Pour un adaptateur à deux euros dont on n'a qu'un exemplaire,
+  peut-être pas — et c'est à la personne de le dire, pas au seuil.
+  Chaque ligne affiche sa raison.
+
+
 ## [2.7.1] — 2026-11-10
 
 ### Corrigé

@@ -162,10 +162,16 @@ const TESTS = `
   T(!!ts && ts.n === 2, 'les deux TS aussi, mais avec deux exemplaires seulement');
   T(!c.some(g=>g.modele === 'Pelicase'),
     'le contenant d’une caisse est écarté d’office : il doit garder sa fiche');
-  T(!c.some(g=>g.modele === 'Minimoog'), 'et un exemplaire unique n’est pas du stock');
+  /* v2.7.2 : un exemplaire unique est LISTÉ mais décoché. La
+     première version le cachait, ce qui contredisait la promesse de
+     l'écran — il propose, on arbitre — en rendant un choix
+     invisible plutôt qu'en le laissant décocher. */
+  T(c.some(g=>g.modele === 'Minimoog'), 'un exemplaire unique est proposé quand même');
   openConvert();
   T(convertChoix.has(xlr.cle), 'XLR coché d’office — trois exemplaires ou plus');
   T(!convertChoix.has(ts.cle), 'TS décoché — deux, c’est un choix, pas un bac');
+  var seul = c.find(g=>g.modele === 'Minimoog');
+  T(!convertChoix.has(seul.cle), 'et un exemplaire unique reste décoché : la décision est à l’humain');
   T(xlr.dansPacks === 2, 'et l’écran sait que deux d’entre eux vivent dans une caisse');
 
   S('9. Ce que la bascule promet');

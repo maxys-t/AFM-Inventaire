@@ -367,7 +367,16 @@ function convertCandidats(){
         dansPacks: g.items.filter(i=>packsOfItem(i.id).length).length,
         besoins: g.items.filter(i=>needsOf(i.id).length).length};
     })
-    .filter(g=>g.n >= 2)
+    /* On montre TOUT, y compris les exemplaires uniques (v2.7.2).
+       La première version les écartait : « rien à compter, donc rien
+       à proposer ». C'était contredire la promesse de l'écran — il
+       propose, on arbitre — en rendant un choix invisible plutôt
+       qu'en le laissant décocher.
+
+       Un exemplaire unique reste décoché et dit pourquoi. Pour un
+       patchbay Ghielmetti c'est la bonne réponse ; pour un adaptateur
+       à deux euros, peut-être pas, et c'est à la personne de le
+       dire. */
     .sort((a,b)=>(a.cat+a.subcat).localeCompare(b.cat+b.subcat,'fr') || b.n - a.n);
 }
 
@@ -419,15 +428,17 @@ function renderConvert(){
           g.poids?esc(fweight(g.poids))+' each · ':''}${
           g.dansPacks?g.dansPacks+' in cases · ':''}${
           g.besoins?`<span class="warntxt">${g.besoins} declare needs</span> · `:''}${
-          g.n >= CONVERT_SEUIL ? 'enough to count' : 'only ' + g.n + ' — probably a choice, not stock'}</div>
+          g.n >= CONVERT_SEUIL ? 'enough to count'
+            : (g.n === 1 ? 'single one — a record of its own is probably worth more'
+                         : 'only ' + g.n + ' — probably a choice, not stock')}</div>
       </div>
     </label>`;
   });
 
   document.getElementById('cvBody').innerHTML = `
     <div class="submuted">Ticked by default from ${CONVERT_SEUIL} copies of the same model.
-      Below that there is nothing to count — twenty mic stands across nine models are a choice,
-      not a bin.</div>
+      Below that there is little to count — twenty mic stands across nine models are a choice,
+      not a bin — but everything is listed, so the call stays yours.</div>
     <div class="repstats" style="margin:12px 0 0">
       <div class="repstat"><div class="k">Models ticked</div><div class="n">${cochés.length}</div></div>
       <div class="repstat"><div class="k">Items leaving the list</div><div class="n">${nItems}</div></div>
