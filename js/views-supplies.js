@@ -384,6 +384,21 @@ function convertToggle(cle){
 }
 
 function renderConvert(){
+  /* ============================================================
+     LA LISTE NE REMONTE PLUS À CHAQUE CLIC (v2.7.1)
+
+     Soixante-trois modèles à arbitrer, et chaque case cochée
+     reconstruisait le panneau entier : la liste repartait de son
+     sommet, on perdait l'endroit qu'on examinait, et il fallait
+     redescendre. Au trentième modèle, on renonce.
+
+     Même défaut et même remède qu'au menu des filtres en v2.1.2.
+     C'est le signe qu'un rendu intégral sur un geste ponctuel est un
+     réflexe à surveiller partout où une liste est longue.
+     ============================================================ */
+  const liste0 = document.querySelector('#cvBody .cvlist');
+  const top0 = liste0 ? liste0.scrollTop : 0;
+
   const cands = convertCandidats();
   const cochés = cands.filter(g=>convertChoix.has(g.cle));
   const nItems = cochés.reduce((t,g)=>t + g.n, 0);
@@ -426,6 +441,9 @@ function renderConvert(){
     <div class="hintline" style="margin-top:10px">The items are <b>archived, not deleted</b>:
       their history stays readable and a bad conversion can be undone. The cases that held them
       receive the matching loadout.</div>`;
+
+  const liste = document.querySelector('#cvBody .cvlist');
+  if(liste && top0) liste.scrollTop = top0;
 }
 
 async function convertRun(){

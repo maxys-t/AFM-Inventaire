@@ -210,6 +210,14 @@ const TESTS = `
   T(read_app.includes('anciensExtras'),
     'une sauvegarde antérieure se relit, convertie à la lecture');
 
+  S('13. Une liste longue ne remonte pas à chaque clic');
+  /* Soixante-trois modèles à arbitrer : si la liste repart de son
+     sommet à chaque case cochée, on renonce au trentième. Même
+     défaut et même remède qu'au menu des filtres en v2.1.2. */
+  T(vs.includes("document.querySelector('#cvBody .cvlist')"),
+    'la position de défilement est relevée avant le rendu');
+  T(vs.includes('liste.scrollTop = top0'), 'et remise après');
+
   window.__results = R;
 `;
 

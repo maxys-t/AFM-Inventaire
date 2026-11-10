@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.7.1] — 2026-11-10
+
+### Corrigé
+
+- **L'écran de bascule ne remonte plus en haut à chaque case
+  cochée.** Soixante-trois modèles à arbitrer, et chaque clic
+  reconstruisait le panneau entier : la liste repartait de son
+  sommet, on perdait l'endroit qu'on examinait, et au trentième
+  modèle on renonçait.
+
+  Même défaut et même remède qu'au menu des filtres en v2.1.2 — ce
+  qui en dit long : un rendu intégral déclenché par un geste
+  ponctuel est un réflexe à surveiller partout où une liste est
+  longue. Le harnais `t250` le vérifie désormais.
+
+
 ## [2.7.0] — 2026-11-10
 
 ⚠️ **Deux migrations SQL, dans cet ordre.** Sauvegarde avant.
