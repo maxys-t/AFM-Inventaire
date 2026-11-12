@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.8.2] — 2026-11-12
+
+### Corrigé
+
+- **L'application ne se chargeait plus du tout.** Une modification
+  faite directement dans l'éditeur de GitHub avait laissé deux
+  entrées de `ITEM_FIELDSETS` ouvertes sans être refermées :
+  `config.js` ne se parsait plus, et tout ce qui en dépend — c'est-à-dire
+  tout — tombait avec lui.
+
+  Les harnais chargent `config.js` en premier : `./tests/run.sh`
+  aurait refusé de passer. **L'éditeur de GitHub, lui, ne lance
+  rien.** La règle est ajoutée à `UPDATE-PROCESS.md` : modifier en
+  local, lancer les tests, puis pousser.
+
+### Modifié
+
+- Les changements de la même édition sont conservés : *Primary Role*
+  remplace *Role*, avec les valeurs Production, Measure, Live,
+  Control, Instrument Control, Remote, Spare, et le placeholder de
+  *Max OS supported* est vidé.
+
+- **La clé du champ redevient `primary_role`, sans espace.** Elle
+  sert d'identifiant dans le formulaire (`id="xf-…"`), et un
+  identifiant HTML contenant une espace n'est pas retrouvable : la
+  valeur ne se serait jamais enregistrée, en silence. Le libellé
+  affiché, lui, reste « Primary Role ».
+
+
 ## [2.8.1] — 2026-11-12
 
 ### Corrigé

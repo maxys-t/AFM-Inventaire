@@ -287,15 +287,19 @@ const ITEM_FIELDSETS = {
   ordinateur: {
     titre: 'Machine',
     champs: [
-      {k:'role',       label:'Role',            type:'select',
-       options:['Mixing','Mastering','Measure','Live','Control','Instrument','Remote','Spare'],
+      /* La clé ne doit PAS contenir d'espace : elle sert d'identifiant
+         de champ dans le formulaire (`id="xf-…"`), et un id avec une
+         espace n'est pas retrouvable — la valeur ne se serait jamais
+         enregistrée. Le libellé, lui, s'écrit comme on veut. */
+      {k:'primary_role', label:'Primary Role',   type:'select',
+       options:['Production','Measure','Live','Control','Instrument Control','Remote','Spare'],
        tip:"Ce qu'on lit en premier dans une liste de sept machines."},
       {k:'os',         label:'OS version',      type:'text',   ph:'macOS 14.5',
        tip:"Dans un studio ce n'est pas une mesure, c'est une décision : on reste sur une version parce qu'un driver ou un plugin ne suit pas."},
       {k:'os_frozen',  label:'Updates frozen',  type:'bool',
        tip:"Sans ce drapeau, quelqu'un mettra la machine à jour un dimanche soir."},
       {k:'os_frozen_why', label:'Frozen because', type:'text', ph:'Antelope driver not ready'},
-      {k:'os_max',     label:'Max OS supported', type:'text',  ph:'Sequoia'},
+      {k:'os_max',     label:'Max OS supported', type:'text',  ph:''},
       {k:'chip',       label:'Chip',            type:'text',   ph:'M2 Max'},
       {k:'ram_gb',     label:'RAM (GB)',        type:'number'},
       {k:'storage_gb', label:'Storage (GB)',    type:'number'},

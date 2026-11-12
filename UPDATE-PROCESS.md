@@ -21,6 +21,13 @@ dans le même geste, jamais séparément.
       sert un mélange d'ancien et de neuf, et le défaut est introuvable.
 - [ ] **4. Lancer les tests** : `./tests/run.sh`. Ils vérifient entre autres
       le point précédent. On ne livre pas avec un harnais en échec.
+      - **Ne jamais modifier un fichier directement dans GitHub.** L'éditeur
+        du site ne lance aucun test : une accolade oubliée dans `config.js`
+        empêche le fichier de se parser, et toute l'application tombe —
+        c'est arrivé le 12 novembre 2026. Les harnais chargent `config.js`
+        en premier et auraient refusé de passer.
+      - Modifier en local, lancer `./tests/run.sh`, puis pousser. C'est la
+        seule étape qui sépare une faute de frappe d'une panne en ligne.
 - [ ] **5. Ajouter une entrée en haut du `CHANGELOG.md`** : la nouvelle version,
       la date, et les changements regroupés (Ajouté / Modifié / Corrigé).
 - [ ] **6. Mettre à jour le `README.md` — SEULEMENT si** le fonctionnement ou
