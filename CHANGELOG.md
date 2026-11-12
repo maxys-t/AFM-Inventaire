@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.8.3] — 2026-11-12
+
+### Ajouté
+
+- **Les harnais tournent à chaque poussée, et le site n'est déployé
+  que s'ils passent.** Workflow GitHub Actions
+  `tests-et-deploiement.yml` : une faute de frappe laisse désormais
+  l'ancienne version en ligne au lieu de la remplacer par une page
+  blanche.
+
+  > **Un réglage à faire une fois** : Settings → Pages → Source →
+  > **GitHub Actions**. Tant qu'il n'est pas fait, le site continue
+  > d'être publié par l'ancien mécanisme et le workflow échoue à
+  > l'étape de déploiement — sans rien casser.
+
+- **`t260` vérifie la cohérence de la nomenclature avec elle-même.**
+  Renommer une sous-catégorie dans `CATS` sans toucher `IT_SUBS` ou
+  `ITEM_FIELDSETS` ne plante pas : ça cesse simplement de marcher, en
+  silence — l'onglet IT se viderait et la carte *Machine*
+  disparaîtrait sans que rien ne le dise. C'est la faute la plus
+  probable quand on édite les nomenclatures à la main.
+
+  Le harnais refuse aussi une clé de champ contenant une espace ou
+  une majuscule — elle sert d'identifiant HTML — et un menu déroulant
+  sans options.
+
+### Corrigé
+
+- **Des marqueurs de conflit Git étaient restés dans `config.js`**,
+  ce qui l'empêchait à nouveau de se parser. Le bloc
+  `ITEM_FIELDSETS` a été réécrit d'un seul tenant. Les choix de la
+  dernière édition sont conservés : *Primary Role* et ses valeurs,
+  placeholder de *Max OS supported* vidé.
+
+
 ## [2.8.2] — 2026-11-12
 
 ### Corrigé

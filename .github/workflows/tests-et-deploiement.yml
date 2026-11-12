@@ -1,0 +1,91 @@
+# ============================================================
+# Tests, puis déploiement — et dans cet ordre.
+#
+# POURQUOI CE FICHIER EXISTE
+#
+# Le 12 novembre 2026, une modification faite directement dans
+# l'éditeur de GitHub a laissé deux accolades ouvertes dans
+# `config.js`. Le fichier ne se parsait plus, et toute l'application
+# est tombée — en ligne, sans avertissement.
+#
+# `./tests/run.sh` aurait refusé de passer : les harnais chargent
+# `config.js` en premier. Mais l'éditeur de GitHub ne lance rien.
+#
+# Ce workflow remet la barrière là où elle doit être : les harnais
+# tournent à chaque poussée, et le site n'est déployé QUE s'ils
+# passent tous. Une faute de frappe laisse l'ancienne version en
+# ligne au lieu de la remplacer par une page blanche.
+#
+# CE QU'IL FAUT RÉGLER UNE FOIS
+#
+#   Settings → Pages → Build and deployment → Source : GitHub Actions
+#
+# Tant que ce réglage n'est pas fait, le site continue d'être publié
+# par l'ancien mécanisme (déploiement depuis la branche) et ce
+# workflow échouera à l'étape de déploiement — sans rien casser.
+# ============================================================
+
+name: Tests et déploiement
+
+on:
+  push:
+    branches: [main]
+  # Permet de relancer à la main depuis l'onglet Actions, par exemple
+  # après avoir corrigé le réglage Pages.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un seul déploiement à la fois, et on ne l'interrompt pas en cours
+# de route : une publication coupée en deux laisserait le site dans
+# un état indéterminé.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    name: Harnais
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # jsdom est la seule dépendance, et le fichier de verrouillage
+      # est volontairement hors du dépôt : `npm install` plutôt que
+      # `npm ci`, qui l'exigerait.
+      - name: Installer jsdom
+        run: npm install --prefix tests --no-audit --no-fund
+
+      # run.sh vérifie aussi que toutes les balises `?v=` valent
+      # APP_VERSION — c'est ce qui évite qu'un navigateur serve un
+      # mélange d'ancien et de neuf.
+      - name: Lancer les harnais
+        run: bash tests/run.sh
+
+  deploiement:
+    name: Déploiement
+    # LA LIGNE QUI COMPTE : sans elle, le site partirait même en cas
+    # d'échec, et ce fichier ne servirait à rien.
+    needs: tests
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          # Le dépôt entier, comme le faisait le déploiement depuis la
+          # branche : l'application est un site statique sans étape de
+          # construction, et le fichier CNAME doit partir avec.
+          path: '.'
+      - id: deployment
+        uses: actions/deploy-pages@v4

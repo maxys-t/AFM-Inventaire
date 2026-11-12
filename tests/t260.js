@@ -242,6 +242,46 @@ const TESTS = `
   T(!document.getElementById('detailBody').innerHTML.includes('Nothing filled in yet'),
     'sans carte Machine : un micro n’en déclare pas');
 
+  S('12. La nomenclature reste cohérente avec elle-même');
+  /* Les nomenclatures de config.js s'éditent à la main, parfois
+     depuis GitHub. Renommer une sous-catégorie dans CATS sans
+     toucher IT_SUBS ou ITEM_FIELDSETS ne plante pas : ça cesse
+     simplement de marcher, en silence. L'onglet IT se viderait, la
+     carte Machine ne s'afficherait plus, et rien ne le dirait.
+
+     C'est la faute la plus probable, et la seule que ce harnais peut
+     attraper sans connaître les données réelles. */
+  var sousCats = new Set();
+  Object.keys(CATS).forEach(function(c){
+    Object.keys(CATS[c].subs || {}).forEach(function(sc){ sousCats.add(sc); });
+  });
+  Object.keys(ITEM_FIELDSETS).forEach(function(k){
+    T(sousCats.has(k), 'ITEM_FIELDSETS.' + k + ' désigne une sous-catégorie qui existe');
+  });
+  IT_SUBS.forEach(function(k){
+    T(sousCats.has(k), 'IT_SUBS contient « ' + k + ' », qui existe dans CATS');
+  });
+  /* Une clé de champ sert d'identifiant HTML : une espace la rendrait
+     introuvable, et la valeur ne s'enregistrerait jamais. */
+  var mauvaises = [];
+  Object.keys(ITEM_FIELDSETS).forEach(function(k){
+    ITEM_FIELDSETS[k].champs.forEach(function(c){
+      if(!/^[a-z0-9_]+$/.test(c.k)) mauvaises.push(k + '.' + c.k);
+    });
+  });
+  T(mauvaises.length === 0,
+    'aucune clé de champ ne contient d’espace ou de majuscule (' + (mauvaises.join(', ')||'ok') + ')');
+  /* Un select sans options est un menu vide : on ne peut rien y
+     choisir, et personne ne comprend pourquoi. */
+  var selectsVides = [];
+  Object.keys(ITEM_FIELDSETS).forEach(function(k){
+    ITEM_FIELDSETS[k].champs.forEach(function(c){
+      if(c.type === 'select' && !(c.options||[]).length) selectsVides.push(k + '.' + c.k);
+    });
+  });
+  T(selectsVides.length === 0,
+    'et aucun menu déroulant n’est vide (' + (selectsVides.join(', ')||'ok') + ')');
+
   window.__results = R;
 `;
 
