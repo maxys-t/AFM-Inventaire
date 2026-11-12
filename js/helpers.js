@@ -535,11 +535,25 @@ function supplyOut(id){
   }, 0);
 }
 function supplyFree(s){ return s ? Math.max(0, supplyUsable(s) - supplyOut(s.id)) : 0; }
+
+/* ---- Stock inconnu ≠ stock nul (v2.7.3) ----
+   La reprise des consommables de la v1.22 a mis leur stock à zéro
+   plutôt que d'inventer un nombre — c'était le bon choix. Mais
+   « zéro possédé » et « deux réclamés » donnait mécaniquement « il
+   en manque deux », et cinquante-sept lignes se sont mises à crier
+   d'un coup.
+
+   Cinquante-sept alertes rouges simultanées apprennent à ignorer les
+   alertes rouges. Tant que personne n'a renseigné le stock, on ne
+   sait pas s'il en manque : on dit qu'on ne sait pas. */
+function supplyUnknown(s){ return !!s && !s.qty_total; }
 /* Ce qui doit se voir à la préparation, pas sur le quai. */
 function supplyShort(s){
-  return s ? Math.max(0, supplyCommitted(s.id) - supplyUsable(s)) : 0;
+  if(!s || supplyUnknown(s)) return 0;
+  return Math.max(0, supplyCommitted(s.id) - supplyUsable(s));
 }
 function supplyLow(s){
+  if(supplyUnknown(s)) return false;        // on ne sait pas, on ne crie pas
   return !!(s && s.min_qty != null && supplyUsable(s) < s.min_qty);
 }
 

@@ -78,6 +78,9 @@ function renderSupplies(kind){
         <div class="n ${hs?'warnv':''}">${hs}</div></div>
       <div class="repstat"><div class="k">Short for the cases</div>
         <div class="n ${manque?'warnv':''}">${manque}</div></div>
+      ${tous.filter(supplyUnknown).length
+        ? `<div class="repstat"><div class="k">Stock not set yet</div>
+             <div class="n">${tous.filter(supplyUnknown).length}</div></div>` : ''}
       ${kind === 'consumable'
         ? `<div class="repstat"><div class="k">Below threshold</div>
              <div class="n ${bas?'warnv':''}">${bas}</div></div>` : ''}
@@ -113,6 +116,7 @@ function supplyTableHTML(kind){
     const bas   = supplyLow(s);
     return `<tr class="rowlink" onclick="openSupplyDetail('${s.id}')">
       <td data-l="Item">${supplyTitle(s)}
+        ${supplyUnknown(s)?'<span class="tag conf" title="Nobody has said how many you own">stock not set</span>':''}
         ${court?`<span class="pkwarn" title="The cases ask for more than you own">short ${court}</span>`:''}
         ${bas?'<span class="tag attente">low</span>':''}
         ${s.loc?`<div class="s muted">${esc(locLabel(s.loc))}</div>`:''}</td>
@@ -166,6 +170,9 @@ function renderSupplyDetail(){
       <div class="fstat"><div class="k">Free</div><div class="v">${supplyFree(s)}</div></div>
     </div>
 
+    ${supplyUnknown(s)?`<div class="alert">Nobody has said how many of these the studio owns.
+      ${supplyCommitted(s.id)} are asked for by the case loadouts — set the stock and the
+      figures start meaning something.</div>`:''}
     ${court?`<div class="alert bad">⚠ The case loadouts ask for ${supplyCommitted(s.id)} of these,
       and only ${supplyUsable(s)} are usable. <b>${court} short.</b>
       Raise the stock, or lower a loadout.</div>`:''}

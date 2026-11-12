@@ -127,6 +127,24 @@ const TESTS = `
   T(supplyLow(supply('s2')), 'et un consommable sous son seuil se signale');
   T(!supplyLow(supply('s1')), 'sans seuil, rien ne se déclenche');
 
+  S('4bis. Stock inconnu n’est pas stock nul');
+  /* La reprise des consommables de la v1.22 met leur stock à zéro
+     plutôt que d'inventer un nombre. Sans distinction, cinquante-sept
+     lignes se mettaient à crier « il en manque » d'un coup — et
+     cinquante-sept alertes rouges apprennent à ignorer les alertes
+     rouges. */
+  db.supplies.push({id:'s3', kind:'consumable', name:'Repris de la v1.22',
+                    qty_total:0, qty_hs:0, min_qty:3, archived:false, notes:''});
+  db.supplyLines.push({id:'l9', supply_id:'s3', pack_id:'pk1', qty:2, spare:false, pos:9});
+  T(supplyUnknown(supply('s3')), 'un stock jamais renseigné se reconnaît');
+  T(supplyShort(supply('s3')) === 0,
+    'et ne déclenche aucune alerte de pénurie : on ne sait pas, on ne crie pas');
+  T(supplyLow(supply('s3')) === false, 'ni d’alerte de seuil');
+  T(supplyCommitted('s3') === 2, 'mais les caisses en réclament bien deux — l’information reste');
+  supply('s3').qty_total = 1;
+  T(supplyShort(supply('s3')) === 1,
+    'dès qu’un chiffre est saisi, le manque devient un fait et s’affiche');
+
   S('5. Hors service n’est pas disparu');
   /* Décrémenter ferait baisser la valeur du parc alors que l'objet
      est encore là, et effacerait la trace de ce qu'il y a à réparer. */

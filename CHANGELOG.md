@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.7.3] — 2026-11-10
+
+### Corrigé
+
+- **Un stock jamais renseigné ne crie plus à la pénurie.** La reprise
+  des consommables de la v1.22 met leur stock à zéro plutôt que
+  d'inventer un nombre — c'était le bon choix. Mais « zéro possédé »
+  face à « deux réclamés » donnait mécaniquement « il en manque
+  deux », et **cinquante-sept lignes se sont mises à crier d'un
+  coup**.
+
+  Cinquante-sept alertes rouges simultanées apprennent à ignorer les
+  alertes rouges, et c'est ainsi qu'on finit par manquer la vraie.
+  C'est l'argument qui avait déjà servi en v2.5.0 pour l'Amp 700 :
+  un avertissement permanent n'est plus un avertissement.
+
+  Tant que personne n'a dit combien le studio en possède, la ligne
+  affiche **« stock not set »** et ne compte ni dans les manques ni
+  dans les seuils. Dès qu'un chiffre est saisi, le manque redevient
+  un fait et s'affiche. Le tableau indique combien de lignes restent
+  à renseigner.
+
+
 ## [2.7.2] — 2026-11-10
 
 ### Modifié
