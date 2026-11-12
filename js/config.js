@@ -306,12 +306,10 @@ const ITEM_FIELDSETS = {
       {k:'os_frozen_why', label:'Frozen because', type:'text', ph:'Antelope driver not ready'},
       {k:'os_max',     label:'Max OS supported', type:'text',   ph:''},
       {k:'chip',       label:'Chip',             type:'text',   ph:'M2 Max'},
+      {k:'year',       label:'Year',             type:'text',   ph:''},
       {k:'ram_gb',     label:'RAM (GB)',         type:'number'},
       {k:'storage_gb', label:'Storage (GB)',     type:'number'},
       {k:'hostname',   label:'Hostname',         type:'text',   ph:'accessflow-a'},
-      {k:'mac',        label:'MAC address',      type:'text',   ph:'A4:83:E7:12:34:56'},
-      {k:'filevault',  label:'FileVault',        type:'select', options:['On','Off']},
-      {k:'backup_dest',label:'Backup to',        type:'text',   ph:'NAS / Time Machine disk'}
     ]
   }
 };
@@ -359,4 +357,3 @@ const LABELS = {
     settings: "Accounts, locations, import and export, activity log."
   }
 };
-
