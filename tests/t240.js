@@ -212,6 +212,28 @@ const TESTS = `
   T(vp.includes('packSetFolder'), 'la dépose enregistre le rangement');
   T(vp.includes("'Undo'"), 'et il s’annule : un glissement est un geste qu’on fait vite');
 
+  S('10bis. Les actions ne dépendent plus du survol');
+  /* Les boutons du dossier étaient en opacity:0, révélés au :hover.
+     Sur un iPad il n'y a pas de survol : ils étaient invisibles et
+     inatteignables, et supprimer un dossier impossible depuis la
+     cible principale de l'application. */
+  T(!/\.pkfhead:hover \.pkfacts/.test(read_css2),
+    'plus de bouton révélé au survol');
+  T(read_packs.includes('packFolderMenu'),
+    'un bouton permanent ouvre un menu — atteignable au doigt');
+  T(read_packs.includes('oncontextmenu="packContextMenu'),
+    'et le clic droit mène au même endroit, comme dans un gestionnaire de fichiers');
+
+  S('10ter. Sélectionner plusieurs caisses, puis les ranger');
+  T(read_packs.includes('packSel') && read_packs.includes('packSelToggle'),
+    'les caisses se cochent');
+  T(read_packs.includes('function packSetFolderMany'),
+    'et se rangent toutes d’un geste');
+  T(read_packs.includes('function packNewFolderWith'),
+    'y compris dans un dossier créé au passage — on sélectionne d’abord, on range ensuite');
+  T(read_packs.includes("packSel.has(packId) ? [...packSel] : [packId]"),
+    'un clic droit hors sélection agit sur la seule ligne visée : la convention qui ne surprend jamais');
+
   S('11. Supprimer un tiroir ne jette pas ce qu’il y a dedans');
   T(vp.includes('move back to the top of the list — nothing is deleted'),
     'la confirmation le dit');
@@ -238,6 +260,7 @@ const script = [STUBS, read('js/config.js'), read('js/helpers.js'),
                 'var read_proj = ' + JSON.stringify(read('js/views-projects.js')) + ';',
                 'var read_sql  = ' + JSON.stringify(read('sql/032-dossiers-et-retour.sql')) + ';',
                 'var read_packs = ' + JSON.stringify(read('js/views-packs.js')) + ';',
+                'var read_css2 = ' + JSON.stringify(read('css/styles.css')) + ';',
                 DATA, TESTS].join('\n;\n');
 
 try{ dom.window.eval(script); }

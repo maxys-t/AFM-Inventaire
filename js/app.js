@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '2.8.6';
+const APP_VERSION = '2.9.0';
 
 /* ---- le thème ----
 
@@ -175,6 +175,7 @@ function render(){
   if(v==='people') renderPeople();
   if(v==='settings') renderSettings();
   if(typeof renderBulkBar==='function' && v!=='inv') renderBulkBar();
+  if(typeof renderPackBulk==='function') renderPackBulk();
 }
 
 /* ---- notifications (bandeau en bas d'écran) ----

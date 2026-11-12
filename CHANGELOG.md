@@ -1,5 +1,52 @@
 # Changelog
 
+## [2.9.0] — 2026-11-12
+
+### Corrigé — et la leçon dépasse le bouton
+
+- **Supprimer un dossier était impossible depuis un iPad.** Les deux
+  boutons d'un dossier étaient en `opacity:0`, révélés au `:hover`.
+  **Sur un écran tactile il n'y a pas de survol** : ils étaient
+  invisibles et inatteignables, et le doigt tombait sur le repli du
+  dossier.
+
+  J'avais écrit ce CSS en pensant « deux boutons permanents par
+  dossier feraient plus de boutons que de caisses ». C'est vrai avec
+  une souris, et faux sur la cible principale de cette application.
+
+  **Une action révélée au survol n'existe pas sur une tablette.**
+  Elle doit être permanente, ou tenir dans un menu qu'on ouvre
+  explicitement. Le harnais `t240` interdit désormais ce motif sur
+  les dossiers.
+
+### Ajouté — la page Packs raisonne comme un gestionnaire de fichiers
+
+- **Les caisses se cochent**, une par une ou tout un dossier d'un
+  coup depuis sa case d'en-tête, et une barre de sélection apparaît
+  en bas — même emplacement et même logique que celle de
+  l'inventaire : ce qu'on a appris là s'applique ici.
+
+- **« Move to folder… »** range toute la sélection d'un geste, avec
+  annulation. La liste propose les dossiers existants, **« New
+  folder… »** et le retour à la racine.
+
+- **Créer un dossier range la sélection dedans dans la foulée.**
+  C'est le geste qu'on fait vraiment : on sélectionne d'abord, on
+  range ensuite. Créer un tiroir vide puis y glisser les caisses une
+  à une demandait deux fois plus de gestes pour le même résultat.
+
+- **Clic droit** sur une caisse ou sur un dossier ouvre le même
+  menu. Sur une ligne non cochée il agit sur elle seule ; sur une
+  ligne cochée, sur toute la sélection — la convention de tous les
+  gestionnaires de fichiers, et la seule qui ne surprenne jamais.
+
+- **Un bouton ⋯ permanent** sur chaque dossier : renommer, en
+  sélectionner les caisses, supprimer.
+
+Trois chemins vers les mêmes actions, parce que personne ne les
+connaît tous les trois — et qu'aucun ne dépend du survol.
+
+
 ## [2.8.6] — 2026-11-12
 
 ### Modifié

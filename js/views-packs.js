@@ -13,6 +13,38 @@ let packOnlyIncomplete = false;
    geste de consultation, pas un réglage à enregistrer. */
 let packFolderShut = new Set();
 
+/* ============================================================
+   SÉLECTION ET MENU CONTEXTUEL (v2.9.0)
+
+   Les dossiers existaient, mais leurs deux boutons n'apparaissaient
+   qu'au SURVOL — et sur un iPad il n'y a pas de survol. Ils étaient
+   donc invisibles et inatteignables, et le doigt tombait sur le
+   repli du dossier. Supprimer un dossier était impossible depuis la
+   tablette, qui est pourtant la cible principale.
+
+   La leçon dépasse ce bouton : une action révélée au survol n'existe
+   pas sur un écran tactile. Elle doit être permanente, ou tenir dans
+   un menu qu'on ouvre explicitement.
+
+   D'où cette reprise en logique de gestionnaire de fichiers :
+   on coche, on choisit une destination, et le menu s'ouvre au clic
+   droit comme à l'appui long. Trois façons d'arriver au même endroit,
+   parce que personne ne les connaît toutes.
+   ============================================================ */
+let packSel = new Set();         // caisses cochées
+let packMenu = null;             // menu contextuel ouvert
+
+function packSelToggle(id, on){
+  if(on) packSel.add(id); else packSel.delete(id);
+  redessinePackTree(); renderPackBulk();
+}
+function packSelClear(){ packSel.clear(); redessinePackTree(); renderPackBulk(); }
+function packSelAll(ids){
+  const tout = ids.every(x=>packSel.has(x));
+  ids.forEach(x=>{ if(tout) packSel.delete(x); else packSel.add(x); });
+  redessinePackTree(); renderPackBulk();
+}
+
 function renderPacks(){
   const el = document.getElementById('v-packs');
   if(!el) return;
@@ -55,6 +87,7 @@ function renderPacks(){
     </div>
 
     <div class="panel packpanel" id="packTree">${packTreeHTML()}</div>`;
+  renderPackBulk();
 }
 
 function setPackFilter(v){
@@ -206,15 +239,19 @@ function packTreeHTML(){
     const dehors = dedans.filter(p=>packStatus(p).dehors).length;
     const manque = dedans.filter(p=>packStatus(p).manque).length;
     h += `<div class="pkfolder" data-drop="folder:${f.id}">
-      <div class="pkfhead" onclick="togglePackFolder('${f.id}')">
+      <div class="pkfhead" onclick="togglePackFolder('${f.id}')"
+           oncontextmenu="packFolderMenu(event,'${f.id}')">
+        ${can('edit')?`<label class="pkcheck" onclick="event.stopPropagation()">
+          <input type="checkbox" ${dedans.length && dedans.every(p=>packSel.has(p.id))?'checked':''}
+                 onchange="packSelAll(${JSON.stringify(dedans.map(p=>p.id)).replace(/"/g,'&quot;')})"></label>`:''}
         <span class="chev">${replié?'▸':'▾'}</span>
         <span class="t">${esc(f.name)}</span>
         <span class="muted">${dedans.length} case(s)</span>
         ${dehors?`<span class="tag sorti">${dehors} out</span>`:''}
         ${manque?`<span class="pkwarn">${manque} incomplete</span>`:''}
         ${can('edit')?`<span class="pkfacts" onclick="event.stopPropagation()">
-          <button class="pkfbtn" onclick="packRenameFolder('${f.id}')" title="Rename">✎</button>
-          <button class="pkfbtn" onclick="packDeleteFolder('${f.id}')" title="Delete the folder, keep the cases">✕</button>
+          <button class="pkfbtn" onclick="packFolderMenu(event,'${f.id}')"
+                  title="Rename, delete, select">⋯</button>
         </span>`:''}
       </div>
       ${replié ? '' : (dedans.map(p=>packBrancheHTML(p, 0)).join('')
@@ -261,9 +298,21 @@ function packRowHTML(p, niveau, aplati, nEnfants, parentId){
       : (st.manque ? `<span class="pkwarn">${st.absents.length} missing</span>`
                    : `<span class="muted">${st.absents.length} in use</span>`);
 
-  return `<div class="packrow" data-pack="${p.id}" data-drop="${p.id}" data-parent="${parentId||''}"
-       style="padding-left:${12 + niveau*26}px" onclick="openPackDetail('${p.id}')"
+  /* La case à cocher n'apparaît que sur les racines : une caisse
+     imbriquée suit celle qui la contient, la ranger séparément dans
+     un dossier n'aurait pas de sens. */
+  const coche = (niveau === 0 && can('edit'))
+    ? `<label class="pkcheck" onclick="event.stopPropagation()">
+         <input type="checkbox" ${packSel.has(p.id)?'checked':''}
+                onchange="packSelToggle('${p.id}', this.checked)"></label>`
+    : '<span class="pkcheck"></span>';
+
+  return `<div class="packrow${packSel.has(p.id)?' selrow':''}" data-pack="${p.id}" data-drop="${p.id}"
+       data-parent="${parentId||''}" style="padding-left:${6 + niveau*26}px"
+       onclick="openPackDetail('${p.id}')"
+       oncontextmenu="packContextMenu(event,'${p.id}')"
        onpointerdown="packDragStart(event,'pack','${p.id}')">
+    ${coche}
     ${chev}
     <span class="pkgrip" title="Drag to move this pack">⠿</span>
     ${ph ? `<img class="repthumb" loading="lazy" src="${ph}">`
@@ -1106,4 +1155,156 @@ async function packCheckin(id){
     if(packShown) renderPackDetail();
     toast(`${dehors.length} item(s) checked in.`, 'ok');
   }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
+/* ============================================================
+   LE MENU CONTEXTUEL, LA BARRE DE SÉLECTION, LES DOSSIERS
+   (v2.9.0)
+
+   Trois chemins vers les mêmes actions — clic droit, bouton ⋯,
+   barre de sélection — parce que personne ne les connaît tous les
+   trois, et qu'aucun ne doit dépendre du survol.
+   ============================================================ */
+
+function packMenuClose(){
+  if(packMenu){ packMenu.remove(); packMenu = null; }
+}
+document.addEventListener('click', e=>{
+  if(packMenu && !e.target.closest('.pkmenu')) packMenuClose();
+});
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape') packMenuClose(); });
+
+/* Un menu ancré là où l'on a cliqué, borné à l'écran : une liste qui
+   dépasse en bas est une liste dont on ne voit pas la dernière
+   entrée, et c'est souvent celle qu'on cherche. */
+function packMenuOuvrir(x, y, entrees){
+  packMenuClose();
+  const m = document.createElement('div');
+  m.className = 'pkmenu';
+  m.innerHTML = entrees.map(e=>{
+    if(e.sep) return '<div class="pkmsep"></div>';
+    if(e.titre) return `<div class="pkmhead">${esc(e.titre)}</div>`;
+    return `<button class="pkmit${e.danger?' danger':''}" data-a="${e.id}">${e.html || esc(e.label)}</button>`;
+  }).join('');
+  document.body.appendChild(m);
+  const r = m.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(x, window.innerWidth  - r.width  - 8)) + 'px';
+  m.style.top  = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
+  m.addEventListener('click', ev=>{
+    const b = ev.target.closest('.pkmit'); if(!b) return;
+    const e = entrees.find(x2=>x2.id === b.dataset.a);
+    packMenuClose();
+    if(e && e.action) e.action();
+  });
+  packMenu = m;
+}
+
+/* ---- Clic droit sur une caisse ---- */
+function packContextMenu(ev, packId){
+  if(!can('edit')) return;
+  ev.preventDefault(); ev.stopPropagation();
+  /* Un clic droit sur une ligne non cochée agit sur elle seule ;
+     sur une ligne cochée, il agit sur toute la sélection. C'est la
+     convention de tous les gestionnaires de fichiers, et la seule
+     qui ne surprenne jamais. */
+  const cibles = packSel.has(packId) ? [...packSel] : [packId];
+  packMenuOuvrir(ev.clientX, ev.clientY, packMenuDeplacer(cibles));
+}
+
+/* ---- Les entrées « ranger dans… », partagées ---- */
+function packMenuDeplacer(ids){
+  const n = ids.length;
+  const quoi = n > 1 ? `${n} cases` : (pack(ids[0]) || {}).name || 'this case';
+  const dossiers = packFolders();
+  const actuel = new Set(ids.map(id=>(pack(id)||{}).folder_id || null));
+  const entrees = [{titre: `Move ${quoi} to`}];
+  dossiers.forEach(f=>entrees.push({
+    id: 'f-' + f.id,
+    html: (actuel.size === 1 && actuel.has(f.id) ? '✓ ' : '') + esc(f.name),
+    action: ()=>packSetFolderMany(ids, f.id)
+  }));
+  entrees.push({id:'new', label:'New folder…', action:()=>packNewFolderWith(ids)});
+  if(![...actuel].every(x=>x === null))
+    entrees.push({id:'none', label:'Top of the list', action:()=>packSetFolderMany(ids, null)});
+  entrees.push({sep:true});
+  entrees.push({id:'sel', label: packSel.has(ids[0]) ? 'Clear selection' : 'Select this case',
+                action: ()=>{ if(packSel.has(ids[0])) packSelClear();
+                              else { packSel.add(ids[0]); redessinePackTree(); renderPackBulk(); } }});
+  return entrees;
+}
+
+/* ---- Le menu ⋯ d'un dossier ---- */
+function packFolderMenu(ev, folderId){
+  ev.preventDefault(); ev.stopPropagation();
+  const f = folderOf(folderId); if(!f) return;
+  const dedans = packRoots().filter(p=>p.folder_id === folderId).map(p=>p.id);
+  packMenuOuvrir(ev.clientX, ev.clientY, [
+    {titre: f.name},
+    {id:'ren',  label:'Rename…',            action:()=>packRenameFolder(folderId)},
+    {id:'sel',  label:`Select its ${dedans.length} case(s)`,
+     action:()=>{ dedans.forEach(x=>packSel.add(x)); redessinePackTree(); renderPackBulk(); }},
+    {sep:true},
+    {id:'del',  label:'Delete folder', danger:true,
+     action:()=>packDeleteFolder(folderId)}
+  ]);
+}
+
+/* ---- Ranger plusieurs caisses d'un coup ---- */
+async function packSetFolderMany(ids, folderId){
+  const avant = ids.map(id=>({id, f:(pack(id)||{}).folder_id || null}))
+                   .filter(x=>x.f !== folderId);
+  if(!avant.length) return;
+  try{
+    for(const a of avant){
+      await apiSetPackFolder(a.id, folderId);
+      pack(a.id).folder_id = folderId;
+    }
+    packSelClear();
+    renderPacks();
+    const f = folderId ? folderOf(folderId) : null;
+    toast(`${avant.length} case(s) → ${f ? f.name : 'top of the list'}`, 'ok', 'Undo', async ()=>{
+      for(const a of avant){ await apiSetPackFolder(a.id, a.f); pack(a.id).folder_id = a.f; }
+      renderPacks();
+    }, 9000);
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
+/* ---- Créer un dossier ET y ranger la sélection ----
+   C'est le geste qu'on fait vraiment : on sélectionne d'abord, on
+   range ensuite. Créer un dossier vide puis y glisser les caisses
+   une à une demande deux fois plus de gestes pour le même résultat. */
+async function packNewFolderWith(ids){
+  const nom = (prompt(`New folder for ${ids.length} case(s)`) || '').trim();
+  if(!nom) return;
+  try{
+    const f = await apiCreateFolder(nom, packFolders().length);
+    db.packFolders.push(f);
+    await packSetFolderMany(ids, f.id);
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
+/* ---- La barre de sélection ----
+   Même emplacement et même logique que celle de l'inventaire : ce
+   qu'on a appris là s'applique ici. */
+function renderPackBulk(){
+  let bar = document.getElementById('packbulk');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'packbulk'; bar.className = 'bulkbar';
+    document.body.appendChild(bar);
+  }
+  const n = packSel.size;
+  if(!n || curView() !== 'packs'){ bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  bar.style.display = '';
+  const ids = [...packSel];
+  const poids = ids.reduce((t,id)=>t + packWeight(pack(id)), 0);
+  bar.innerHTML = `
+    <span class="count"><b>${n}</b> selected</span>
+    <span class="lotw">${esc(fweight(poids))}</span>
+    <button class="btn small" onclick="packMenuDepuisBarre(event)">Move to folder…</button>
+    <button class="btn small sec" onclick="packSelClear()">Clear</button>`;
+}
+function packMenuDepuisBarre(ev){
+  const r = ev.currentTarget.getBoundingClientRect();
+  packMenuOuvrir(r.left, r.top - 8, packMenuDeplacer([...packSel]));
 }
