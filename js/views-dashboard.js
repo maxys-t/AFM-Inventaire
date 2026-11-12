@@ -23,6 +23,16 @@ function renderDash(){
       alerts.push(`<div class="alert">⏰ ${itemTitle(i)} out for <b>${daysSince(o.date)} days</b>
         — ${esc(outBy(i))} (${esc(o.reason)})</div>`);
   });
+  /* La garantie expire sans prévenir, et c'est le seul moment où
+     l'on peut encore en profiter. Vaut pour un U87 comme pour un Mac
+     Studio — ce n'est pas une alerte informatique. (v2.8.0) */
+  db.items.filter(i=>warrantyExpired(i) || warrantySoon(i)).forEach(i=>{
+    const n = warrantyDaysLeft(i);
+    alerts.push(`<div class="alert ${n < 0 ? '' : ''}">🛡 ${itemTitle(i)} — ${
+      n < 0 ? `warranty ended <b>${fdateD(i.warranty_until)}</b>`
+            : `warranty ends in <b>${n} day${n>1?'s':''}</b> (${fdateD(i.warranty_until)})`}
+      <button class="btn sec small" onclick="openDetail('${i.id}')">Open</button></div>`);
+  });
   rep.forEach(i=>{
     const r = repairOf(i.id);
     const what = r

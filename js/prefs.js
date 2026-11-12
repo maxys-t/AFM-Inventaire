@@ -41,6 +41,10 @@ const INV_COLUMNS = [
   {k:'prov',   label:'Provider',       fixed:false},
   {k:'price',  label:'Purchase price', fixed:false, admin:true},
   {k:'pdate',  label:'Purchase date',  fixed:false},
+  /* La garantie expire sans prévenir, et c'est le seul moment où
+     l'on peut encore en profiter. Pas cochée par défaut : elle
+     n'intéresse qu'au moment où on la cherche. (v2.8) */
+  {k:'warranty', label:'Warranty',      fixed:false},
   {k:'so',     label:'Sales order #',  fixed:false},
   {k:'serial', label:'Serial number',  fixed:false}
 ];
@@ -49,7 +53,7 @@ const INV_DEFAULT_COLS = ['photo','item','id','cat','status','loc','pack','cond'
 
 /* Colonnes apparues après coup : proposées une fois à qui avait déjà
    réglé son tableau, puis laissées à sa main. */
-const NOUVELLES_COLONNES = ['pack'];
+const NOUVELLES_COLONNES = ['pack'];   // proposées une fois aux réglages existants
 
 /* --- Vues fixes ---
    Deux jeux de colonnes couvrant les deux usages : repérer vite, ou

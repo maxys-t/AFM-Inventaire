@@ -1369,6 +1369,13 @@ nav button.navmain:not(.active){box-shadow:inset 0 0 0 1px var(--border2)}
 .dpack .reptitle{font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dpack .repmeta{font-size:12px;color:var(--muted)}
 
+/* --- L'alias passe devant le modèle (v2.8.0) ---
+   Le nom d'usage en titre, le modèle en sous-titre sur la même
+   ligne : on reconnaît « AccessFlow A » d'abord, on vérifie que
+   c'est bien un Mac Studio ensuite. */
+.ttmodel{font-weight:400;font-size:.92em}
+.fcard h4 .btn{margin-left:auto;font-size:11px;padding:3px 9px}
+
 /* --- Accessoires et consommables (v2.7.0) ---
    Un tableau de chiffres : ils s'alignent à droite, sinon on ne les
    compare pas d'une ligne à l'autre. */

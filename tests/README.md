@@ -65,6 +65,7 @@ continue de servir l'ancien fichier.
 | t230 | Les lots indissociables : les deux Amphion et leur Amp 700 |
 | t240 | Dossiers de caisses, e-mail de livraison, écran de composition |
 | t250 | Trois niveaux de matériel : items, accessoires comptés, consommables |
+| t260 | Alias, garantie, champs par domaine et vue IT dérivée |
 
 ## En écrire un
 

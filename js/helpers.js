@@ -89,13 +89,71 @@ function codeStale(i){
 function staleItems(){ return (db.items||[]).filter(codeStale); }
 
 /* --- Affichage d'un item : « Manufacturer » en gras puis le modèle --- */
+/* ============================================================
+   LE NOM QU'ON EMPLOIE (v2.8)
+
+   `name` tient lieu de modèle : « Mac Studio M2 Max 2023 96 Gb ».
+   Quand deux exemplaires sont identiques, l'application les
+   distinguait par « #1 » et « #2 » — alors que personne ne dit « le
+   Mac Studio numéro 1 », tout le monde dit « le A ».
+
+   L'alias passe donc devant : un nom d'usage bat toujours un numéro
+   d'inventaire. Le modèle ne disparaît pas, il devient le
+   sous-titre.
+   ============================================================ */
+function itemAlias(i){ return (i && i.alias ? String(i.alias).trim() : ''); }
 function itemTitle(i){
+  const a = itemAlias(i);
+  if(a) return `<b>${esc(a)}</b> <span class="muted ttmodel">${esc(itemModelText(i))}</span>`;
   const b = (i.brand||'').trim();
   return (b ? `<b>${esc(b)}</b> ` : '') + esc(i.name);
 }
 function itemTitleText(i){
-  const b = (i.brand||'').trim();
-  return (b ? b + ' ' : '') + (i.name||'');
+  const a = itemAlias(i);
+  return a ? a + ' · ' + itemModelText(i) : itemModelText(i);
+}
+/* La marque et le modèle, sans l'alias — pour le sous-titre, et
+   partout où l'on parle de l'objet et non de l'exemplaire. */
+function itemModelText(i){
+  const b = (i && i.brand || '').trim();
+  return (b ? b + ' ' : '') + ((i && i.name) || '');
+}
+
+/* ---- Garantie (v2.8) ----
+   Vaut pour un U87 comme pour un Mac Studio. */
+function warrantyDaysLeft(i){
+  if(!i || !i.warranty_until) return null;
+  const d = new Date(i.warranty_until + 'T23:59:59');
+  if(isNaN(d.getTime())) return null;
+  /* `floor` et non `ceil` : une garantie valable jusqu'au 12 inclus
+     laisse « 0 jour » le 12, pas « 1 ». Avec `ceil`, une garantie qui
+     expire aujourd'hui annonçait encore un jour de rab. */
+  return Math.floor((d - new Date()) / 864e5);
+}
+function warrantySoon(i){
+  const n = warrantyDaysLeft(i);
+  return n !== null && n >= 0 && n <= WARRANTY_ALERT_DAYS;
+}
+function warrantyExpired(i){
+  const n = warrantyDaysLeft(i);
+  return n !== null && n < 0;
+}
+
+/* ---- Champs propres à un domaine (v2.8) ----
+   Déclarés dans config.js, stockés dans `items.extra`. */
+function fieldsetOf(i){
+  return (i && ITEM_FIELDSETS[i.subcat]) || null;
+}
+function extraOf(i, k){
+  const e = (i && i.extra) || {};
+  const v = e[k];
+  return (v === undefined || v === null || v === '') ? '' : v;
+}
+function extraLabel(champ, v){
+  if(v === '' || v === undefined || v === null) return '';
+  if(champ.type === 'bool') return v ? 'Yes' : 'No';
+  if(champ.type === 'date') return fdateD(v);
+  return String(v);
 }
 
 /* --- Prix --- */

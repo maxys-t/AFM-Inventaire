@@ -258,12 +258,68 @@ const NEED_PRESETS = [
   {kind:'cable', label:'USB Micro',      g:null}
 ];
 
+/* ============================================================
+   CHAMPS PROPRES À UN DOMAINE (v2.8)
+
+   Un ordinateur a une version d'OS, un nom d'hôte, une adresse MAC.
+   Un micro n'en a pas. Leur donner à chacun une colonne remplirait
+   la table de vides, et il en faudrait une nouvelle série le jour où
+   l'on voudra suivre les lampes d'un ampli.
+
+   Les champs sont donc DÉCLARÉS ICI, par sous-catégorie, et stockés
+   dans `items.extra`. Ajouter un domaine ne demande aucune
+   migration : un bloc de plus dans cet objet.
+
+   CE QU'ON Y MET, ET CE QU'ON N'Y MET PAS
+
+   Un champ est une DÉCISION ou une CARACTÉRISTIQUE : ça change
+   rarement, et quand ça change c'est que quelqu'un l'a voulu.
+
+   Une MESURE n'y a pas sa place : stockage libre, cycles de
+   batterie, date de dernière sauvegarde. Ça dérive en permanence,
+   personne ne le saisira, et un champ que personne ne met à jour est
+   pire qu'un champ absent — il a l'air d'une réponse. C'est
+   exactement ce qui est arrivé aux quarante XLR numérotés.
+
+   Types : text | number | bool | select (avec `options`) | date
+   ============================================================ */
+const ITEM_FIELDSETS = {
+  ordinateur: {
+    titre: 'Machine',
+    champs: [
+      {k:'role',       label:'Role',            type:'select',
+       options:['Mixing','Mastering','Measure','Live','Control','Instrument','Remote','Spare'],
+       tip:"Ce qu'on lit en premier dans une liste de sept machines."},
+      {k:'os',         label:'OS version',      type:'text',   ph:'macOS 14.5',
+       tip:"Dans un studio ce n'est pas une mesure, c'est une décision : on reste sur une version parce qu'un driver ou un plugin ne suit pas."},
+      {k:'os_frozen',  label:'Updates frozen',  type:'bool',
+       tip:"Sans ce drapeau, quelqu'un mettra la machine à jour un dimanche soir."},
+      {k:'os_frozen_why', label:'Frozen because', type:'text', ph:'Antelope driver not ready'},
+      {k:'os_max',     label:'Max OS supported', type:'text',  ph:'Sequoia'},
+      {k:'chip',       label:'Chip',            type:'text',   ph:'M2 Max'},
+      {k:'ram_gb',     label:'RAM (GB)',        type:'number'},
+      {k:'storage_gb', label:'Storage (GB)',    type:'number'},
+      {k:'hostname',   label:'Hostname',        type:'text',   ph:'accessflow-a'},
+      {k:'mac',        label:'MAC address',     type:'text',   ph:'A4:83:E7:12:34:56'},
+      {k:'filevault',  label:'FileVault',       type:'select', options:['On','Off']},
+      {k:'backup_dest',label:'Backup to',       type:'text',   ph:'NAS / Time Machine disk'}
+    ]
+  }
+};
+
+/* Les sous-catégories que l'onglet IT regroupe. Une lecture filtrée
+   de l'inventaire : la ligne apparaît dès qu'un ordinateur est
+   ajouté, il n'y a RIEN à synchroniser. Élargir tient en un mot de
+   plus. */
+const IT_SUBS = ['ordinateur'];
+
 /* --- Project status --- */
 const PSTAT = {inactif:"Idle", preparation:"Packing", show:"On show"};
 const PTAG  = {inactif:"pinactif", preparation:"pprep", show:"pshow"};
 
 /* --- Thresholds --- */
 const ALERT_DAYS = 7;              // flag gear out for more than X days with no due date
+const WARRANTY_ALERT_DAYS = 90;    // start warning this long before a warranty runs out
 const TRASH_RETENTION_DAYS = 30;   // how long deleted items stay in the trash
 
 /* --- Interface copy --- */

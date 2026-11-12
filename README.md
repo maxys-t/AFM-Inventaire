@@ -4,7 +4,7 @@ Application web de gestion de l'inventaire du studio AFM : matériel, prêts,
 réparations, emplacements et projets de tournée. Réservée au personnel du studio,
 utilisable sur ordinateur comme sur mobile.
 
-> Version actuelle : **2.7.3** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique
+> Version actuelle : **2.8.0** — voir [CHANGELOG.md](CHANGELOG.md) pour l'historique
 > complet, et [ROADMAP.md](ROADMAP.md) pour ce qui vient.
 
 ## À quoi ça sert
@@ -138,6 +138,9 @@ config → auth → helpers → db → vues → app. Ne pas le modifier.
 | Changer les sous-catégories pouvant servir de contenant | `js/config.js` (`CONTAINER_SUBS`) |
 | Changer les états du matériel               | `js/config.js` (`CONDS`) — les menus s'y adaptent seuls |
 | Modifier la liste des alimentations et cordons courants | `js/config.js` (`NEED_PRESETS`) — elle ne sert qu'à la saisie, aucune migration |
+| Ajouter un champ propre à une sous-catégorie | `js/config.js` (`ITEM_FIELDSETS`) — aucune migration, le champ vit dans `items.extra` |
+| Élargir ce que la vue IT regroupe        | `js/config.js` (`IT_SUBS`) — un mot de plus |
+| Changer le préavis de fin de garantie    | `js/config.js` (`WARRANTY_ALERT_DAYS`) |
 | Ajouter une famille de besoin (autre que *power* / *cable*) | `js/helpers.js` (`NEED_KINDS`) **et** la contrainte `item_needs_kind_chk` dans une nouvelle migration |
 | Comprendre la différence besoin / lot        | `sql/031-lots-indissociables.sql` — un besoin est dirigé et sans fiche (un cordon), un lot est symétrique et n'a pas de parent (les deux Amphion) |
 | Ajouter / renommer une catégorie            | `js/config.js` (`CATS`)              |
@@ -207,7 +210,7 @@ automatique et export manuel) sont acceptés.
 ## Tests
 
 ```bash
-./tests/run.sh          # les vingt-sept harnais
+./tests/run.sh          # les vingt-huit harnais
 ./tests/run.sh t124     # un seul
 ```
 

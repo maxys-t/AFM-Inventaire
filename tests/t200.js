@@ -21,8 +21,8 @@ const liens = [...rail.matchAll(/data-v="(\w+)"/g)].map(m=>m[1]);
 /* Dix depuis la v2.7 : Accessories et Consumables ont rejoint le
    rail. C'était un choix — un onglet imbriqué les aurait rendues
    secondaires alors qu'on les consulte en préparant. */
-T(liens.length === 10, `les dix destinations y sont (${liens.length})`);
-['dash','proj','packs','out','inv','acc','cons','rep','people','settings']
+T(liens.length === 11, `les onze destinations y sont (${liens.length})`);
+['dash','proj','packs','out','inv','acc','cons','it','rep','people','settings']
   .forEach(v=>T(liens.includes(v), `${v} est dans le rail`));
 /* L'ordre dit la hiérarchie du travail : le projet est la fin. */
 T(liens[1] === 'proj', 'Projects juste après le tableau de bord');
@@ -33,9 +33,9 @@ T(/railhead">Send out</.test(rail) && /railhead">The fleet</.test(rail),
 /* Dix dessins : les huit destinations, la corbeille, et le bouton de
    repli. La corbeille a rejoint le rail en v2.0.1 — c'est un
    rangement, pas une action de l'en-tête. */
-T((rail.match(/<svg/g)||[]).length === 12,
+T((rail.match(/<svg/g)||[]).length === 13,
   'chaque destination porte son icône — c’est ce qui rend le repli lisible');
-T((rail.match(/class="nav"/g)||[]).length === 10,
+T((rail.match(/class="nav"/g)||[]).length === 11,
   'et chaque icône appartient bien à une destination');
 T(/id="trashBtn" class="nav"/.test(rail), 'la corbeille est au bas du rail');
 T(!/id="trashBtn"[^>]*btn sec/.test(html), 'et plus dans l’en-tête');
@@ -91,7 +91,7 @@ S('6. Les vues n’ont pas bougé');
 /* La promesse de cette version : la disposition des pages ne change
    pas, seule la façon d'y arriver. Les conteneurs doivent être les
    mêmes, sinon les vues écrivent dans le vide. */
-['v-dash','v-inv','v-proj','v-out','v-packs','v-acc','v-cons','v-rep','v-people','v-settings']
+['v-dash','v-inv','v-proj','v-out','v-packs','v-acc','v-cons','v-it','v-rep','v-people','v-settings']
   .forEach(v=>T(html.includes(`id="${v}"`), `#${v} est toujours là`));
 
 S('7. La fiche : les gestes à leur place');

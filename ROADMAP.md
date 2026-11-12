@@ -248,7 +248,25 @@ plan :
 
 ---
 
-## v2.8 — L'audit
+## ~~v2.8 — L'audit~~ — RETIRÉ le 12 novembre 2026
+
+> **Écarté avant d'être construit.** Aucun des retours de six
+> semaines ne portait sur un objet introuvable : ils portaient tous
+> sur la friction de préparation. Le cycle sortie/retour est déjà une
+> vérification — chaque caisse qui part fait toucher et cocher ses
+> items. Et un audit que personne ne fait produirait 469 compteurs
+> « en retard », soit exactement le mur d'alertes supprimé en v2.7.3.
+>
+> **Ce qu'il faut en garder** : récolter la vérification déjà faite.
+> Cocher un item en préparation, c'est constater qu'il existe et où
+> il est. Tamponner « vu le … » à ce moment-là donnerait des données
+> d'audit gratuitement, et la liste de ce que personne n'a touché
+> depuis un an serait la vraie information — pas 469 compteurs. À
+> faire le jour où l'on touche à la préparation.
+>
+> Le texte d'origine est conservé ci-dessous.
+
+### Le projet d'origine
 
 Un inventaire dit où les choses **devraient** être. Rien ne confirme
 jamais qu'elles y sont, et la dérive ne se voit qu'un soir de
@@ -293,7 +311,16 @@ C'est petit, ça ne demande aucune migration, et ça règle une panne
 qui ne se voit qu'au pire moment. À caser juste après la v2.7.
 
 
-## Le parc informatique — ce qu'un tableur a révélé
+## ✅ v2.8 — Le parc informatique (livré le 12 novembre 2026)
+
+Réduit par rapport au plan ci-dessous, et volontairement : le journal
+d'entretien et le tableau d'alertes dédié étaient de l'anticipation
+— l'onglet *Maintenance* du tableur comptait 204 lignes préparées et
+zéro remplie. Livré : l'alias, la garantie, les champs par domaine
+déclarés dans `config.js`, et l'onglet IT en **lecture filtrée** de
+l'inventaire.
+
+### L'analyse d'origine
 
 Un fichier Excel de suivi des sept ordinateurs du studio, fait à
 côté : 38 colonnes, un journal d'interventions, un tableau de bord
@@ -503,6 +530,39 @@ L'argument pour l'absorber n'est pas l'élégance : **deux sources de
 vérité sur le même studio finissent toujours par diverger.** Celle
 qui n'est pas sous les yeux tous les jours est celle qui se périme,
 et ce sera le tableur.
+
+
+## À noter — les licences logicielles
+
+Idée du 12 novembre 2026, pas encore planifiée.
+
+Un onglet pour suivre les licences : nom, éditeur, type (iLok, liée
+à la machine, liée au compte), nombre de postes, où elle est
+activée, échéance de renouvellement, coût.
+
+**Ce qui en fait plus qu'une liste** : une licence est activée *sur
+quelque chose* — une machine du parc, ou une clé iLok qui est
+elle-même un item. C'est le même mécanisme que les lots de la v2.5 :
+une relation entre deux objets déjà suivis. « Qu'est-ce qui tombe si
+je reformate le Mac Studio A ? » devient une question à laquelle
+l'application répond.
+
+### Sur la liaison avec iLok License Manager
+
+**Vérifié le 12 novembre 2026 : rien de public ne permet de le
+faire.** iLok License Manager est une application de bureau, la
+gestion passe par son interface et par le compte iLok en ligne. PACE
+publie des outils pour les éditeurs qui protègent leurs logiciels,
+pas une API de lecture pour les détenteurs de licences.
+
+Ce qui reste possible, et honnête : une **saisie manuelle**, avec un
+champ « support » qui pointe vers l'iLok ou la machine concernée.
+Une trentaine de lignes à saisir une fois, puis une au fil des
+achats. Moins séduisant qu'une synchronisation, mais ça existe —
+contrairement à la synchronisation.
+
+À reconsidérer si PACE ouvre quelque chose, ou si l'export de
+l'application de bureau s'avère exploitable.
 
 
 ## v3.0 — Les modèles

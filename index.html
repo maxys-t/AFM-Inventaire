@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AFM Inventory Tracker</title>
-<link rel="stylesheet" href="css/styles.css?v=2.7.3">
+<link rel="stylesheet" href="css/styles.css?v=2.8.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -61,6 +61,9 @@
   <button data-v="cons" class="nav" onclick="show('cons')">
     <svg viewBox="0 0 20 20"><path d="M5 4h10l-1 12.5a1.4 1.4 0 01-1.4 1.3H7.4A1.4 1.4 0 016 16.5zM4 4h12M7.8 8.5h4.4"/></svg>
     <span>Consumables</span></button>
+  <button data-v="it" class="nav" onclick="show('it')">
+    <svg viewBox="0 0 20 20"><path d="M3 5.5h14v8H3zM7 17h6M10 13.5V17"/></svg>
+    <span>IT</span></button>
   <button data-v="rep" class="nav" onclick="show('rep')">
     <svg viewBox="0 0 20 20"><path d="M12.4 2.6a3.4 3.4 0 00-3.9 4.4l-5.6 5.6a1.6 1.6 0 002.3 2.3l5.6-5.6a3.4 3.4 0 004.4-3.9l-2 2-2.4-.4-.4-2.4zM4.2 3.3l3.2 3.2M14.6 12.1l2.9 2.9a1.5 1.5 0 01-2.1 2.1l-2.9-2.9"/></svg>
     <span>Repairs</span></button>
@@ -138,6 +141,7 @@
   <section id="v-packs" style="display:none"></section>
   <section id="v-acc" style="display:none"></section>
   <section id="v-cons" style="display:none"></section>
+  <section id="v-it" style="display:none"></section>
   <section id="v-rep" style="display:none"></section>
 
   <section id="v-people" style="display:none">
@@ -226,6 +230,12 @@
   <h3 id="itemFormTitle">Add item</h3>
   <div class="form-grid">
     <div class="field full"><label>Model *</label><input id="i-name" placeholder="e.g. Juno-106, SM58, XLR 5m"></div>
+    <!-- Le nom qu'on emploie vraiment. Affiché en titre, le modèle
+         passant en sous-titre, et prioritaire sur le « #N »
+         automatique : personne ne dit « le Mac Studio numéro 1 ». -->
+    <div class="field full">
+      <label data-tip="The name people actually use: « AccessFlow A », « the blue Pelicase ». Shown as the title, with the model underneath. Leave empty and nothing changes.">Alias ⓘ</label>
+      <input id="i-alias" placeholder="optional — e.g. AccessFlow A"></div>
     <div class="field"><label>Category *</label><select id="i-cat" onchange="fillSubForm()"></select></div>
     <div class="field"><label>Sub-category *</label><select id="i-subcat"></select></div>
     <div class="field"><label>Manufacturer</label><input id="i-brand" placeholder="e.g. Roland, Shure…"></div>
@@ -242,6 +252,12 @@
       <input id="i-casenote" style="display:none;margin-top:7px"
              placeholder="Which one? e.g. Gator soft bag, original flight case"></div>
     <div class="field"><label>Purchase date</label><input type="date" id="i-date"></div>
+    <div class="field">
+      <label data-tip="Warranty or AppleCare end date. The dashboard warns 90 days ahead.">Warranty until ⓘ</label>
+      <div class="datefield">
+        <input type="date" id="i-warranty">
+        <button type="button" class="btn sec small" onclick="document.getElementById('i-warranty').value=''">Clear</button>
+      </div></div>
     <div class="field" id="qtyField"><label>Quantity</label><input type="number" id="i-qty" min="1" value="1"></div>
     <div class="field" id="copiesField" style="display:none">
       <label data-tip="You already own more of these than the inventory knows about. The copies share everything except the serial number, which is never shared.">Add copies ⓘ</label>
@@ -469,6 +485,15 @@
   <div id="supBody"></div>
 </div></div>
 
+<div class="overlay" id="ovExtra"><div class="modal">
+  <h3 id="xfTitle"></h3>
+  <div id="xfBody"></div>
+  <div class="modal-actions">
+    <button class="btn sec" onclick="close_('ovExtra')">Cancel</button>
+    <button class="btn" onclick="extraSave()">Save</button>
+  </div>
+</div></div>
+
 <div class="overlay" id="ovSupplyForm"><div class="modal">
   <h3 id="sfTitle"></h3>
   <div id="sfBody"></div>
@@ -623,26 +648,27 @@
 <div id="labelPrint" style="display:none"></div>
 
 <!-- Ordre de chargement : réglages → outils → données → vues → app -->
-<script src="js/config.js?v=2.7.3"></script>
-<script src="js/auth.js?v=2.7.3"></script>
-<script src="js/helpers.js?v=2.7.3"></script>
-<script src="js/crop.js?v=2.7.3"></script>
-<script src="js/prefs.js?v=2.7.3"></script>
-<script src="js/db.js?v=2.7.3"></script>
-<script src="js/views-dashboard.js?v=2.7.3"></script>
-<script src="js/views-inventory.js?v=2.7.3"></script>
-<script src="js/views-projects.js?v=2.7.3"></script>
-<script src="js/views-out.js?v=2.7.3"></script>
-<script src="js/views-packs.js?v=2.7.3"></script>
-<script src="js/views-repairs.js?v=2.7.3"></script>
-<script src="js/views-people-loc.js?v=2.7.3"></script>
-<script src="js/views-supplies.js?v=2.7.3"></script>
-<script src="js/views-trash.js?v=2.7.3"></script>
-<script src="js/views-users.js?v=2.7.3"></script>
-<script src="js/views-settings.js?v=2.7.3"></script>
-<script src="js/import-csv.js?v=2.7.3"></script>
-<script src="js/import-weights.js?v=2.7.3"></script>
-<script src="js/photos-bulk.js?v=2.7.3"></script>
-<script src="js/app.js?v=2.7.3"></script>
+<script src="js/config.js?v=2.8.0"></script>
+<script src="js/auth.js?v=2.8.0"></script>
+<script src="js/helpers.js?v=2.8.0"></script>
+<script src="js/crop.js?v=2.8.0"></script>
+<script src="js/prefs.js?v=2.8.0"></script>
+<script src="js/db.js?v=2.8.0"></script>
+<script src="js/views-dashboard.js?v=2.8.0"></script>
+<script src="js/views-inventory.js?v=2.8.0"></script>
+<script src="js/views-projects.js?v=2.8.0"></script>
+<script src="js/views-out.js?v=2.8.0"></script>
+<script src="js/views-packs.js?v=2.8.0"></script>
+<script src="js/views-repairs.js?v=2.8.0"></script>
+<script src="js/views-people-loc.js?v=2.8.0"></script>
+<script src="js/views-supplies.js?v=2.8.0"></script>
+<script src="js/views-it.js?v=2.8.0"></script>
+<script src="js/views-trash.js?v=2.8.0"></script>
+<script src="js/views-users.js?v=2.8.0"></script>
+<script src="js/views-settings.js?v=2.8.0"></script>
+<script src="js/import-csv.js?v=2.8.0"></script>
+<script src="js/import-weights.js?v=2.8.0"></script>
+<script src="js/photos-bulk.js?v=2.8.0"></script>
+<script src="js/app.js?v=2.8.0"></script>
 </body>
 </html>

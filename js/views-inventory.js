@@ -124,8 +124,12 @@ function invFiltered(sauf){
                                    .filter(f=>f.c);
   return db.items.filter(i=>{
     if(q){
-      const foin = [i.name, i.brand, i.serial, i.id, i.notes, i.owner,
-                    i.provider, i.sales_order, catPath(i)].join(' ').toLowerCase();
+      /* L'alias en tête : c'est le mot qu'on tape, « AccessFlow A »
+         bien plus souvent que « Mac Studio M2 Max ». Les champs de
+         domaine suivent — chercher un nom d'hôte doit marcher. */
+      const foin = [i.alias, i.name, i.brand, i.serial, i.id, i.notes, i.owner,
+                    i.provider, i.sales_order, catPath(i),
+                    Object.values(i.extra || {}).join(' ')].join(' ').toLowerCase();
       if(!foin.includes(q)) return false;
     }
     // Plusieurs colonnes filtrées se combinent : toutes doivent passer.
@@ -153,6 +157,7 @@ function sortKey(c, i){
     case 'case':   return i.has_case ? 0 : 1;
     case 'pack':   return (packsOfItem(i.id)[0] || {}).name || null;
     case 'pdate':  return i.purchase_date || null;    // « aaaa-mm-jj » se compare tel quel
+    case 'warranty': return i.warranty_until || null;
     case 'photo':  return i.photo ? 0 : 1;
   }
   return (invCellText(c, i) || '').toLowerCase();
@@ -723,6 +728,7 @@ function invCellText(c, i){
        item peut figurer dans plusieurs recettes depuis la v1.22. */
     case 'pack':   return packsOfItem(i.id).map(p=>p.name).join(', ');
     case 'pdate':  return i.purchase_date ? fdateOnly(i.purchase_date) : '';
+    case 'warranty': return i.warranty_until ? fdateOnly(i.warranty_until) : '';
     case 'so':     return i.sales_order || '';
     case 'serial': return i.serial || '';
   }
@@ -750,6 +756,16 @@ function invCell(c, i){
     case 'case':   return i.has_case
       ? `<span class="pkok">✓</span>${i.case_note?` <span class="muted">${esc(i.case_note)}</span>`:''}`
       : '<span class="muted">—</span>';
+    /* Une garantie passée ou proche se voit : c'est une date qu'on ne
+       lit jamais à temps si rien ne la signale. */
+    case 'warranty': {
+      if(!i.warranty_until) return '<span class="muted">—</span>';
+      const n = warrantyDaysLeft(i);
+      if(n < 0) return `<span class="pkwarn">${esc(fdateOnly(i.warranty_until))}</span>`;
+      if(n <= WARRANTY_ALERT_DAYS)
+        return `<span class="tag attente">${n} d</span>`;
+      return esc(fdateOnly(i.warranty_until));
+    }
     default:       return esc(invCellText(c,i));
   }
 }
@@ -1034,6 +1050,8 @@ function openItemForm(id){
   document.getElementById('i-home').innerHTML = homeOptions();   // jamais un off-site : un item n'habite pas au Trianon
   const i = id?item(id):null;
   document.getElementById('i-name').value = i?i.name:"";
+  document.getElementById('i-alias').value = i?(i.alias||""):"";
+  document.getElementById('i-warranty').value = i?(i.warranty_until||""):"";
   document.getElementById('i-cat').value = i?i.cat:"";
   fillSubForm(i?i.subcat:"");
   document.getElementById('i-brand').value = i?i.brand:"";
@@ -1088,7 +1106,12 @@ function saveItem(){
     purchase_date:document.getElementById('i-date').value || null,
     weight_g: parseWeight(document.getElementById('i-weight').value),
     has_case: document.getElementById('i-case').checked,
-    case_note: document.getElementById('i-casenote').value.trim() || null
+    case_note: document.getElementById('i-casenote').value.trim() || null,
+    /* Une chaîne vide n'est pas un alias : c'est l'absence d'alias.
+       Sans ce `|| null`, le titre afficherait un blanc à la place du
+       modèle. */
+    alias: document.getElementById('i-alias').value.trim() || null,
+    warranty_until: document.getElementById('i-warranty').value || null
   };
   /* Pas de précision sur un conditionnement qui n'existe pas. */
   if(!vals.has_case) vals.case_note = null;
@@ -1527,6 +1550,7 @@ function openDetail(id){
           ${kv('Pack', packLines(i) ? packLines(i).replace(/^<br>/, '') : '')}
           ${kv('Case', i.has_case ? esc(i.case_note || 'yes, unspecified') : 'none')}
         </div>
+        ${extraBlock(i)}
         ${linkBlock(i)}
         ${needsBlock(i)}
         ${(i.price!=null || i.purchase_date || i.provider || i.sales_order) ? `<div class="fcard">

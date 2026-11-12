@@ -1,5 +1,109 @@
 # Changelog
 
+## [2.8.0] — 2026-11-12
+
+⚠️ **Migration SQL : `sql/035-alias-garantie-champs.sql`.** Trois
+colonnes facultatives, rien de modifié, rien de supprimé.
+
+Cette version absorbe un tableur Excel de suivi des sept ordinateurs
+du studio. **La moitié de ses 38 colonnes existait déjà** dans
+l'application ; le reste tient en trois ajouts et une vue dérivée.
+
+> **L'audit a été retiré de la feuille de route.** Il devait être la
+> v2.8. Mais aucun des retours de ces six semaines ne portait sur un
+> objet introuvable — ils portaient tous sur la friction de
+> préparation. Et le cycle sortie/retour est déjà une vérification :
+> chaque caisse qui part fait toucher et cocher ses items. Un audit
+> que personne ne fait produirait 469 compteurs « en retard », soit
+> exactement le mur d'alertes qu'on venait de supprimer en v2.7.3.
+
+### Ajouté — l'alias
+
+Le nom qu'on emploie vraiment : « AccessFlow A », « la Pelicase
+bleue ». `name` tenait lieu de **modèle** — la fiche affiche
+« Model : Mac Studio M2 Max 2023 96 Gb » — et le nom d'usage n'avait
+nulle part où aller.
+
+Deux machines identiques étaient distinguées par « #1 » et « #2 ».
+Personne ne dit « le Mac Studio numéro 1 ». **Un nom d'usage bat
+toujours un numéro d'inventaire** : l'alias passe en titre, le modèle
+devient le sous-titre, et la recherche le trouve en premier.
+
+Générique, pas informatique : il sert autant à deux Pelicases qu'à
+deux Mac Studio.
+
+### Ajouté — la garantie
+
+Une date de fin, une alerte au tableau de bord quatre-vingt-dix jours
+avant, une colonne d'inventaire qui se trie. Valable pour un U87
+comme pour un Mac Studio — une garantie expire sans prévenir, et
+c'est le seul moment où l'on peut encore en profiter.
+
+### Ajouté — des champs propres à un domaine
+
+Un ordinateur a une version d'OS, un nom d'hôte, une adresse MAC ; un
+micro n'en a pas. Leur donner à chacun une colonne remplirait la
+table de vides, et il en faudrait une nouvelle série le jour où l'on
+voudra suivre les lampes d'un ampli.
+
+Les champs sont donc **déclarés dans `config.js`**, par
+sous-catégorie, et stockés dans `items.extra`. Une carte apparaît sur
+la fiche quand la sous-catégorie en déclare. Ajouter un domaine ne
+demande **aucune migration**.
+
+Pas d'écran d'administration pour les définir : `CATS`, `CONDS` et
+`NEED_PRESETS` se tiennent déjà ainsi, et un studio de trois
+personnes ne gagne rien à une interface pour une liste qu'on touche
+trois fois par an.
+
+**Ce qu'on a refusé d'y mettre**, et c'est le choix qui décide de
+l'utilité du reste : stockage libre, cycles de batterie, date de
+dernière sauvegarde. Ça dérive en permanence, personne ne le
+saisira, et **un champ que personne ne met à jour est pire qu'un
+champ absent — il a l'air d'une réponse.** C'est exactement ce qui
+est arrivé aux quarante XLR numérotés.
+
+Ce qui reste est ce qui se **décide** ou se **caractérise** : la
+version d'OS — dans un studio ce n'est pas une mesure mais une
+décision, on reste sur une version parce qu'un driver ne suit pas —
+avec un drapeau **« mise à jour gelée » et sa raison**, absent du
+tableur et probablement le champ le plus utile de tous.
+
+### Ajouté — l'onglet IT
+
+Sept machines parmi quatre cent soixante-neuf items, avec une
+douzaine de colonnes que rien d'autre ne porte.
+
+**Ce n'est pas un module.** C'est une **lecture filtrée** de
+l'inventaire : la ligne apparaît à l'instant où un ordinateur est
+ajouté, et disparaît quand il part. Rien à créer, rien à
+synchroniser, rien qui puisse diverger — le contraire exact d'un
+tableur tenu à côté, et c'était tout l'intérêt de l'absorber.
+
+Les machines restent des **items** : même base, même sauvegarde, même
+étiquette QR, même historique de sorties. Le mac mini *Live* part en
+tournée comme le reste. C'est la vue qui est séparée, pas la donnée.
+
+Les colonnes suivent ce qui est rempli — une colonne vide sur sept
+lignes ne fait que rétrécir les autres.
+
+### Reporté, et pourquoi
+
+- **Le journal d'entretien** et **le tableau d'alertes dédié** du
+  tableur : de l'anticipation. L'onglet *Maintenance* du fichier
+  compte 204 lignes préparées et **zéro remplie**. On y reviendra
+  quand les fiches seront remplies et que le manque se fera sentir.
+- **Les licences logicielles** sont notées dans `ROADMAP.md`. La
+  liaison avec iLok License Manager a été vérifiée : **rien de public
+  ne permet de le faire** — PACE publie des outils pour les éditeurs,
+  pas une API de lecture pour les détenteurs de licences.
+
+### Corrigé
+
+- `warrantyDaysLeft` compte en jours pleins (`floor`) : une garantie
+  valable jusqu'au 12 inclus laisse « 0 jour » le 12, et non « 1 ».
+
+
 ## [2.7.3] — 2026-11-10
 
 ### Corrigé
