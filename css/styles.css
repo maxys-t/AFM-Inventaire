@@ -1369,6 +1369,28 @@ nav button.navmain:not(.active){box-shadow:inset 0 0 0 1px var(--border2)}
 .dpack .reptitle{font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dpack .repmeta{font-size:12px;color:var(--muted)}
 
+/* ============================================================
+   L'ONGLET IT : UN TABLEAU, PAS DES FICHES EN LIGNE (v2.8.4)
+
+   La première version empilait nom, identifiant et emplacement dans
+   une seule cellule. Avec une douzaine de colonnes à côté, les deux
+   lignes se chevauchaient dès que la fenêtre se resserrait.
+
+   Même mécanique que l'inventaire : une donnée par colonne, aucun
+   retour à la ligne, et ce qui dépasse s'abrège. On compare des
+   colonnes du regard — on ne lit pas des paragraphes.
+   ============================================================ */
+.ittable td,.ittable th{white-space:nowrap}
+.ittable td{max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.ittable .itname{font-weight:600;min-width:150px}
+.ittable .itmodel{max-width:260px}
+.ittable .itid{width:1%}
+/* Le tableau défile dans son cadre et l'en-tête colle, comme
+   l'inventaire : sans hauteur bornée, `position:sticky` n'a rien à
+   quoi se caler. */
+#v-it .invwrap{max-height:calc(100vh - 290px);overflow:auto}
+#v-it .invtable thead th{position:sticky;top:0;z-index:6;background:var(--panel)}
+
 /* --- L'alias passe devant le modèle (v2.8.0) ---
    Le nom d'usage en titre, le modèle en sous-titre sur la même
    ligne : on reconnaît « AccessFlow A » d'abord, on vérifie que

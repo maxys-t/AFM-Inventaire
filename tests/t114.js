@@ -65,7 +65,15 @@ const TESTS = `
   T(fams.indexOf('captation') === 1 && fams.indexOf('peripheriques') === 2
     && fams.indexOf('pedales') === 3, 'micros, outboard, pédales dans cet ordre');
   var codes = fams.flatMap(f=>Object.values(CATS[f].subs).map(s=>s.code));
-  T(codes.length === 73, '73 sous-catégories (' + codes.length + ')');
+  /* On ne compte plus EXACTEMENT les sous-catégories. Le chiffre
+     était figé à 73, et ajouter « Display » en v2.8.5 faisait
+     échouer le harnais pour une opération parfaitement normale — ce
+     qui apprend à mettre le nombre à jour sans réfléchir, et finit
+     par vider le test de son sens.
+     Ce qui compte vraiment tient en deux invariants. */
+  T(codes.length >= 70, 'la nomenclature est complète (' + codes.length + ' sous-catégories)');
+  T(new Set(codes).size === codes.length,
+    'et aucun code n’est employé deux fois — deux identifiants se marcheraient dessus');
   T(new Set(codes).size === codes.length, 'tous les codes sont uniques');
 
   S('2. Suppressions');

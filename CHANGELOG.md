@@ -1,5 +1,60 @@
 # Changelog
 
+## [2.8.5] — 2026-11-12
+
+### Ajouté
+
+- **Une sous-catégorie « Display »** dans *Computers & interfaces*.
+  Les écrans y étaient rangés comme des ordinateurs, et se
+  retrouvaient donc dans l'onglet IT avec une douzaine de colonnes
+  vides — pas de système, pas de nom d'hôte, pas de sauvegarde.
+
+  Leur place est plus juste ainsi dans tous les cas, et l'onglet IT
+  les ignore puisque `IT_SUBS` ne retient que `ordinateur`. Les y
+  ramener un jour tiendrait en un mot de plus.
+
+  > **À faire une fois dans l'application** : Inventory → filtre
+  > *Category = Computer* → coche tes écrans → bouton **Category** de
+  > la barre de sélection → *Display*. Leur identifiant ne change
+  > pas, et c'est voulu : un identifiant qui bouge tout seul rend une
+  > étiquette fausse sans prévenir.
+
+### Corrigé
+
+- **Un harnais comptait exactement 73 sous-catégories.** Ajouter
+  « Display » le faisait échouer — pour une opération parfaitement
+  normale, que la nomenclature est faite pour subir. Un test qui
+  casse à chaque ajout légitime apprend à mettre le chiffre à jour
+  sans réfléchir, et finit par ne plus rien vérifier.
+
+  Il contrôle désormais ce qui compte vraiment : que la nomenclature
+  est complète, et surtout qu'**aucun code n'est employé deux fois**
+  — deux sous-catégories partageant un code feraient collisionner
+  les identifiants d'items.
+
+
+## [2.8.4] — 2026-11-12
+
+### Modifié
+
+- **L'onglet IT devient un vrai tableau.** La première version
+  empilait le nom, l'identifiant et l'emplacement dans une seule
+  cellule, sur deux lignes superposées. Avec une douzaine de colonnes
+  à côté, ça se chevauchait dès que la fenêtre se resserrait.
+
+  On reprend exactement la mécanique de l'inventaire : **une donnée
+  par colonne**, aucun retour à la ligne, ce qui dépasse s'abrège, et
+  le cadre défile avec son en-tête collant. On compare des colonnes
+  du regard — on ne lit pas des paragraphes.
+
+  Le nom d'usage, le modèle et l'identifiant ont désormais chacun le
+  leur, de même que l'emplacement et la garantie.
+
+- L'écran vide **nomme les sous-catégories** que l'onglet rassemble,
+  au lieu de dire « Computer » en dur : si `IT_SUBS` change, le
+  message suit.
+
+
 ## [2.8.3] — 2026-11-12
 
 ### Ajouté

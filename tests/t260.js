@@ -196,6 +196,16 @@ const TESTS = `
   var h = document.getElementById('v-it').innerHTML;
   T(h.includes('AccessFlow A'), 'les machines sont là, sous leur nom d’usage');
   T(h.includes('frozen'), 'le gel se voit d’un coup d’œil');
+  /* v2.8.4 : un tableau, pas des fiches en ligne. La première
+     version empilait nom, identifiant et emplacement dans une seule
+     cellule, et ça se chevauchait dès que la fenêtre se resserrait. */
+  T(h.includes('class="itname"') && h.includes('class="itmodel"')
+    && h.includes('class="itid"'),
+    'nom, modèle et identifiant ont chacun leur colonne');
+  T(h.includes('<th>Where</th>') && h.includes('<th>Warranty</th>'),
+    'l’emplacement et la garantie aussi — plus de sous-ligne empilée');
+  T(h.includes('invwrap') && h.includes('invtable'),
+    'et le cadre défile avec son en-tête collant, comme l’inventaire');
   T(h.includes('Updates frozen') && h.includes('Warranty ending'),
     'et les deux compteurs qui comptent');
   T(h.includes('filtered read of the'),

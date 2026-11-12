@@ -44,18 +44,34 @@ function renderIT(){
 
   if(!items.length){
     el.innerHTML = `<div class="panel"><h2>IT</h2><div class="muted">
-      No computer in the inventory yet. Add one from Inventory — with its sub-category set to
-      <b>Computer</b> — and its line appears here on its own.</div></div>`;
+      No machine in the inventory yet. Add one from Inventory — with its sub-category set to
+      one of ${IT_SUBS.map(s2=>'<b>'+esc(subLabelAnywhere(s2))+'</b>').join(', ')} —
+      and its line appears here on its own.</div></div>`;
     return;
   }
 
+  /* ============================================================
+     UN TABLEAU, PAS DES FICHES EN LIGNE (v2.8.4)
+
+     La première version empilait le nom, l'identifiant et
+     l'emplacement dans une seule cellule, sous forme de deux lignes
+     superposées. Avec une douzaine de colonnes à côté, ça se
+     chevauchait dès que la fenêtre se resserrait.
+
+     On reprend donc exactement la mécanique de l'inventaire : une
+     donnée par colonne, rien qui revient à la ligne, un cadre qui
+     défile avec son en-tête collant. On compare des colonnes du
+     regard ; on ne lit pas des paragraphes.
+     ============================================================ */
   const cols = itColonnes(items);
+
   const cell = (i, c) => {
     const v = extraOf(i, c.k);
     if(c.k === 'os_frozen')
       return v ? `<span class="tag attente" title="${esc(extraOf(i,'os_frozen_why')||'')}">frozen</span>`
                : '<span class="muted">—</span>';
-    return v === '' ? '<span class="muted">—</span>' : esc(extraLabel(c, v));
+    if(v === '') return '<span class="muted">—</span>';
+    return esc(extraLabel(c, v));
   };
 
   el.innerHTML = `
@@ -76,24 +92,44 @@ function renderIT(){
         <div class="n">${àRemplir}</div></div>` : ''}
     </div>
 
-    <div class="panel"><div class="invwrap"><table class="invtable suptable">
-      <thead><tr>
-        <th>Machine</th>
-        ${cols.map(c=>`<th>${esc(c.label)}</th>`).join('')}
-        <th>Warranty</th>
-      </tr></thead>
-      <tbody>${items.map(i=>`<tr class="rowlink" onclick="openDetail('${i.id}')">
-        <td data-l="Machine">${itemTitle(i)}
-          <div class="s muted mono">${esc(i.id)} · ${esc(itemWhere(i))}</div></td>
-        ${cols.map(c=>`<td data-l="${esc(c.label)}">${cell(i, c)}</td>`).join('')}
-        <td data-l="Warranty">${itWarrantyCell(i)}</td>
-      </tr>`).join('')}</tbody>
-    </table></div></div>
+    <div class="panel" style="padding:10px">
+      <div class="invwrap"><table class="invtable ittable">
+        <thead><tr>
+          <th class="itname">Name</th>
+          <th class="itmodel">Model</th>
+          <th class="itid">ID</th>
+          ${cols.map(c=>`<th>${esc(c.label)}</th>`).join('')}
+          <th>Where</th>
+          <th>Warranty</th>
+        </tr></thead>
+        <tbody>${items.map(i=>`<tr class="rowlink" onclick="openDetail('${i.id}')">
+          <td class="itname" data-l="Name">${esc(itemAlias(i) || itemModelText(i))}</td>
+          <td class="itmodel" data-l="Model">${itemAlias(i)
+            ? `<span class="muted">${esc(itemModelText(i))}</span>`
+            : '<span class="muted">—</span>'}</td>
+          <td class="itid" data-l="ID"><span class="mono">${esc(i.id)}</span></td>
+          ${cols.map(c=>`<td data-l="${esc(c.label)}">${cell(i, c)}</td>`).join('')}
+          <td data-l="Where">${esc(itemWhere(i))}</td>
+          <td data-l="Warranty">${itWarrantyCell(i)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>
 
-    <div class="hintline" style="margin-top:10px">Fields are declared in
-      <span class="mono">js/config.js</span> (<span class="mono">ITEM_FIELDSETS</span>).
-      Only what is decided or characteristic belongs there — a figure that drifts on its own
-      would never be kept up to date.</div>`;
+    <div class="hintline" style="margin-top:10px">Columns come from
+      <span class="mono">ITEM_FIELDSETS</span> in <span class="mono">js/config.js</span>, and only
+      appear once something is filled in. What the tab gathers is set by
+      <span class="mono">IT_SUBS</span>.</div>`;
+}
+
+/* Le libellé d'une sous-catégorie sans connaître sa famille : on la
+   cherche dans CATS. Sert au message d'écran vide, qui doit nommer
+   ce qu'il attend. */
+function subLabelAnywhere(sub){
+  for(const c of Object.keys(CATS)){
+    const s2 = (CATS[c].subs || {})[sub];
+    if(s2) return s2.label;
+  }
+  return sub;
 }
 
 function itWarrantyCell(i){

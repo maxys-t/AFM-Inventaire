@@ -87,6 +87,10 @@ const CATS = {
   informatique: { label:"Computers & interfaces", subs:{
     interface:     {label:"Audio interface", code:"INT"},
     ordinateur:    {label:"Computer",        code:"CPU"},
+    /* Un écran n'est pas un ordinateur : il n'a ni système, ni nom
+       d'hôte, ni sauvegarde. Les ranger ensemble les faisait
+       apparaître dans l'onglet IT avec douze colonnes vides. */
+    ecran:         {label:"Display",         code:"DSP"},
     convertisseur: {label:"Converter",       code:"CNV"},
     controleur:    {label:"MIDI controller", code:"CTL"},
     stockage:      {label:"Storage",         code:"STG"},

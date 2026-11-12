@@ -1,0 +1,5 @@
+# Fichiers créés par le Finder, sans aucun rapport avec le projet.
+# Ils apparaissaient à chaque commit et noyaient les vraies
+# modifications dans le bruit.
+.DS_Store
+**/.DS_Store
