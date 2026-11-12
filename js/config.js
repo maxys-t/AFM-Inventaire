@@ -293,9 +293,9 @@ const ITEM_FIELDSETS = {
          s'enregistrerait jamais, en silence. Le libellé affiché, lui,
          s'écrit comme on veut. */
       {k:'primary_role', label:'Primary Role',    type:'select',
-       options:['Production','Measure','Live','Control','Instrument Control','Remote','Spare'],
-      {k:'os',         label:'OS version',       type:'text',   ph:'macOS 14.5',
-      {k:'os_frozen',  label:'Updates frozen',   type:'bool',
+       options:['Production','Measure','Live','Control','Instrument Control','Remote','Spare']},
+      {k:'os',         label:'OS version',       type:'text',   ph:'macOS 14.5'},
+      {k:'os_frozen',  label:'Updates frozen',   type:'bool',}
       {k:'os_frozen_why', label:'Frozen because', type:'text', ph:'Antelope driver not ready'},
       {k:'os_max',     label:'Max OS supported', type:'text',   ph:''},
       {k:'chip',       label:'Chip',             type:'text',   ph:'M2 Max'},
