@@ -307,8 +307,12 @@ const ITEM_FIELDSETS = {
       {k:'os_max',     label:'Max OS supported', type:'text',   ph:''},
       {k:'chip',       label:'Chip',             type:'text',   ph:'M2 Max'},
       {k:'year',       label:'Year',             type:'text',   ph:''},
-      {k:'ram_gb',     label:'RAM (GB)',         type:'number'},
-      {k:'storage_gb', label:'Storage (GB)',     type:'number'},
+      /* L'unité vit dans la VALEUR, pas dans l'en-tête : « 96 GB »
+         se lit seul, « 96 » sous une colonne « RAM (GB) » oblige à
+         remonter à l'en-tête à chaque ligne. Et 2 000 Go s'écrit
+         2 To — personne ne dit « deux mille gigas ». */
+      {k:'ram_gb',     label:'RAM',              type:'number', fmt:'gb'},
+      {k:'storage_gb', label:'Storage',          type:'number', fmt:'storage'},
       {k:'hostname',   label:'Hostname',         type:'text',   ph:'accessflow-a'},
     ]
   }

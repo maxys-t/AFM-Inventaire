@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.8.6] — 2026-11-12
+
+### Modifié
+
+- **L'unité vit désormais dans la valeur, pas dans l'en-tête.**
+  « 96 » sous une colonne *RAM (GB)* oblige l'œil à remonter à
+  l'en-tête à chaque ligne ; « 96 GB » se lit seul. Les colonnes
+  s'appellent maintenant *RAM* et *Storage*.
+
+- **Le stockage suit l'ordre de grandeur de l'usage** : 2 000 Go
+  s'affichent **2 TB**, 1 500 en **1,5 TB**, et 500 restent en GB.
+  Personne ne dit « deux mille gigas ».
+
+  Le format est déclaré sur le champ (`fmt:'storage'`), pas codé dans
+  l'écran : un futur champ en MHz ou en watts se déclarera de la même
+  façon, sans toucher au tableau.
+
+- **Les colonnes chiffrées s'alignent à droite**, avec des chiffres
+  de même chasse — c'est ce qui permet de comparer deux lignes d'un
+  coup d'œil.
+
+### Corrigé
+
+- **Les en-têtes de l'onglet IT se touchaient** :
+  « RAM (GB)STORAGE (GB)HOSTNAME » se lisait d'un seul tenant. Les
+  colonnes ont retrouvé de l'air à gauche et à droite.
+
+
 ## [2.8.5] — 2026-11-12
 
 ### Ajouté

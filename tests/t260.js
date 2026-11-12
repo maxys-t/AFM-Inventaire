@@ -100,12 +100,13 @@ const DATA = `
   db.items = [
     it('CPU-001','Mac Studio M2 Max 2023 96Gb', {alias:'AccessFlow A',
        warranty_until: dans(40),
-       extra:{role:'Mixing', os:'macOS 14.5', os_frozen:true,
-              os_frozen_why:'Antelope driver not ready', chip:'M2 Max', ram_gb:96,
-              hostname:'accessflow-a', filevault:'On'}}),
+       extra:{primary_role:'Production', os:'macOS 14.5', os_frozen:true,
+              os_frozen_why:'Antelope driver not ready', chip:'M2 Max',
+              ram_gb:96, storage_gb:2000, hostname:'accessflow-a'}}),
     it('CPU-002','Mac Studio M2 Max 2023 96Gb', {alias:'AccessFlow B',
        warranty_until: dans(-10),
-       extra:{role:'Mastering', os:'macOS 15.1', chip:'M2 Max', ram_gb:96}}),
+       extra:{primary_role:'Measure', os:'macOS 15.1', chip:'M2 Max',
+              ram_gb:32, storage_gb:500}}),
     it('CPU-003','Mac mini 2018 64Gb', {alias:'AccessFlow Live', extra:{}}),
     /* Un micro : il ne déclare aucun jeu de champs et n'a rien à
        faire dans la vue IT. */
@@ -188,7 +189,7 @@ const TESTS = `
   S('7. Les colonnes suivent ce qui est rempli');
   var cols = itColonnes(itItems()).map(c=>c.k);
   T(cols.includes('os') && cols.includes('chip'), 'ce qui est renseigné a sa colonne');
-  T(!cols.includes('mac'), 'ce que personne n’a rempli n’en a pas — une colonne vide rétrécit les autres');
+  T(!cols.includes('os_max'), 'ce que personne n’a rempli n’en a pas — une colonne vide rétrécit les autres');
   T(!cols.includes('os_frozen_why'), 'la raison du gel s’affiche avec le gel, pas à part');
 
   S('8. L’écran');
@@ -291,6 +292,23 @@ const TESTS = `
   });
   T(selectsVides.length === 0,
     'et aucun menu déroulant n’est vide (' + (selectsVides.join(', ')||'ok') + ')');
+
+  S('13. Les unités vivent dans la valeur, pas dans l’en-tête');
+  /* « 96 » sous une colonne « RAM (GB) » oblige l'œil à remonter à
+     l'en-tête à chaque ligne. « 96 GB » se lit seul. */
+  var cRam = ITEM_FIELDSETS.ordinateur.champs.find(c=>c.k === 'ram_gb');
+  var cSto = ITEM_FIELDSETS.ordinateur.champs.find(c=>c.k === 'storage_gb');
+  T(cRam.label === 'RAM' && cSto.label === 'Storage',
+    'les en-têtes ne portent plus l’unité');
+  T(extraLabel(cRam, 96) === '96 GB', 'la mémoire la porte');
+  /* 2 000 Go s'écrit 2 To : personne ne dit « deux mille gigas ». */
+  T(extraLabel(cSto, 2000) === '2 TB', '2 000 Go deviennent 2 TB');
+  T(extraLabel(cSto, 500) === '500 GB', 'et 500 restent en GB');
+  T(extraLabel(cSto, 1500) === '1,5 TB', 'un et demi se dit avec une décimale');
+  T(extraNumerique(cRam) && !extraNumerique({type:'text'}),
+    'un champ chiffré se reconnaît, pour s’aligner à droite');
+  var h2 = document.getElementById('v-it').innerHTML;
+  T(h2.includes('class="num"'), 'et les colonnes de chiffres sont alignées à droite');
 
   window.__results = R;
 `;

@@ -149,12 +149,36 @@ function extraOf(i, k){
   const v = e[k];
   return (v === undefined || v === null || v === '') ? '' : v;
 }
+/* ---- Mise en forme d'une valeur de domaine ----
+   L'unité appartient à la valeur, pas à l'en-tête de colonne :
+   « 96 GB » se lit seul, tandis que « 96 » sous une colonne
+   « RAM (GB) » oblige l'œil à remonter à chaque ligne.
+
+   Et l'ordre de grandeur suit l'usage : 2 000 Go s'écrit 2 To, parce
+   que personne ne dit « deux mille gigas ». */
+const EXTRA_FORMATS = {
+  gb:      v => frNombre(v) + ' GB',
+  storage: v => Number(v) >= 1000
+    ? frNombre(Math.round(Number(v) / 100) / 10) + ' TB'
+    : frNombre(v) + ' GB',
+  mb:      v => frNombre(v) + ' MB',
+  ghz:     v => frNombre(v) + ' GHz',
+  w:       v => frNombre(v) + ' W'
+};
+function frNombre(v){
+  const n = Number(v);
+  return isNaN(n) ? String(v) : n.toLocaleString('fr-FR');
+}
 function extraLabel(champ, v){
   if(v === '' || v === undefined || v === null) return '';
   if(champ.type === 'bool') return v ? 'Yes' : 'No';
   if(champ.type === 'date') return fdateD(v);
+  if(champ.fmt && EXTRA_FORMATS[champ.fmt]) return EXTRA_FORMATS[champ.fmt](v);
   return String(v);
 }
+/* Une valeur chiffrée s'aligne à droite : c'est ce qui permet de
+   comparer deux lignes d'un coup d'œil. */
+function extraNumerique(champ){ return champ && (champ.type === 'number' || !!champ.fmt); }
 
 /* --- Prix --- */
 function fprice(v){ return (v==null || v==='' || isNaN(v)) ? '' : Number(v).toLocaleString('fr-FR',{style:'currency',currency:'EUR'}); }

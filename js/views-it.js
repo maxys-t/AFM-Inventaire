@@ -98,7 +98,7 @@ function renderIT(){
           <th class="itname">Name</th>
           <th class="itmodel">Model</th>
           <th class="itid">ID</th>
-          ${cols.map(c=>`<th>${esc(c.label)}</th>`).join('')}
+          ${cols.map(c=>`<th${extraNumerique(c)?' class="num"':''}>${esc(c.label)}</th>`).join('')}
           <th>Where</th>
           <th>Warranty</th>
         </tr></thead>
@@ -108,7 +108,8 @@ function renderIT(){
             ? `<span class="muted">${esc(itemModelText(i))}</span>`
             : '<span class="muted">—</span>'}</td>
           <td class="itid" data-l="ID"><span class="mono">${esc(i.id)}</span></td>
-          ${cols.map(c=>`<td data-l="${esc(c.label)}">${cell(i, c)}</td>`).join('')}
+          ${cols.map(c=>`<td data-l="${esc(c.label)}"${
+            extraNumerique(c)?' class="num"':''}>${cell(i, c)}</td>`).join('')}
           <td data-l="Where">${esc(itemWhere(i))}</td>
           <td data-l="Warranty">${itWarrantyCell(i)}</td>
         </tr>`).join('')}</tbody>

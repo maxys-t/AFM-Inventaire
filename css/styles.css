@@ -1381,10 +1381,17 @@ nav button.navmain:not(.active){box-shadow:inset 0 0 0 1px var(--border2)}
    colonnes du regard — on ne lit pas des paragraphes.
    ============================================================ */
 .ittable td,.ittable th{white-space:nowrap}
-.ittable td{max-width:220px;overflow:hidden;text-overflow:ellipsis}
-.ittable .itname{font-weight:600;min-width:150px}
+/* Les en-têtes se touchaient : « RAM (GB)STORAGE (GB)HOSTNAME » se
+   lisait d'un seul tenant. Une colonne a besoin d'air à gauche et à
+   droite pour qu'on voie où elle commence. */
+.ittable td,.ittable th{padding-left:14px;padding-right:14px}
+.ittable td{max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.ittable .itname{font-weight:600;min-width:160px}
 .ittable .itmodel{max-width:260px}
 .ittable .itid{width:1%}
+/* Les chiffres s'alignent à droite et partagent la même chasse :
+   c'est ce qui permet de comparer deux lignes d'un coup d'œil. */
+.ittable td.num,.ittable th.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Le tableau défile dans son cadre et l'en-tête colle, comme
    l'inventaire : sans hauteur bornée, `position:sticky` n'a rien à
    quoi se caler. */
