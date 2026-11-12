@@ -288,25 +288,26 @@ const ITEM_FIELDSETS = {
     titre: 'Machine',
     champs: [
       /* La clé ne doit PAS contenir d'espace : elle sert d'identifiant
-         de champ dans le formulaire (`id="xf-…"`), et un id avec une
-         espace n'est pas retrouvable — la valeur ne se serait jamais
-         enregistrée. Le libellé, lui, s'écrit comme on veut. */
-      {k:'primary_role', label:'Primary Role',   type:'select',
+         de champ dans le formulaire (`id="xf-…"`), et un identifiant
+         HTML contenant une espace n'est pas retrouvable — la valeur ne
+         s'enregistrerait jamais, en silence. Le libellé affiché, lui,
+         s'écrit comme on veut. */
+      {k:'primary_role', label:'Primary Role',    type:'select',
        options:['Production','Measure','Live','Control','Instrument Control','Remote','Spare'],
        tip:"Ce qu'on lit en premier dans une liste de sept machines."},
-      {k:'os',         label:'OS version',      type:'text',   ph:'macOS 14.5',
+      {k:'os',         label:'OS version',       type:'text',   ph:'macOS 14.5',
        tip:"Dans un studio ce n'est pas une mesure, c'est une décision : on reste sur une version parce qu'un driver ou un plugin ne suit pas."},
-      {k:'os_frozen',  label:'Updates frozen',  type:'bool',
+      {k:'os_frozen',  label:'Updates frozen',   type:'bool',
        tip:"Sans ce drapeau, quelqu'un mettra la machine à jour un dimanche soir."},
       {k:'os_frozen_why', label:'Frozen because', type:'text', ph:'Antelope driver not ready'},
-      {k:'os_max',     label:'Max OS supported', type:'text',  ph:''},
-      {k:'chip',       label:'Chip',            type:'text',   ph:'M2 Max'},
-      {k:'ram_gb',     label:'RAM (GB)',        type:'number'},
-      {k:'storage_gb', label:'Storage (GB)',    type:'number'},
-      {k:'hostname',   label:'Hostname',        type:'text',   ph:'accessflow-a'},
-      {k:'mac',        label:'MAC address',     type:'text',   ph:'A4:83:E7:12:34:56'},
-      {k:'filevault',  label:'FileVault',       type:'select', options:['On','Off']},
-      {k:'backup_dest',label:'Backup to',       type:'text',   ph:'NAS / Time Machine disk'}
+      {k:'os_max',     label:'Max OS supported', type:'text',   ph:''},
+      {k:'chip',       label:'Chip',             type:'text',   ph:'M2 Max'},
+      {k:'ram_gb',     label:'RAM (GB)',         type:'number'},
+      {k:'storage_gb', label:'Storage (GB)',     type:'number'},
+      {k:'hostname',   label:'Hostname',         type:'text',   ph:'accessflow-a'},
+      {k:'mac',        label:'MAC address',      type:'text',   ph:'A4:83:E7:12:34:56'},
+      {k:'filevault',  label:'FileVault',        type:'select', options:['On','Off']},
+      {k:'backup_dest',label:'Backup to',        type:'text',   ph:'NAS / Time Machine disk'}
     ]
   }
 };
