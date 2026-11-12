@@ -21,6 +21,9 @@ const html = `<!DOCTYPE html><html><body>
   <input type="search" id="q">
   <div id="invSummary"></div><div id="invList"></div>
   <span class="colbox"><div class="colmenu" id="colMenu"></div></span>
+  <div class="overlay" id="ovDetail"><div class="modal wide" id="detailBody"></div></div>
+  <div class="overlay" id="ovExtra"><h3 id="xfTitle"></h3><div id="xfBody"></div></div>
+  <select id="i-cond"></select>
 </body></html>`;
 
 const STUBS = `
@@ -42,8 +45,32 @@ const STUBS = `
   function outBy(i){ return i.out ? (i.out.reason||'') : ''; }
   function outForRepair(){ return false; }
   function locLabel(n){ return n||''; }
-  function openDetail(){}
   function renderBulkBar(){}
+  function open_(){}
+  function close_(){}
+  function fillConds(){}
+  function showLabel(){}
+  function openCheckout(){}
+  function openCheckin(){}
+  function openReport(){}
+  function openReceive(){}
+  function deleteItem(){}
+  function itemUrl(id){ return 'https://x/?i=' + id; }
+  function packLines(){ return ''; }
+  function packsOfItem(){ return []; }
+  function needsOf(){ return []; }
+  function linkGroupOf(){ return null; }
+  function groupItems(){ return []; }
+  function requiredBy(){ return []; }
+  function liablesPour(){ return []; }
+  function histIcon(){ return ''; }
+  function histText(){ return ''; }
+  function histBy(){ return ''; }
+  function copiesDe(){ return []; }
+  function repairTag(){ return ''; }
+  function repairsOf(){ return []; }
+  function outLabel(){ return ''; }
+  function fdateOnly(d){ return d||''; }
   function show(){}
   function goInventory(){}
   function openItemForm(){}
@@ -192,6 +219,28 @@ const TESTS = `
   T(/const IT_SUBS/.test(read_cfg), 'et le périmètre de la vue aussi');
   T(!/apiInsertFieldset|from\\('fieldsets'\\)/.test(read_it + read_cfg),
     'aucune table, aucun formulaire de définition');
+
+  S('11. La fiche d’un item s’ouvre — et personne ne le vérifiait');
+  /* Vingt-huit harnais, et aucun n'avait jamais appelé openDetail :
+     l'écran le plus utilisé de l'application n'était testé par
+     personne. Une fonction manquante y est passée jusqu'en
+     production, où elle rendait toute fiche impossible à ouvrir.
+
+     Ce test est volontairement bête : il OUVRE, et toute exception
+     le fait échouer. C'est ce qui manquait. */
+  var planté = null;
+  try{ openDetail('CPU-001'); }catch(e){ planté = e.message; }
+  T(planté === null, 'ouvrir une fiche ne lève aucune exception (' + (planté||'ok') + ')');
+  var fiche = document.getElementById('detailBody').innerHTML;
+  T(fiche.includes('AccessFlow A'), 'elle porte le nom d’usage');
+  T(fiche.includes('Machine'), 'et la carte des champs de domaine');
+  T(fiche.includes('macOS 14.5') && fiche.includes('frozen'),
+    'avec ce qui est rempli, gel compris');
+
+  try{ openDetail('MCN-001'); }catch(e){ planté = e.message; }
+  T(planté === null, 'et une fiche sans jeu de champs s’ouvre aussi');
+  T(!document.getElementById('detailBody').innerHTML.includes('Nothing filled in yet'),
+    'sans carte Machine : un micro n’en déclare pas');
 
   window.__results = R;
 `;

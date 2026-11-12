@@ -1648,6 +1648,98 @@ function needsBlock(i){
 }
 
 /* ============================================================
+   LES CHAMPS PROPRES À UN DOMAINE (v2.8.0)
+
+   Un ordinateur a une version d'OS, un nom d'hôte, une adresse MAC ;
+   un micro n'en a pas. La carte n'apparaît donc que si la
+   sous-catégorie en déclare — voir ITEM_FIELDSETS dans config.js.
+
+   Aucun écran d'administration pour les définir : on édite le
+   fichier, comme pour les catégories et les états. Un studio de
+   trois personnes ne gagne rien à une interface pour une liste
+   qu'on touche trois fois par an.
+   ============================================================ */
+function extraBlock(i){
+  const fs = fieldsetOf(i);
+  if(!fs) return '';
+  const remplis = fs.champs.filter(c=>extraOf(i, c.k) !== '');
+  if(!remplis.length && !can('edit')) return '';
+
+  const ligne = c => {
+    const v = extraOf(i, c.k);
+    if(v === '') return '';
+    /* Une mise à jour gelée se lit en premier et se voit : sans ça,
+       quelqu'un mettra la machine à jour un dimanche soir. */
+    if(c.k === 'os_frozen' && v)
+      return `<div class="kv"><span class="k">${esc(c.label)}</span>
+        <span class="v"><span class="tag attente">frozen</span>
+        ${esc(extraOf(i,'os_frozen_why') || '')}</span></div>`;
+    if(c.k === 'os_frozen_why') return '';
+    return `<div class="kv"><span class="k">${esc(c.label)}</span>
+      <span class="v">${esc(extraLabel(c, v))}</span></div>`;
+  };
+
+  return `<div class="fcard">
+    <h4>${esc(fs.titre)}${can('edit')
+      ? ` <button class="btn sec small" onclick="openExtraForm('${i.id}')">Edit</button>` : ''}</h4>
+    ${remplis.length ? fs.champs.map(ligne).join('')
+      : '<div class="muted" style="font-size:13.5px">Nothing filled in yet.</div>'}
+  </div>`;
+}
+
+let extraEditing = null;
+function openExtraForm(id){
+  const i = item(id); const fs = fieldsetOf(i);
+  if(!i || !fs) return;
+  extraEditing = id;
+  document.getElementById('xfTitle').textContent = fs.titre + ' — ' + itemTitleText(i);
+  document.getElementById('xfBody').innerHTML = `<div class="form-grid">${
+    fs.champs.map(c=>{
+      const v = extraOf(i, c.k);
+      const lbl = `<label${c.tip?` data-tip="${esc(c.tip)}"`:''}>${esc(c.label)}${c.tip?' \u24D8':''}</label>`;
+      if(c.type === 'bool')
+        return `<div class="field full"><label class="checkline">
+          <input type="checkbox" id="xf-${c.k}" ${v?'checked':''}> ${esc(c.label)}</label>
+          ${c.tip?`<div class="hintline">${esc(c.tip)}</div>`:''}</div>`;
+      if(c.type === 'select')
+        return `<div class="field">${lbl}<select id="xf-${c.k}">
+          <option value="">—</option>
+          ${c.options.map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('')}
+        </select></div>`;
+      return `<div class="field">${lbl}<input id="xf-${c.k}"
+        type="${c.type === 'number' ? 'number' : (c.type === 'date' ? 'date' : 'text')}"
+        value="${esc(String(v))}" placeholder="${esc(c.ph || '')}"></div>`;
+    }).join('')}</div>
+    <div class="hintline" style="margin-top:10px">Only what is <b>decided</b> or
+      <b>characteristic</b> belongs here. A figure that drifts on its own — free storage,
+      battery health — would never be kept up to date, and a stale field reads like an answer.</div>`;
+  open_('ovExtra');
+}
+
+async function extraSave(){
+  const i = item(extraEditing); const fs = fieldsetOf(i);
+  if(!i || !fs) return;
+  const extra = {...(i.extra || {})};
+  fs.champs.forEach(c=>{
+    const el = document.getElementById('xf-' + c.k);
+    if(!el) return;
+    let v = (c.type === 'bool') ? el.checked : el.value.trim();
+    if(c.type === 'number') v = v === '' ? '' : Number(v);
+    /* On ne stocke pas les cases vides : un jsonb qui accumule des
+       clés nulles devient illisible à la relecture. */
+    if(v === '' || v === false) delete extra[c.k]; else extra[c.k] = v;
+  });
+  try{
+    await apiUpdateItem(i.id, {extra});
+    i.extra = extra;
+    close_('ovExtra');
+    openDetail(i.id);
+    if(curView() === 'it') renderIT();
+    toast('Saved.', 'ok');
+  }catch(err){ toast(String(err.message||err), 'error'); }
+}
+
+/* ============================================================
    LE LOT : CE QUI NE SE SÉPARE JAMAIS (v2.5.0)
 
    Les deux Amphion et leur Amp 700. Le Germanium Preamp et son

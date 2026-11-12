@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.8.1] — 2026-11-12
+
+### Corrigé
+
+- **Aucune fiche d'item ne s'ouvrait plus.** La carte des champs de
+  domaine était appelée depuis `openDetail`, mais la fonction qui la
+  rend n'avait jamais été écrite dans le fichier : mon insertion
+  s'était accrochée à un commentaire dont le numéro de version ne
+  correspondait plus, et l'ancre introuvable n'a rien remplacé — en
+  silence. L'appel, lui, était bien là.
+
+### Et surtout
+
+- **Vingt-huit harnais, et aucun n'avait jamais ouvert une fiche.**
+  L'écran le plus utilisé de l'application n'était testé par
+  personne : les harnais vérifiaient les listes, les caisses, les
+  projets, les calculs — jamais le clic le plus fréquent.
+
+  C'est pour ça qu'une fonction manquante est passée jusqu'en
+  production. `t260` ouvre désormais une fiche pour de bon, avec et
+  sans jeu de champs, et **toute exception fait échouer le harnais**.
+  Volontairement bête, et c'est exactement ce qui manquait.
+
+
 ## [2.8.0] — 2026-11-12
 
 ⚠️ **Migration SQL : `sql/035-alias-garantie-champs.sql`.** Trois
