@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.9.1] — 2026-11-12
+
+### Corrigé — « Un contenant ne peut pas être rangé dans son propre pack », en supprimant un dossier
+
+- **Le coupable n'était pas le dossier.** `pack_folders` a un
+  `on delete set null` sur `packs.folder_id` : supprimer un dossier
+  **met à jour les caisses** qu'il contenait. Or
+  `packs_container_sane` était un déclencheur `before insert or
+  update` sur *toute* la table `packs` — il se réveillait donc et
+  revalidait `container_id`, une colonne que la suppression ne
+  touchait pas.
+
+  Conséquence : une caisse déjà dans un état incohérent devenait
+  **impossible à modifier pour toujours** — pas seulement son
+  contenant : son nom, son dossier, sa case « permanent ». Le
+  verrou s'étendait à la ligne entière.
+
+  **La leçon : une validation ne doit porter que sur ce que la
+  requête change.** Revalider une donnée inchangée transforme une
+  incohérence passée en blocage définitif. La migration **036** fait
+  deux choses, par ceinture et bretelles : la fonction sort
+  immédiatement si `container_id` n'a pas bougé, et le déclencheur
+  ne s'arme plus que sur `update of container_id`.
+
+- Le harnais **`t270`** garde cette règle et deux autres sur le
+  dossier `sql/` : chaque migration depuis la 033 s'inscrit au
+  journal, et chaque inscription absorbe le doublon pour qu'une
+  migration recollée après une erreur ne casse pas sur sa clé.
+
 ## [2.9.0] — 2026-11-12
 
 ### Corrigé — et la leçon dépasse le bouton
