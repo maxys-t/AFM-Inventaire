@@ -68,7 +68,20 @@ const m036nom = (m036.match(/'036-[a-z-]+\.sql'/)||[])[0];
 T(m036nom === "'036-declencheur-contenant.sql'",
   'la 036 s’inscrit sous son nom de fichier, comme les 35 précédentes');
 
-S('5. Les fichiers sont numérotés sans doublon');
+S('5. Les écrans ne relèvent pas de l’onglet IT');
+/* Le code et la base doivent dire la même chose : « Display » existe
+   dans config.js, IT_SUBS ne la liste pas, et une migration a
+   effectivement requalifié les lignes. Sans la troisième, les deux
+   premières ne servent à rien — c'est le bug de la v2.8.5. */
+const cfg = read('js/config.js');
+T(/ecran:\s*\{label:"Display"/.test(cfg), 'la sous-catégorie Display existe');
+const itsubs = (cfg.match(/const IT_SUBS = \[([^\]]*)\]/)||[])[1] || '';
+T(!/ecran/.test(itsubs), 'IT_SUBS ne la contient pas');
+const m037 = read('sql/037-ecrans-hors-it.sql');
+T(/set subcat = 'ecran'/.test(m037),
+  'et la 037 déplace les lignes qui étaient restées en « ordinateur »');
+
+S('6. Les fichiers sont numérotés sans doublon');
 const nums = fichiers.map(f=>parseInt(f,10));
 T(new Set(nums).size === nums.length, 'aucun numéro en double');
 

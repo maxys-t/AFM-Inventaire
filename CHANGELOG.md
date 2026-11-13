@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.9.2] — 2026-11-13
+
+### Corrigé — les écrans étaient toujours dans l'onglet IT
+
+- En v2.8.5 j'ai créé la sous-catégorie **Display** et retiré les
+  écrans de l'onglet IT **côté code seulement** : la vue liste
+  `subcat = 'ordinateur'`, et les cinq écrans y étaient restés
+  rangés. Je t'avais laissé le déplacement à faire à la main —
+  c'était la mauvaise réponse.
+
+  **Quand une version change la signification d'une catégorie,
+  requalifier les lignes existantes fait partie de la version.**
+  Sinon le code dit une chose, la base en dit une autre, et c'est
+  la base qui gagne à l'écran. La migration **037** déplace les
+  cinq écrans (deux LG, trois Asus Zen Screen) nommément — pas sur
+  un filtre de nom, qui finirait un jour par en attraper un de
+  trop.
+
+- **Les identifiants restent en `CPU-…`**, volontairement : ils
+  sont cités par l'historique, les projets et les caisses, et sont
+  peut-être déjà imprimés sur une étiquette. L'application signale
+  déjà l'écart (pastille « code DSP ? » sur la fiche, liste
+  complète dans Settings). Renuméroter se décidera à part.
+
+- Le harnais `t270` vérifie désormais les trois choses ensemble :
+  la sous-catégorie existe, `IT_SUBS` ne la contient pas, et une
+  migration a bien requalifié les lignes.
+
 ## [2.9.1] — 2026-11-12
 
 ### Corrigé — « Un contenant ne peut pas être rangé dans son propre pack », en supprimant un dossier
