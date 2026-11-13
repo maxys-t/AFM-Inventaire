@@ -4,7 +4,7 @@
 
 /* Version affichée dans l'en-tête : permet de vérifier d'un coup d'œil
    quelle version est réellement en ligne après une mise à jour. */
-const APP_VERSION = '2.9.4';
+const APP_VERSION = '2.9.5';
 
 /* ---- le thème ----
 
@@ -231,11 +231,64 @@ function open_(id){
   document.getElementById(id).classList.add('open');
 }
 function openOver(id){ document.getElementById(id).classList.add('open','stacked'); }
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
-  if(e.target!==o) return;
-  if(o.id === 'ovCrop' && typeof cancelCrop === 'function') return cancelCrop();
-  o.classList.remove('open','stacked');
-}));
+/* ---- Un clic, c'est un appui ET un relâchement au même endroit ----
+
+   Le navigateur, lui, déclenche `click` dès que l'appui et le
+   relâchement partagent un ANCÊTRE commun. D'où deux agacements bien
+   réels, qui ont la même cause :
+
+   1. On commence une sélection dans le formulaire, la souris dépasse
+      le cadre, on relâche sur le fond. Ancêtre commun : l'overlay.
+      La fenêtre se fermait — sans rien enregistrer.
+
+   2. On sélectionne le nom d'un item pour le copier. On relâche :
+      la fiche s'ouvrait, le glissement ayant été pris pour un clic.
+
+   On n'étouffe donc un clic que s'il est le résidu d'un GESTE :
+   pointeur qui a parcouru du chemin, ou texte effectivement
+   sélectionné. Les commandes (boutons, cases, champs) sont
+   exemptées : y frémir de trois pixels doit continuer à les
+   actionner. */
+
+const GESTE_SEUIL = 8;      // px — au-delà, ce n'est plus un clic
+const GESTE_FRÉMIR = 3;     // px — en deçà, c'en est toujours un
+let gesteDépart = null;
+
+const estCommande = el => !!(el && el.closest &&
+  el.closest('input,select,textarea,option,button,a,label,summary,' +
+             '[contenteditable="true"],[role="button"],.btn'));
+
+document.addEventListener('pointerdown', e=>{
+  gesteDépart = {x:e.clientX, y:e.clientY, cible:e.target};
+}, true);
+
+document.addEventListener('click', e=>{
+  const d = gesteDépart;
+  if(!d) return;
+  const parcouru = Math.hypot(e.clientX - d.x, e.clientY - d.y);
+  if(parcouru <= GESTE_FRÉMIR) return;                 // un vrai clic
+
+  const sél = window.getSelection && window.getSelection();
+  const duTexte = !!(sél && !sél.isCollapsed && String(sél).trim());
+  if(parcouru <= GESTE_SEUIL && !duTexte) return;      // main mal assurée
+
+  if(estCommande(e.target) || estCommande(d.cible)) return;
+
+  e.stopPropagation();
+  e.preventDefault();
+}, true);
+
+/* Fermer en cliquant sur le fond : il faut avoir appuyé ET relâché
+   sur le fond. Un geste parti de l'intérieur ne ferme rien. */
+document.querySelectorAll('.overlay').forEach(o=>{
+  let appuyéSurLeFond = false;
+  o.addEventListener('pointerdown', e=>{ appuyéSurLeFond = (e.target === o); });
+  o.addEventListener('click', e=>{
+    if(e.target !== o || !appuyéSurLeFond) return;
+    if(o.id === 'ovCrop' && typeof cancelCrop === 'function') return cancelCrop();
+    o.classList.remove('open','stacked');
+  });
+});
 
 /* ---- export / import JSON ---- */
 async function exportJSON(){

@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.9.5] — 2026-11-13
+
+### Corrigé — un clic, c'est un appui ET un relâchement au même endroit
+
+Deux agacements signalés en utilisant l'application. Ils n'en font
+qu'un : **le navigateur déclenche `click` dès que l'appui et le
+relâchement partagent un ancêtre commun**, peu importe la distance
+parcourue entre les deux.
+
+- **Une sélection qui dépasse le cadre fermait la fenêtre — sans
+  enregistrer.** Appui dans le formulaire, souris qui sort, relâché
+  sur le fond : l'ancêtre commun est l'overlay, donc le navigateur
+  annonçait un clic sur le fond, donc la fermeture. Désormais il
+  faut avoir **appuyé et relâché sur le fond** pour fermer.
+
+- **Sélectionner le nom d'un item ouvrait sa fiche au relâchement.**
+  Le glissement était pris pour un clic.
+
+La règle retenue : on n'étouffe un clic que s'il est le résidu d'un
+**geste** — pointeur qui a parcouru plus de 8 px, ou moins mais avec
+du texte effectivement sélectionné. En deçà de 3 px, c'est toujours
+un clic : une main mal assurée doit continuer à fonctionner.
+
+**Les commandes sont exemptées** — boutons, cases, champs, liens.
+Frémir de dix pixels sur une case à cocher doit continuer à la
+cocher : réparer un agacement ne vaut pas casser un usage.
+
+Le harnais `t272` rejoue ces gestes avec de vrais événements, dans
+les deux sens : ce qui doit être étouffé et ce qui doit passer.
+
 ## [2.9.4] — 2026-11-13
 
 ### Corrigé — « Modification de la fiche réservée aux administrateurs » en passant une migration
