@@ -30,16 +30,54 @@ order by id;
 --    La liste est nominative, pas devinée sur le nom : un filtre
 --    du genre « name ilike '%screen%' » attraperait un jour un
 --    objet qui n'a rien à voir. Cinq lignes se nomment.
+--
+--    LE DÉCLENCHEUR `guard_items` EST MIS EN PAUSE le temps de
+--    l'opération. Il a été écrit avec cette ligne :
+--
+--        if auth.uid() is null then return new; end if;
+--                                    -- maintenance SQL / service
+--
+--    L'hypothèse était que l'éditeur SQL du tableau de bord est
+--    anonyme. ELLE EST FAUSSE : le tableau de bord envoie un jeton,
+--    `auth.uid()` répond, et comme cet identifiant ne figure pas
+--    dans la table des comptes, `can_edit_inventory()` dit non. Une
+--    migration légitime se faisait donc refuser par le garde-fou
+--    des comptes.
+--
+--    On le suspend explicitement plutôt que d'affaiblir la règle :
+--    le garde-fou protège l'application, pas les migrations.
+--    `on_error_rollback` du bloc le rallume quoi qu'il arrive.
 -- ------------------------------------------------------------
-update public.items
-   set subcat = 'ecran'
- where id in ('CPU-006',   -- LG 32UN880P
-              'CPU-007',   -- LG 43UN700
-              'CPU-008',   -- Asus Zen Screen MB14A #1
-              'CPU-009',   -- Asus Zen Screen MB14A #2
-              'CPU-010')   -- Asus Zen Screen MB14A #3
-   and cat = 'informatique'
-   and subcat = 'ordinateur';
+do $$
+begin
+  alter table public.items disable trigger guard_items;
+
+  update public.items
+     set subcat = 'ecran'
+   where id in ('CPU-006',   -- LG 32UN880P
+                'CPU-007',   -- LG 43UN700
+                'CPU-008',   -- Asus Zen Screen MB14A #1
+                'CPU-009',   -- Asus Zen Screen MB14A #2
+                'CPU-010')   -- Asus Zen Screen MB14A #3
+     and cat = 'informatique'
+     and subcat = 'ordinateur';
+
+  alter table public.items enable trigger guard_items;
+exception when others then
+  -- Ne JAMAIS sortir d'ici en laissant le garde-fou éteint.
+  alter table public.items enable trigger guard_items;
+  raise;
+end $$;
+
+-- Et on le VÉRIFIE, comme la 020 l'avait établi : se fier au fait
+-- qu'on a écrit la ligne ne suffit pas, c'est l'état réel qui compte.
+do $$ declare e char; begin
+  select tgenabled into e from pg_trigger
+   where tgname = 'guard_items' and tgrelid = 'public.items'::regclass;
+  if e is distinct from 'O' then
+    raise exception 'guard_items n''a pas été réactivé (état %)', e;
+  end if;
+end $$;
 
 -- ------------------------------------------------------------
 -- 3. Les identifiants restent en CPU-…

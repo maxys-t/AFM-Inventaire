@@ -81,7 +81,31 @@ const m037 = read('sql/037-ecrans-hors-it.sql');
 T(/set subcat = 'ecran'/.test(m037),
   'et la 037 déplace les lignes qui étaient restées en « ordinateur »');
 
-S('6. Les fichiers sont numérotés sans doublon');
+S('6. Une migration qui suspend un garde-fou le rallume');
+/* `guard_items` refuse tout changement de fiche à qui n'est pas
+   éditeur — et l'éditeur SQL du tableau de bord en fait partie,
+   contrairement à ce que supposait la 005. Une migration a donc le
+   droit de le suspendre, mais JAMAIS de sortir en le laissant
+   éteint : l'application tournerait sans sa règle de droits. */
+/* La règle ne vaut que pour les migrations écrites depuis qu'elle
+   existe. Les 014 à 016 suspendaient déjà des garde-fous sans rien
+   vérifier ; elles sont passées depuis longtemps et on ne réécrit
+   pas une migration appliquée. La 020 avait eu la bonne idée — le
+   contrôle final sur `tgenabled` — on la généralise. */
+for(const f of fichiers.filter(x=>parseInt(x,10) >= 37)){
+  const t = read('sql/'+f);
+  for(const d of (t.match(/disable trigger (\w+)/g)||[])){
+    const nom = d.split(' ').pop();
+    T((t.match(new RegExp('enable trigger ' + nom,'g'))||[]).length >= 2,
+      f + ' : ' + nom + ' est rallumé en sortie normale ET sur erreur');
+    T(/exception when others then/.test(t),
+      f + ' : la remise en service est protégée par un gestionnaire d’erreur');
+    T(/tgenabled/.test(t) && /n''a pas été réactivé/.test(t),
+      f + ' : et l’état réel du déclencheur est vérifié à la fin');
+  }
+}
+
+S('7. Les fichiers sont numérotés sans doublon');
 const nums = fichiers.map(f=>parseInt(f,10));
 T(new Set(nums).size === nums.length, 'aucun numéro en double');
 

@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.9.4] — 2026-11-13
+
+### Corrigé — « Modification de la fiche réservée aux administrateurs » en passant une migration
+
+- Les migrations **037** et **038** se faisaient refuser par
+  `guard_items`, le déclencheur qui réserve la modification d'une
+  fiche aux éditeurs. Il avait été écrit en v0.05 avec cette ligne :
+
+  ```sql
+  if auth.uid() is null then return new; end if;  -- maintenance SQL / service
+  ```
+
+  **L'hypothèse était que l'éditeur SQL du tableau de bord est
+  anonyme. Elle est fausse** : le tableau de bord envoie un jeton,
+  `auth.uid()` répond, cet identifiant ne figure pas dans la table
+  des comptes, et `can_edit_inventory()` dit non. Une migration
+  parfaitement légitime se faisait donc arrêter par le garde-fou
+  des comptes de l'application.
+
+- Les deux migrations **suspendent explicitement `guard_items`** le
+  temps de l'opération, plutôt que d'affaiblir la règle : le
+  garde-fou protège l'application, pas les migrations. Elles le
+  rallument en sortie normale, le rallument encore dans un
+  gestionnaire d'erreur, puis **vérifient `tgenabled` dans
+  `pg_trigger`** — parce qu'avoir écrit la ligne ne prouve pas
+  qu'elle a pris effet. C'est le motif que la 020 avait déjà
+  inventé ; il devient la règle.
+
+- Le harnais `t270` l'impose à toute migration à partir de la 037.
+  Les plus anciennes ne sont pas réécrites : une migration déjà
+  appliquée ne se corrige pas, elle se remplace.
+
 ## [2.9.3] — 2026-11-13
 
 ### Corrigé — plus de trou de photo dans l'inventaire

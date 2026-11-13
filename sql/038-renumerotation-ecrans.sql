@@ -85,7 +85,19 @@ begin
 
   -- --------------------------------------------------------
   -- 3. Le renommage, un couple à la fois
+  --
+  --    `guard_items` est mis en pause : il refuse tout changement
+  --    d'identifiant à qui n'est pas éditeur, et il nous compte
+  --    parmi ceux-là. Voir l'explication en tête de la 037 — en
+  --    deux mots, l'éditeur SQL du tableau de bord n'est PAS
+  --    anonyme, contrairement à ce que supposait la 005.
+  --
+  --    Le garde-fou protège l'application, pas les migrations. On
+  --    le suspend franchement et on le rallume quoi qu'il arrive,
+  --    plutôt que d'y percer une exception permanente.
   -- --------------------------------------------------------
+  alter table public.items disable trigger guard_items;
+
   for i in 1 .. array_length(paires, 1) loop
     ancien  := paires[i][1];
     nouveau := paires[i][2];
@@ -114,7 +126,24 @@ begin
     faits := faits + 1;
   end loop;
 
+  alter table public.items enable trigger guard_items;
   raise notice '% écran(s) renuméroté(s).', faits;
+
+exception when others then
+  -- Ne JAMAIS sortir d'ici en laissant le garde-fou éteint, même si
+  -- l'un des contrôles ci-dessus a arrêté la migration.
+  alter table public.items enable trigger guard_items;
+  raise;
+end $$;
+
+-- Et on le VÉRIFIE, comme la 020 l'avait établi : se fier au fait
+-- qu'on a écrit la ligne ne suffit pas, c'est l'état réel qui compte.
+do $$ declare e char; begin
+  select tgenabled into e from pg_trigger
+   where tgname = 'guard_items' and tgrelid = 'public.items'::regclass;
+  if e is distinct from 'O' then
+    raise exception 'guard_items n''a pas été réactivé (état %)', e;
+  end if;
 end $$;
 
 insert into public.schema_migrations (id, name, note)
