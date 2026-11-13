@@ -1,5 +1,59 @@
 # Changelog
 
+## [2.10.0] — 2026-11-13
+
+### Ajouté — deux dates qui veulent le même objet
+
+`projBusy()` ne regardait que le **présent** : un item est occupé
+s'il est *déjà sorti*. Les dates d'un projet ne servaient qu'à
+l'affichage. Deux dates sur le même week-end pouvaient donc toutes
+les deux prévoir le U87, et on ne le découvrait **qu'au matin du
+chargement** — quand il est trop tard pour trouver autre chose.
+
+Tout était déjà en base : `starts_on`, `ends_on`, `item_ids`,
+`pack_ids`. Il ne manquait que la comparaison. **Aucune migration.**
+
+- **Un bandeau en haut de la composition** : « 3 item(s) also
+  planned for Trianon on overlapping dates ». En haut, parce qu'un
+  avertissement qu'on ne voit qu'en défilant n'avertit personne.
+- **Chaque ligne concernée porte un liseré et la phrase**, avec le
+  nom du projet *et ses dates* — sans les dates, on ne sait pas s'il
+  faut s'inquiéter.
+- **On signale, on n'empêche pas.** Même règle que le matériel
+  abîmé depuis la v1.22 : rien n'est désactivé, et le bandeau le dit.
+  Celui qui charge connaît peut-être un arrangement que la base
+  ignore.
+- La détection passe par `projContent()`, donc elle hérite de tout
+  ce qu'il sait résoudre : le contenu des caisses, le contenant
+  lui-même, les lots indissociables, les substitutions, et le
+  contenu figé d'un projet parti. Une seule source de vérité sur
+  « ce qui part ».
+
+**Trois cas limites tranchés, parce que c'est là qu'un détecteur de
+conflits devient aveugle ou insupportable :**
+
+- **Un projet sans dates ne réserve rien** — ce n'est pas un trou :
+  « Travel Kit » est un modèle qu'on recopie, il décrit un contenu,
+  il ne prend pas de date. Et quand un projet n'a pas de dates,
+  l'application **dit pourquoi elle se tait** plutôt que de laisser
+  croire qu'il n'y a pas de conflit.
+- **Une date passée n'alerte plus.** Prévenir que le U87 était aussi
+  pris le mois dernier n'apprend rien.
+- **Sauf si le projet est encore en show.** Une date de retour
+  dépassée n'en est plus une : le matériel est dehors et personne ne
+  peut promettre qu'il rentre lundi, donc sa plage reste ouverte et
+  il entre en conflit avec tout ce qu'on planifie. **C'est le
+  harnais qui a trouvé ce cas** — ma première version comparait la
+  plage écrite, donc une tournée en retard cessait silencieusement
+  de réserver quoi que ce soit.
+
+Les dates sont comparées en texte « AAAA-MM-JJ » : l'ordre
+alphabétique *est* l'ordre chronologique. Pas de `new Date()`, donc
+pas de fuseau horaire — une date de tournée n'a pas d'heure, et lui
+en inventer une est le plus court chemin vers un décalage d'un jour.
+
+Harnais `t280`, 25 vérifications.
+
 ## [2.9.5] — 2026-11-13
 
 ### Corrigé — un clic, c'est un appui ET un relâchement au même endroit

@@ -190,6 +190,15 @@ function projEditor(){
   const pris = projFromPacks(p);
   const c = projContent(p);
 
+  /* Les objets que d'AUTRES dates prévoient en même temps. Calculé
+     une fois ici, consulté par ligne : le contraire relirait la
+     composition de chaque projet à chaque ligne affichée. */
+  const clash = projConflicts(p);
+  const pjClash = i => {
+    const l = i && clash.get(i.id);
+    return l ? `<div class="s clashtxt">⚠ ${esc(conflictText(l))}</div>` : '';
+  };
+
   /* ---- colonne de gauche ---- */
   let src = '';
   if(projView.tab === 'items'){
@@ -278,8 +287,10 @@ function projEditor(){
         <span class="muted">${dedans.length} item(s) · ${fweight(dedans.reduce((t,i)=>t+(i.weight_g||0),0))}</span>
         <button class="pjx" onclick="projRemovePack('${g.packId}')" title="Remove this case">✕</button></div>
       <div class="bd">
-        ${g.items.map(i=>`<div class="pjrow">${pjThumb(i)}<div class="pjnm"><div class="t">${itemTitle(i)}</div>
-            <div class="s mono">${i.id}</div></div><span class="muted">${fweight(i.weight_g||0)}</span></div>`).join('')}
+        ${g.items.map(i=>`<div class="pjrow${clash.has(i.id)?' clash':''}">${pjThumb(i)}<div class="pjnm">
+            <div class="t">${itemTitle(i)}</div>
+            <div class="s mono">${i.id}</div>${pjClash(i)}</div>
+            <span class="muted">${fweight(i.weight_g||0)}</span></div>`).join('')}
         ${g.écartés.length?`<div class="pjsub warntxt">Left out — unavailable</div>` +
           g.écartés.map(i=>`<div class="pjrow off">${pjThumb(i)}<div class="pjnm"><div class="t">${itemTitle(i)}</div>
             <div class="s">${esc(itemWhere(i))}</div></div></div>`).join(''):''}
@@ -309,9 +320,9 @@ function projEditor(){
   if(c.loose.length){
     contenu += `<div class="pjgrp"><div class="hd"><span class="t">Loose items</span>
       <span class="muted">${c.loose.length} item(s) · ${fweight(c.loose.reduce((t,i)=>t+(i.weight_g||0),0))}</span></div>
-      <div class="bd">${c.loose.map(i=>`<div class="pjrow" data-kind="placer" data-key="${i.id}">
+      <div class="bd">${c.loose.map(i=>`<div class="pjrow${clash.has(i.id)?' clash':''}" data-kind="placer" data-key="${i.id}">
         ${c.groups.length?'<span class="pjgrip" title="Drag into a case">⠿</span>':''}${pjThumb(i)}
-        <div class="pjnm"><div class="t">${itemTitle(i)}</div><div class="s mono">${i.id}</div></div>
+        <div class="pjnm"><div class="t">${itemTitle(i)}</div><div class="s mono">${i.id}</div>${pjClash(i)}</div>
         <span class="muted">${fweight(i.weight_g||0)}</span>
         <button class="pjx" onclick="projRemoveItem('${i.id}')">✕</button></div>`).join('')}
       </div>
@@ -320,6 +331,29 @@ function projEditor(){
       </div>`;
   }
   if(!contenu) contenu = `<div class="empty">Drag a case or an item from the left,<br>or use the + button.</div>`;
+
+  /* Le bandeau. On le met EN HAUT de la composition parce que c'est
+     une information qu'on veut avant de descendre la liste, pas
+     après — et parce qu'un avertissement qu'on ne voit qu'en
+     défilant n'avertit personne.
+
+     Il signale sans empêcher : même règle que le matériel abîmé.
+     L'application dit ce qu'elle sait, celui qui charge décide — il
+     connaît peut-être un arrangement que la base ignore. */
+  let bandeau = '';
+  if(clash.size){
+    const noms = [...new Set([...clash.values()].flat().map(x=>x.name))];
+    bandeau = `<div class="pjclash">⚠ <b>${clash.size} item(s)</b> also planned for
+      ${noms.map(n=>esc(n)).join(', ')} on overlapping dates. Nothing is blocked —
+      check who takes what.</div>`;
+  }else if(!projRange(p) && (c.items.length)){
+    /* Sans dates, aucun conflit ne peut être détecté. Le dire ici
+       évite de croire qu'il n'y en a pas. Un projet sans dates reste
+       légitime : c'est un modèle qu'on recopie, comme Travel Kit. */
+    bandeau = `<div class="hintline" style="padding:6px 10px">No dates on this project —
+      set them to be warned when another date wants the same gear.</div>`;
+  }
+  contenu = bandeau + contenu;
 
   return `
   <div class="pjhead">

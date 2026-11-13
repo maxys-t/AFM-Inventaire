@@ -1331,6 +1331,16 @@ tr.outpack .chev{margin-right:7px}
 .pjsub{font-size:11px;color:var(--muted);padding:8px 2px 3px;
   text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .warntxt{color:var(--warn)}
+/* Une date qui veut le même objet qu'une autre. On SIGNALE, on
+   n'empêche pas : la ligne garde sa place et sa lisibilité, elle
+   porte seulement un liseré et une phrase. La barrer ou la griser
+   laisserait croire qu'elle a été écartée, ce qui n'est pas le cas. */
+.pjrow.clash{box-shadow:inset 3px 0 0 var(--warn);padding-left:11px}
+.clashtxt{color:var(--warn);font-size:12px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.pjclash{margin:0 0 8px;padding:9px 12px;border-radius:10px;font-size:13px;
+  background:var(--t-warn);color:var(--warn);border-left:3px solid var(--warn)}
+.pjclash b{color:var(--warn)}
 /* Un consommable doit se lire comme une ligne de rappel, jamais comme
    un item : il n'a ni identifiant, ni poids, ni état. */
 .pjrow.extra .pjnm .t::after{content:"consumable";margin-left:8px;font-size:11px;font-weight:500;

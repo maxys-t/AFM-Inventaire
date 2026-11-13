@@ -288,6 +288,25 @@ réaliste qu'une fois les câbles comptés plutôt que numérotés.
 
 ---
 
+## ✅ v2.10 — Les conflits de dates (livré le 13 novembre 2026)
+
+Livré tel que décrit ci-dessous, sans migration. Trois cas limites
+ont été tranchés en chemin, et le troisième n'avait pas été vu :
+
+- un projet **sans dates** ne réserve rien — c'est un modèle, pas une
+  date. L'application dit pourquoi elle se tait, plutôt que de laisser
+  croire qu'il n'y a pas de conflit ;
+- une **date passée** n'alerte plus ;
+- **sauf si le projet est encore en show** : une date de retour
+  dépassée n'en est plus une, le matériel est dehors et sa plage reste
+  ouverte. Trouvé par le harnais, pas par moi.
+
+Reste ouvert, si le besoin se présente : l'avertissement n'existe que
+dans la composition. Le tableau de bord et la liste des projets ne le
+portent pas encore.
+
+### L'analyse d'origine
+
 ## Un trou trouvé en lisant le dépôt Snipe-IT
 
 Pas dans leur code : dans la liste des outils tiers de leur README.

@@ -1041,6 +1041,111 @@ function projBusy(i, p){
   return false;
 }
 
+/* --- Deux dates qui veulent le même objet (v2.10) ---------------
+
+   `projBusy()` ci-dessus ne regarde que le PRÉSENT : un item est
+   occupé s'il est *déjà sorti*. Les dates d'un projet ne servaient
+   qu'à l'affichage. Donc deux dates sur le même week-end pouvaient
+   toutes les deux prévoir le U87, et on ne le découvrait qu'au
+   matin du chargement — quand il est trop tard pour trouver autre
+   chose.
+
+   Tout était déjà en base. Il ne manquait que la comparaison. */
+
+/* La plage d'un projet, ou null s'il n'en a pas.
+
+   PAS DE DATES = PAS DE CONFLIT, et ce n'est pas un trou : un projet
+   sans dates est un modèle — « Travel Kit » — qu'on recopie. Il ne
+   réserve rien, il décrit un contenu.
+
+   Une seule des deux dates suffit : une date d'un jour s'écrit
+   souvent avec le seul départ. */
+function projRange(p){
+  if(!p || p.archived) return null;
+  const a = p.starts_on || p.ends_on;
+  if(!a) return null;
+  let b = p.ends_on || p.starts_on;
+
+  /* UNE DATE DE RETOUR DÉPASSÉE N'EN EST PLUS UNE. Un projet encore
+     en show après sa date de fin n'a pas de fin connue : le matériel
+     est dehors, et personne ne peut promettre qu'il rentre lundi. Sa
+     plage reste donc ouverte, et il entre en conflit avec tout ce
+     qu'on planifie — ce qui est exactement ce qu'on veut savoir.
+
+     C'est un harnais qui a trouvé ce cas : la première version
+     comparait la plage écrite, donc une tournée en retard cessait
+     silencieusement de réserver quoi que ce soit. */
+  if(p.status === 'show' && b < todayISO()) b = '9999-12-31';
+
+  return {from:a, to:b};
+}
+
+/* Les dates sont en « AAAA-MM-JJ » : l'ordre alphabétique EST l'ordre
+   chronologique. Pas de `new Date()`, donc pas de fuseau horaire —
+   une date de tournée n'a pas d'heure, et la convertir en lui en
+   inventant une est le plus court chemin vers un décalage d'un jour. */
+function rangesOverlap(a, b){
+  return !!(a && b) && a.from <= b.to && b.from <= a.to;
+}
+
+function todayISO(){
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset()*60000)
+         .toISOString().slice(0,10);
+}
+
+/* Un projet terminé n'entre plus en conflit avec rien : prévenir que
+   le U87 était aussi pris le mois dernier n'apprend rien.
+
+   Le cas du show en retard n'est PAS traité ici mais dans
+   `projRange()`, qui laisse sa plage ouverte. Une seule règle, à un
+   seul endroit : deux endroits qui décident de la même chose finissent
+   toujours par en décider différemment. */
+function projOver(p){
+  const r = projRange(p);
+  return !!r && r.to < todayISO();
+}
+
+/* Table identifiant d'item → les autres projets qui le prévoient sur
+   des dates qui chevauchent les nôtres.
+
+   Calculée UNE FOIS par affichage et non une fois par ligne : la
+   composition d'un projet se relit à chaque redessin, et le faire par
+   ligne multipliait ce coût par le nombre d'items.
+
+   On s'appuie sur `projContent()`, donc on hérite de tout ce qu'il
+   sait déjà résoudre : le contenu des caisses, les lots
+   indissociables, les substitutions, et le contenu FIGÉ d'un projet
+   parti. Une seule source de vérité sur « ce qui part ». */
+function projConflicts(p){
+  const carte = new Map();
+  const moi = projRange(p);
+  if(!moi) return carte;
+
+  (db.projects||[]).forEach(autre=>{
+    if(!autre || autre.id === p.id || autre.archived) return;
+    const sa = projRange(autre);
+    if(!rangesOverlap(moi, sa) || projOver(autre)) return;
+
+    projContent(autre).items.forEach(i=>{
+      if(!i) return;
+      const l = carte.get(i.id) || [];
+      l.push({id:autre.id, name:autre.name, from:sa.from, to:sa.to});
+      carte.set(i.id, l);
+    });
+  });
+  return carte;
+}
+
+/* La phrase qu'on affiche. Elle nomme le projet ET ses dates : sans
+   les dates, on ne sait pas s'il faut s'inquiéter. */
+function conflictText(liste){
+  if(!liste || !liste.length) return '';
+  const une = c => c.name + ' (' + fdateOnly(c.from) +
+    (c.to !== c.from ? ' → ' + fdateOnly(c.to) : '') + ')';
+  return 'Also planned for ' + liste.map(une).join(', ');
+}
+
 /* Ce qu'il faut signaler sans empêcher, en une phrase. */
 function itemFlag(i){
   if(!i) return '';
