@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.10.1] — 2026-11-13
+
+### Corrigé — impossible d'ouvrir LEASH, en show depuis le 31 octobre
+
+- **La cause n'était pas la v2.10, mais la v2.7.** LEASH est parti
+  le 31 octobre ; son contenu a été figé quand les consommables
+  n'étaient encore que des libellés accrochés aux caisses. Chacune de
+  ses 60 lignes porte `kind` à plat, sans objet `supply`. La v2.7 a
+  ensuite fait lire `l.supply.kind` à `supplySections()` — et la
+  préparation comme la composition plantaient à l'ouverture. Personne
+  n'avait rouvert un projet parti avant la v2.7 depuis : le défaut a
+  dormi deux semaines.
+
+  `supplyKind()` lit désormais la nature d'une ligne, qu'elle soit
+  vivante ou figée.
+
+- **Un second défaut de la même famille, trouvé par le harnais.** Si
+  une caisse est supprimée après le départ d'un projet, le contenu
+  figé la cite toujours, `pack(id)` ne la trouve plus, et la
+  composition plantait sur sa vignette. `packPhoto()` tolère
+  désormais une caisse absente.
+
+**La leçon, et c'est la même que celle de la v2.8.4 :** aucun harnais
+n'avait jamais *affiché* un projet en show avec un contenu figé à
+l'ancien format. On testait le code d'aujourd'hui sur des données
+d'aujourd'hui. **Un contenu figé est une archive, et une archive se
+relit avec le format de son époque** — le code qui la lit doit
+tolérer tous les formats qui ont existé, pas seulement le dernier.
+
+Le harnais `t281` ouvre pour de vrai un projet figé à l'ancien format
+dont une caisse a disparu, en préparation et en composition.
+
 ## [2.10.0] — 2026-11-13
 
 ### Ajouté — deux dates qui veulent le même objet

@@ -620,10 +620,26 @@ function packAllSupplies(p, vus){
 }
 /* Regroupées pour l'affichage : accessoires, puis rab, puis
    consommables. L'ordre est celui dans lequel on charge. */
+/* La nature d'une ligne, qu'elle soit VIVANTE ou FIGÉE.
+
+   Une ligne vivante porte son objet `supply`. Une ligne figée dans
+   le contenu d'un projet parti AVANT la v2.7 ne le porte pas : elle
+   a été photographiée quand les consommables n'étaient encore que
+   des libellés, et garde `kind` à plat. Lire `l.supply.kind` sur
+   elle plantait — et empêchait d'ouvrir le projet LEASH, en show
+   depuis le 31 octobre, pendant deux semaines sans que personne ne
+   le voie.
+
+   LA LEÇON : un contenu figé est une archive, et une archive se lit
+   avec le format DE SON ÉPOQUE. Le code qui la relit doit tolérer
+   tous les formats qui ont existé, pas seulement le dernier. */
+function supplyKind(l){
+  return (l && l.supply && l.supply.kind) || (l && l.kind) || 'consumable';
+}
 const SUPPLY_SECTIONS = [
-  {cle:'accessory', titre:'Accessories', test:l=>l.supply.kind === 'accessory' && !l.spare},
-  {cle:'spare',     titre:'Spares',      test:l=>l.supply.kind === 'accessory' && l.spare},
-  {cle:'consumable',titre:'Consumables', test:l=>l.supply.kind === 'consumable'}
+  {cle:'accessory', titre:'Accessories', test:l=>supplyKind(l) === 'accessory' && !l.spare},
+  {cle:'spare',     titre:'Spares',      test:l=>supplyKind(l) === 'accessory' && l.spare},
+  {cle:'consumable',titre:'Consumables', test:l=>supplyKind(l) === 'consumable'}
 ];
 function supplySections(lignes){
   return SUPPLY_SECTIONS
@@ -982,6 +998,11 @@ function itemWhere(i){
 }
 /* La photo d'un pack est celle de son contenant. */
 function packPhoto(p){
+  /* Un projet parti cite les caisses de son départ. Si l'une a été
+     supprimée depuis, pack(id) rend undefined — et la composition
+     entière plantait sur une vignette. Même famille que supplyKind() :
+     une archive peut citer ce qui n'existe plus. */
+  if(!p) return null;
   const c = p.container_id ? item(p.container_id) : null;
   if(c && c.photo) return c.photo;
   const m = packItemsOf(p.id).find(x=>x.photo);
