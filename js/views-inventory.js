@@ -406,8 +406,8 @@ function mobileCard(i, isChild){
   return `<div class="mcard${isChild?' mchild':''}${sel.has(i.id)?' msel':''}" onclick="openDetail('${i.id}')">
     <label class="mcb" onclick="event.stopPropagation()">
       <input type="checkbox" ${sel.has(i.id)?'checked':''} onchange="toggleSel('${i.id}',this.checked)"></label>
-    ${prefs.mobilePhoto ? (i.photo
-        ? `<img class="mthumb" loading="lazy" src="${i.photo}">`
+    ${prefs.mobilePhoto ? (photoShown(i)
+        ? `<img class="mthumb" loading="lazy" src="${photoShown(i)}">`
         : '<span class="mthumb mnophoto"></span>') : ''}
     <div class="mbody">
       <div class="mtitle">${itemTitle(i)}</div>
@@ -420,14 +420,14 @@ function mobileCard(i, isChild){
 function mobileGroupCard(key, items, open){
   const dispo = items.filter(i=>i.status==='dispo').length;
   const marques = [...new Set(items.map(i=>(i.brand||'').trim()))];
-  const photos = [...new Set(items.map(i=>i.photo||''))];
+  const photo  = groupPhoto(items);
   const k = JSON.stringify(key).replace(/"/g,'&quot;');
   const allSel = items.every(i=>sel.has(i.id));
   return `<div class="mcard mgroup${allSel?' msel':''}" onclick="toggleGroup(${k})">
     <label class="mcb" onclick="event.stopPropagation()">
       <input type="checkbox" ${allSel?'checked':''} onchange="selectGroup(${k},this.checked)"></label>
-    ${prefs.mobilePhoto ? (photos.length===1 && photos[0]
-        ? `<img class="mthumb" loading="lazy" src="${photos[0]}">`
+    ${prefs.mobilePhoto ? (photo
+        ? `<img class="mthumb" loading="lazy" src="${photo}">`
         : '<span class="mthumb mnophoto"></span>') : ''}
     <div class="mbody">
       <div class="mtitle"><span class="chev">${open?'▾':'▸'}</span>
@@ -736,7 +736,8 @@ function invCellText(c, i){
 }
 function invCell(c, i){
   switch(c.k){
-    case 'photo':  return i.photo ? `<img class="thumb" loading="lazy" src="${i.photo}">` : '';
+    case 'photo':  { const ph = photoShown(i);
+                     return ph ? `<img class="thumb" loading="lazy" src="${ph}">` : ''; }
     case 'item':   return itemTitle(i);
     case 'id':     return `<span class="mono">${esc(i.id)}</span>`;
     case 'cat':    return `<span class="tag cat">${esc(subLabel(i.cat,i.subcat))}</span>`;
@@ -790,8 +791,8 @@ function groupCell(c, key, items, open){
   const uniq = a => [...new Set(a)];
   switch(c.k){
     case 'photo': {
-      const ph = uniq(items.map(i=>i.photo||''));
-      return ph.length===1 && ph[0] ? `<img class="thumb" loading="lazy" src="${ph[0]}">` : '';
+      const ph = groupPhoto(items);
+      return ph ? `<img class="thumb" loading="lazy" src="${ph}">` : '';
     }
     case 'item': {
       const brands = uniq(items.map(i=>(i.brand||'').trim()));

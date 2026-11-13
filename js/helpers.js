@@ -223,6 +223,44 @@ function groupKeyOf(name){
   return m ? m[1] : null;
 }
 
+/* --- La photo qu'on MONTRE, qui n'est pas forcément la sienne ---
+
+   Un exemplaire sans photo laissait un trou dans la liste alors que
+   son jumeau juste en dessous est le même objet. Dans une famille
+   « … #1, #2, #3 », n'importe laquelle des photos décrit le modèle :
+   on emprunte donc celle d'un frère plutôt que de laisser le vide.
+
+   On prend le plus petit identifiant qui en a une — déterministe,
+   donc la vignette ne change pas d'un affichage à l'autre.
+
+   ATTENTION : ceci ne concerne QUE l'affichage. La colonne « photo »
+   du tri et du filtre continue de lire `i.photo`, c'est-à-dire la
+   vérité : « No photo » doit rester fiable, sinon on ne saurait
+   plus lesquels restent à photographier. */
+function photoShown(i){
+  if(!i) return '';
+  if(i.photo) return i.photo;
+  const k = groupKeyOf(i.name);
+  if(!k) return '';
+  const frères = (db.items||[]).filter(x=>
+    x.id !== i.id && x.photo && groupKeyOf(x.name) === k);
+  if(!frères.length) return '';
+  frères.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  return frères[0].photo;
+}
+
+/* La photo d'une ligne de groupe : la première disponible parmi les
+   exemplaires, peu importe qu'ils ne soient pas tous identiques.
+   Exiger l'unanimité — l'ancienne règle — vidait l'en-tête dès
+   qu'un seul exemplaire avait été rephotographié sous un autre
+   angle. Un en-tête vide n'informe de rien. */
+function groupPhoto(items){
+  const avec = (items||[]).filter(i=>i && i.photo);
+  if(!avec.length) return '';
+  avec.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  return avec[0].photo;
+}
+
 /* --- Adresse d'une fiche (utilisée par les QR codes) ---
    Calculée depuis l'adresse du site : si le domaine change un jour,
    les nouveaux QR suivent automatiquement. */

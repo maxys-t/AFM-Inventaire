@@ -1,5 +1,48 @@
 # Changelog
 
+## [2.9.3] — 2026-11-13
+
+### Corrigé — plus de trou de photo dans l'inventaire
+
+- **L'en-tête d'un groupe n'exige plus l'unanimité.** Il fallait que
+  les trois MacBook Pro aient *exactement la même* adresse de photo
+  pour qu'une vignette s'affiche ; le #3 ayant été rephotographié
+  sous un autre angle, l'en-tête restait vide. Désormais il montre
+  la première photo disponible de la famille.
+
+- **Un exemplaire sans photo emprunte celle d'un frère.** Dans une
+  famille « … #1, #2, #3 », n'importe laquelle des photos décrit le
+  modèle. On prend celle du plus petit identifiant qui en a une —
+  déterministe, donc la vignette ne scintille pas d'un affichage à
+  l'autre. Un objet unique, lui, n'emprunte rien.
+
+- **Le tri et le filtre « photo » continuent de dire la vérité.**
+  C'est la contrepartie de l'emprunt : l'affichage comble le trou,
+  la donnée le signale. Si « No photo » se mettait à lire la photo
+  empruntée, la liste de ce qui reste à photographier se viderait
+  toute seule. Le harnais `t271` tient les deux bouts.
+
+### Renuméroté
+
+- **Migration 038 — les écrans passent de `CPU-006…010` à
+  `DSP-001…005`.** Toutes les clés étrangères vers `items(id)` sont
+  déclarées `on update cascade` : caisses, réparations, besoins et
+  lots suivent d'eux-mêmes. `history.item_id`, qui n'a pas de clé
+  étrangère, est mis à jour à la main — la trace décrit le même
+  objet physique, elle doit le suivre. Une ligne d'historique est
+  ajoutée sur chaque écran pour garder la mémoire du changement.
+
+  Les champs JSON des projets (`item_ids`, `prep`, `subs`,
+  `snapshot`) ne sont atteints par aucune cascade : la migration
+  **vérifie qu'aucun projet ne cite les anciens identifiants et
+  s'arrête sinon**. Réécrire du JSON à l'aveugle aurait été pire
+  qu'un échec propre.
+
+  Les photos restent stockées sous `items/CPU-006.jpg` et
+  continuent de s'afficher — c'est l'adresse complète qui est
+  enregistrée. Les cinq étiquettes imprimées deviennent inexactes :
+  c'est le coût assumé.
+
 ## [2.9.2] — 2026-11-13
 
 ### Corrigé — les écrans étaient toujours dans l'onglet IT
